@@ -138,7 +138,12 @@ small, .muted { color: var(--text-secondary); }
 .item-body p { margin-top: 3px; font-size: 0.9rem; }
 
 /* ─── Feed ─── */
-.feed { max-width: 540px; margin: 0 auto; }
+.feed {
+  max-width: 540px; margin: 0 auto;
+  min-height: calc(100dvh - 52px);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
 
 /* ─── Buttons ─── */
 .btn {
