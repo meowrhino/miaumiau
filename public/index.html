@@ -4,17 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>miaumiau</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+  <link rel="icon" href="/favicon/favicon.ico">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-  <!-- Header -->
-  <header id="header">
-    <img id="headerAvatar" class="avatar" src="" alt="" onclick="App.go('profile')">
-    <h1 onclick="location.reload()">miaumiau</h1>
-    <button id="headerUnread" class="badge" hidden onclick="App.go('chat')">0</button>
-    <button class="theme-toggle" onclick="App.toggleTheme()" title="cambiar tema" id="themeToggle"></button>
-  </header>
+  <!-- Unread badge (floating, no header) -->
+  <button id="headerUnread" class="unread-badge" hidden onclick="App.go('chat')">0</button>
 
   <!-- Registration (shown if no user) -->
   <section id="registration" class="mode" hidden>
@@ -64,15 +62,21 @@
 
   <!-- Mode: Tweets -->
   <section id="mode-tweets" class="mode" hidden>
-    <div id="tweetComposer" class="composer">
-      <textarea id="tweetInput" placeholder="miau..." maxlength="1000" rows="2"></textarea>
-      <div class="composer-bar">
-        <span id="tweetCount" class="char-count">0/1000</span>
-        <button class="btn primary small" onclick="App.createTweet()">miau</button>
+    <div class="feed">
+      <div id="tweetComposer" class="tweet-composer">
+        <img id="composerAvatar" class="avatar" src="">
+        <div class="tweet-composer-body">
+          <textarea id="tweetInput" placeholder="que pasa miau?" maxlength="1000" rows="1"
+                    oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+          <div class="composer-bar">
+            <span id="tweetCount" class="char-count">0/1000</span>
+            <button class="btn primary small" onclick="App.createTweet()">miau</button>
+          </div>
+        </div>
       </div>
+      <div id="tweetTimeline"></div>
+      <button id="tweetsMore" class="btn load-more" hidden onclick="App.loadTweets(++App.tweetsPage)">m&aacute;s</button>
     </div>
-    <div id="tweetTimeline" class="feed"></div>
-    <button id="tweetsMore" class="btn load-more" hidden onclick="App.loadTweets(++App.tweetsPage)">cargar m&aacute;s</button>
   </section>
 
   <!-- Mode: Chat -->

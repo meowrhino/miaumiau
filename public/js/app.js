@@ -52,14 +52,14 @@ const App = {
       b.classList.toggle('active', b.dataset.mode === mode)
     })
     document.getElementById('bottomNav').hidden = false
-    document.getElementById('header').hidden = false
+    // header removed
   },
 
   updateHeader() {
     if (!App.user) return
-    const avatar = document.getElementById('headerAvatar')
-    avatar.src = '/api/users/' + App.user.id + '/avatar.svg'
-    avatar.hidden = false
+    // Update composer avatar
+    const composerAvatar = document.getElementById('composerAvatar')
+    if (composerAvatar) composerAvatar.src = '/api/users/' + App.user.id + '/avatar.svg'
   },
 
   // ─── Registration ───
@@ -67,7 +67,7 @@ const App = {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('registration').hidden = false
     document.getElementById('bottomNav').hidden = true
-    document.getElementById('header').hidden = true
+    // header removed
 
     App._regColor = 'Coral'
     App._regSeed = Math.floor(Math.random() * 0xFFFFFFFF)
@@ -137,7 +137,7 @@ const App = {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('login').hidden = false
     document.getElementById('bottomNav').hidden = true
-    document.getElementById('header').hidden = true
+    // header removed
   },
 
   async login() {

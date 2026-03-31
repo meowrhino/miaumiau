@@ -14,7 +14,7 @@ const StoryEditor = {
   open() {
     $('#storyEditor').hidden = false
     $('#bottomNav').hidden = true
-    $('#header').hidden = true
+    // header removed
     StoryEditor.texts = []
     StoryEditor.links = []
     StoryEditor.bgBlob = null
@@ -40,7 +40,7 @@ const StoryEditor = {
   close() {
     $('#storyEditor').hidden = true
     $('#bottomNav').hidden = false
-    $('#header').hidden = false
+    // header removed
   },
 
   async loadImage(file) {

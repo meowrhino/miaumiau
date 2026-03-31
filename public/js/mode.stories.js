@@ -45,7 +45,7 @@ Object.assign(App, {
     App._storyIdx = 0
     $('#storyViewer').hidden = false
     document.getElementById('bottomNav').hidden = true
-    document.getElementById('header').hidden = true
+    // header removed
     App._showStory()
   },
 
@@ -130,7 +130,7 @@ Object.assign(App, {
     clearTimeout(App._storyTimer)
     $('#storyViewer').hidden = true
     document.getElementById('bottomNav').hidden = false
-    document.getElementById('header').hidden = false
+    // header removed
   },
 
   openStoryEditor() {
