@@ -1,7 +1,12 @@
 // ─── Profile Mode (5th tab) ───
 Object.assign(App, {
+  _searchTimeout: null,
+
   enter_profile() {
     if (!App.user) return
+
+    // Load friends
+    App.loadFriends()
 
     // Render avatar
     const preview = document.getElementById('profileAvatar')
@@ -96,5 +101,100 @@ Object.assign(App, {
       btnLight.classList.toggle('active', !isDark)
       btnDark.classList.toggle('active', isDark)
     }
+  },
+
+  // ─── Friends ───
+  async loadFriends() {
+    try {
+      const data = await API.get('/friends')
+      App._friends = data.friends
+      App._friendIds = new Set(data.friends.map(f => f.id))
+
+      // Render pending requests
+      const pendingEl = $('#friendPending')
+      pendingEl.innerHTML = ''
+      if (data.pending.length > 0) {
+        const title = document.createElement('p')
+        title.className = 'friends-pending-title'
+        title.textContent = `${data.pending.length} solicitud${data.pending.length > 1 ? 'es' : ''}`
+        pendingEl.appendChild(title)
+        data.pending.forEach(p => {
+          const el = document.createElement('div')
+          el.className = 'friend-row'
+          el.innerHTML = `
+            <img class="avatar" src="${App.avatarUrl(p.id)}">
+            <span class="friend-name" style="color:${colorHex(p.color)}">${esc(p.username)}</span>
+            <button class="btn small primary" onclick="App.acceptFriend(${p.request_id})">aceptar</button>
+            <button class="btn small" onclick="App.rejectFriend(${p.request_id})">rechazar</button>`
+          pendingEl.appendChild(el)
+        })
+      }
+
+      // Render friend list
+      const listEl = $('#friendList')
+      listEl.innerHTML = ''
+      if (data.friends.length === 0) {
+        listEl.innerHTML = '<p class="muted" style="font-size:0.8rem">aun no tienes amigos. busca gatos arriba!</p>'
+        return
+      }
+      data.friends.forEach(f => {
+        const el = document.createElement('div')
+        el.className = 'friend-row'
+        el.innerHTML = `
+          <img class="avatar" src="${App.avatarUrl(f.id)}">
+          <span class="friend-name" style="color:${colorHex(f.color)}">${esc(f.username)}</span>
+          <span class="muted" style="font-size:0.7rem">${f.bio || ''}</span>`
+        listEl.appendChild(el)
+      })
+    } catch (e) { console.error(e) }
+  },
+
+  searchUsers(query) {
+    clearTimeout(App._searchTimeout)
+    const results = $('#friendSearchResults')
+    if (!query || query.length < 1) { results.innerHTML = ''; return }
+    App._searchTimeout = setTimeout(async () => {
+      try {
+        const users = await API.get('/users/search?q=' + encodeURIComponent(query))
+        results.innerHTML = ''
+        users.filter(u => u.id !== App.user.id).forEach(u => {
+          const isFriend = App._friendIds?.has(u.id)
+          const el = document.createElement('div')
+          el.className = 'friend-row'
+          el.innerHTML = `
+            <img class="avatar" src="${App.avatarUrl(u.id)}">
+            <span class="friend-name" style="color:${colorHex(u.color)}">${esc(u.username)}</span>
+            ${isFriend
+              ? '<span class="muted" style="font-size:0.7rem">ya sois amigos</span>'
+              : `<button class="btn small primary" onclick="App.addFriend(${u.id})">+ amigo</button>`
+            }`
+          results.appendChild(el)
+        })
+      } catch (e) { console.error(e) }
+    }, 300)
+  },
+
+  async addFriend(userId) {
+    try {
+      await API.post('/friends/request/' + userId)
+      showToast('solicitud enviada!')
+      $('#friendSearch').value = ''
+      $('#friendSearchResults').innerHTML = ''
+    } catch (e) { showToast(e.message) }
+  },
+
+  async acceptFriend(requestId) {
+    try {
+      await API.post('/friends/accept/' + requestId)
+      showToast('amigo aceptado!')
+      App.loadFriends()
+    } catch (e) { showToast(e.message) }
+  },
+
+  async rejectFriend(requestId) {
+    try {
+      await API.post('/friends/reject/' + requestId)
+      App.loadFriends()
+    } catch (e) { showToast(e.message) }
   }
 })

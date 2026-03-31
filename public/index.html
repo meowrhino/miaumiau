@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#fffcf7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>miaumiau</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
@@ -132,6 +135,17 @@
         <div id="profileAvatar" class="profile-avatar-big"></div>
         <button class="btn small" onclick="CatEditor.open()">editar mi gato</button>
         <button class="btn small" onclick="App.rerollProfileAvatar()">aleatorio</button>
+      </div>
+
+      <div class="profile-section">
+        <h2>amigos</h2>
+        <div class="friends-search">
+          <input id="friendSearch" type="text" placeholder="buscar gatos..." autocomplete="off"
+                 oninput="App.searchUsers(this.value)">
+          <div id="friendSearchResults" class="friends-results"></div>
+        </div>
+        <div id="friendPending" class="friends-pending"></div>
+        <div id="friendList" class="friends-list"></div>
       </div>
 
       <div class="profile-section">

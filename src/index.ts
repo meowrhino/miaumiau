@@ -320,6 +320,99 @@ app.post('/api/chat/:userId/read', async (c) => {
   return json({ ok: true })
 })
 
+// ─── Friends ───
+
+// Helper: get friend IDs for a user
+async function getFriendIds(dbConn: D1Database, userId: number): Promise<number[]> {
+  const rows = await dbConn.prepare(`
+    SELECT CASE WHEN requester_id = ? THEN target_id ELSE requester_id END as friend_id
+    FROM friendships WHERE status = 'accepted' AND (requester_id = ? OR target_id = ?)
+  `).bind(userId, userId, userId).all<{ friend_id: number }>()
+  return rows.results.map(r => r.friend_id)
+}
+
+app.get('/api/friends', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+
+  const friends = await c.env.DB.prepare(`
+    SELECT u.id, u.username, u.color, u.avatar_seed, u.bio,
+      CASE WHEN f.requester_id = ? THEN 'sent' ELSE 'received' END as direction
+    FROM friendships f
+    JOIN users u ON u.id = CASE WHEN f.requester_id = ? THEN f.target_id ELSE f.requester_id END
+    WHERE f.status = 'accepted' AND (f.requester_id = ? OR f.target_id = ?)
+  `).bind(user.id, user.id, user.id, user.id).all()
+
+  const pending = await c.env.DB.prepare(`
+    SELECT u.id, u.username, u.color, u.avatar_seed, f.id as request_id
+    FROM friendships f JOIN users u ON u.id = f.requester_id
+    WHERE f.target_id = ? AND f.status = 'pending'
+  `).bind(user.id).all()
+
+  return json({ friends: friends.results, pending: pending.results })
+})
+
+app.post('/api/friends/request/:userId', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const targetId = Number(c.req.param('userId'))
+  if (targetId === user.id) return err('No puedes ser amigo de ti mismo')
+
+  // Check if already exists
+  const existing = await c.env.DB.prepare(`
+    SELECT id, status FROM friendships
+    WHERE (requester_id = ? AND target_id = ?) OR (requester_id = ? AND target_id = ?)
+  `).bind(user.id, targetId, targetId, user.id).first<{ id: number; status: string }>()
+
+  if (existing) {
+    if (existing.status === 'accepted') return err('Ya sois amigos')
+    return err('Solicitud ya enviada')
+  }
+
+  await c.env.DB.prepare('INSERT INTO friendships (requester_id, target_id) VALUES (?, ?)')
+    .bind(user.id, targetId).run()
+  return json({ ok: true }, 201)
+})
+
+app.post('/api/friends/accept/:requestId', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const requestId = Number(c.req.param('requestId'))
+  await c.env.DB.prepare("UPDATE friendships SET status = 'accepted' WHERE id = ? AND target_id = ?")
+    .bind(requestId, user.id).run()
+  return json({ ok: true })
+})
+
+app.post('/api/friends/reject/:requestId', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const requestId = Number(c.req.param('requestId'))
+  await c.env.DB.prepare('DELETE FROM friendships WHERE id = ? AND target_id = ?')
+    .bind(requestId, user.id).run()
+  return json({ ok: true })
+})
+
+app.delete('/api/friends/:userId', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const otherId = Number(c.req.param('userId'))
+  await c.env.DB.prepare(`
+    DELETE FROM friendships
+    WHERE (requester_id = ? AND target_id = ?) OR (requester_id = ? AND target_id = ?)
+  `).bind(user.id, otherId, otherId, user.id).run()
+  return json({ ok: true })
+})
+
+// Search users (for adding friends)
+app.get('/api/users/search', async (c) => {
+  const q = c.req.query('q')
+  if (!q || q.length < 1) return json([])
+  const users = await c.env.DB.prepare(
+    "SELECT id, username, color, avatar_seed, bio FROM users WHERE username LIKE ? LIMIT 10"
+  ).bind('%' + q + '%').all()
+  return json(users.results)
+})
+
 // ─── Media (R2) ───
 
 app.get('/media/:path{.+}', async (c) => {

@@ -46,7 +46,7 @@ body {
   font-family: var(--font);
   background: var(--bg); color: var(--text);
   min-height: 100dvh; overflow-x: hidden;
-  padding-bottom: 52px; padding-top: 0;
+  padding-bottom: 56px; padding-top: 0;
   font-size: 14px; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -74,9 +74,10 @@ small, .muted { color: var(--text-secondary); }
 /* ─── Bottom Nav ─── */
 #bottomNav {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-  display: flex; height: 52px;
+  display: flex; height: 56px;
   background: var(--surface);
   border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 #bottomNav button {
   flex: 1; border: none; background: none; color: var(--text-secondary);
@@ -112,27 +113,32 @@ small, .muted { color: var(--text-secondary); }
 
 /* ─── Avatar ─── */
 .avatar {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 36px; height: 36px; border-radius: 50%;
   flex-shrink: 0; cursor: pointer;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border-strong);
+  transition: transform 0.15s, border-color 0.15s;
+  background: var(--surface);
 }
+.avatar:hover { transform: scale(1.08); border-color: var(--pop); }
 .avatar.big { width: 52px; height: 52px; }
 
 /* ─── Tweets ─── */
 .tweet {
-  display: flex; gap: 12px; padding: 14px 16px;
+  display: flex; gap: 12px; padding: 16px;
   border-bottom: 1px solid var(--border);
-  transition: background 0.1s;
+  transition: background 0.15s;
 }
 .tweet:hover { background: var(--accent-soft); }
 .tweet-body { flex: 1; min-width: 0; }
 .tweet-meta { display: flex; gap: 6px; align-items: baseline; }
-.tweet-name { font-weight: 600; font-size: 0.9rem; }
-.tweet-time { font-size: 0.75rem; color: var(--text-secondary); }
-.tweet-text { margin-top: 2px; font-size: 0.95rem; line-height: 1.45; }
-.tweet-text a { color: var(--text); text-decoration: underline; }
+.tweet-name { font-weight: 700; font-size: 0.9rem; cursor: pointer; }
+.tweet-name:hover { text-decoration: underline; }
+.tweet-time { font-size: 0.7rem; color: var(--text-secondary); }
+.tweet-time::before { content: '·'; margin-right: 6px; }
+.tweet-text { margin-top: 4px; font-size: 15px; line-height: 1.5; }
+.tweet-text a { color: var(--pop); text-decoration: underline; }
 .tweet-actions {
-  display: flex; gap: 20px; margin-top: 8px;
+  display: flex; gap: 24px; margin-top: 10px;
 }
 .tweet-actions button {
   display: flex; align-items: center; gap: 4px;
@@ -161,18 +167,20 @@ small, .muted { color: var(--text-secondary); }
 
 /* ─── Feed ─── */
 .feed {
-  max-width: 540px; margin: 0 auto;
+  max-width: 580px; margin: 0 auto;
   min-height: calc(100dvh - 52px);
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
+  background: var(--surface);
 }
 
 /* ─── Buttons ─── */
 .btn {
-  border: 1px solid var(--border-strong); background: var(--surface);
-  color: var(--text); padding: 6px 14px; border-radius: var(--radius);
+  border: 1.5px solid var(--border-strong); background: var(--surface);
+  color: var(--text); padding: 8px 16px; border-radius: var(--radius);
   cursor: pointer; font-size: 0.8rem; font-family: var(--font);
   font-weight: 500; transition: all 0.1s; user-select: none;
+  min-height: 36px;
 }
 .btn:hover { background: var(--accent-soft); }
 .btn:active { transform: translateY(1px); }
@@ -389,12 +397,13 @@ input:focus, textarea:focus {
   display: flex; flex-direction: column; gap: 4px;
 }
 .message {
-  max-width: 75%; padding: 8px 12px;
-  border-radius: 16px; font-size: 0.9rem;
+  max-width: 75%; padding: 10px 14px;
+  border-radius: 18px; font-size: 0.9rem;
+  line-height: 1.4;
 }
 .message.sent {
   align-self: flex-end;
-  background: var(--text); color: var(--bg);
+  background: var(--pop-chat); color: #fff;
   border-bottom-right-radius: 4px;
 }
 .message.received {
@@ -516,6 +525,23 @@ input:focus, textarea:focus {
 .profile-key-edit input { flex: 1; margin-bottom: 0; font-size: 0.85rem; }
 .profile-theme-row { display: flex; gap: 8px; }
 .profile-theme-row .btn { flex: 1; text-align: center; }
+
+/* ─── Friends ─── */
+.friends-search { position: relative; }
+.friends-search input { margin-bottom: 4px; }
+.friends-results, .friends-pending, .friends-list {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.friends-pending-title {
+  font-size: 0.75rem; font-weight: 600; color: var(--pop-bereal);
+  margin-bottom: 4px;
+}
+.friend-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0;
+}
+.friend-row .avatar { width: 28px; height: 28px; }
+.friend-name { font-weight: 600; font-size: 0.85rem; flex: 1; }
 
 /* ─── BeReal ─── */
 .bereal-header {
