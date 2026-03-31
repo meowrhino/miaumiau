@@ -19,15 +19,22 @@
   --radius: 0px;
   --shadow: 0 1px 2px rgba(42,36,32,0.06);
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* POP colors — 1 per tab */
+  --pop-stories: #FF3B30;
+  --pop-posts: #007AFF;
+  --pop-tweets: #FFCC00;
+  --pop-chat: #34C759;
+  --pop: var(--pop-tweets); /* active tab color */
 }
 
 [data-theme="dark"] {
-  --bg: #262420;
-  --surface: #302c28;
+  --bg: #1c1a18;
+  --surface: #262420;
   --text: #ede8e2;
   --text-secondary: #9a9088;
-  --border: rgba(237, 232, 226, 0.1);
-  --border-strong: rgba(237, 232, 226, 0.18);
+  --border: rgba(237, 232, 226, 0.08);
+  --border-strong: rgba(237, 232, 226, 0.15);
   --accent: #ede8e2;
   --accent-soft: rgba(237, 232, 226, 0.05);
   --shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -79,11 +86,23 @@ small, .muted { color: var(--text-secondary); }
   position: relative;
 }
 #bottomNav button:hover { color: var(--text); }
-#bottomNav button.active { color: var(--text); }
+#bottomNav button.active { color: var(--pop); }
 #bottomNav button.active::after {
   content: ''; position: absolute; top: 0; left: 20%; right: 20%;
-  height: 2px; background: var(--text);
+  height: 2.5px; background: var(--pop);
 }
+#bottomNav button[data-mode="stories"] { --btn-pop: var(--pop-stories); }
+#bottomNav button[data-mode="posts"] { --btn-pop: var(--pop-posts); }
+#bottomNav button[data-mode="tweets"] { --btn-pop: var(--pop-tweets); }
+#bottomNav button[data-mode="chat"] { --btn-pop: var(--pop-chat); }
+#bottomNav button.active[data-mode="stories"] { color: var(--pop-stories); }
+#bottomNav button.active[data-mode="posts"] { color: var(--pop-posts); }
+#bottomNav button.active[data-mode="tweets"] { color: var(--pop-tweets); }
+#bottomNav button.active[data-mode="chat"] { color: var(--pop-chat); }
+#bottomNav button.active[data-mode="stories"]::after { background: var(--pop-stories); }
+#bottomNav button.active[data-mode="posts"]::after { background: var(--pop-posts); }
+#bottomNav button.active[data-mode="tweets"]::after { background: var(--pop-tweets); }
+#bottomNav button.active[data-mode="chat"]::after { background: var(--pop-chat); }
 .nav-icon { width: 22px; height: 22px; }
 #bottomNav button.active .nav-icon { stroke-width: 2; }
 .nav-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
@@ -155,8 +174,8 @@ small, .muted { color: var(--text-secondary); }
 .btn:hover { background: var(--accent-soft); }
 .btn:active { transform: translateY(1px); }
 .btn.primary {
-  background: var(--text); color: var(--bg);
-  border-color: var(--text);
+  background: var(--pop); color: #fff;
+  border-color: var(--pop); font-weight: 600;
 }
 .btn.primary:hover { opacity: 0.85; }
 .btn.danger { color: var(--danger); border-color: var(--danger); }
@@ -167,10 +186,11 @@ small, .muted { color: var(--text-secondary); }
 /* ─── FAB ─── */
 .fab {
   position: fixed; bottom: 62px; right: 16px;
-  width: 44px; height: 44px; border-radius: 50%;
-  background: var(--text); color: var(--bg); border: none;
-  font-size: 1.4rem; cursor: pointer; z-index: 50;
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--pop); color: #fff; border: none;
+  font-size: 1.5rem; cursor: pointer; z-index: 50;
   transition: transform 0.1s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 .fab:active { transform: scale(0.92); }
 
@@ -202,8 +222,9 @@ input:focus, textarea:focus {
 .tweet-composer-body textarea::placeholder { color: var(--text-secondary); }
 .composer-bar {
   display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid var(--border); padding-top: 6px;
+  border-top: 1px solid var(--border); padding-top: 8px;
 }
+.tweet-composer-body textarea:focus + .composer-bar { border-top-color: var(--pop); }
 .char-count { font-size: 0.7rem; color: var(--text-secondary); }
 
 /* ─── Generic Composer (chat, posts) ─── */

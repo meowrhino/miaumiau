@@ -52,7 +52,9 @@ const App = {
       b.classList.toggle('active', b.dataset.mode === mode)
     })
     document.getElementById('bottomNav').hidden = false
-    // header removed
+    // update pop color
+    const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', profile: 'var(--text)' }
+    document.documentElement.style.setProperty('--pop', popMap[mode] ?? 'var(--text)')
   },
 
   updateHeader() {
