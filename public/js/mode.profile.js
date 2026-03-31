@@ -49,6 +49,7 @@ Object.assign(App, {
       })
       App.user = { ...App.user, ...updated }
       App.save()
+      App.bumpAvatarVersion()
       App.updateHeader()
       showToast('guardado')
     } catch (e) { showToast(e.message) }

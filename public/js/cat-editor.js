@@ -63,6 +63,7 @@ const CatEditor = {
     // Update composer avatar
     App.updateHeader()
 
+    App.bumpAvatarVersion()
     showToast('gato actualizado')
     CatEditor.close()
   },

@@ -27,7 +27,7 @@ Object.assign(App, {
     el.className = 'tweet'
     const replies = tweet.reply_count ? `<span class="tweet-count">${tweet.reply_count}</span>` : ''
     el.innerHTML = `
-      <img class="avatar" src="/api/users/${tweet.user_id}/avatar.svg" loading="lazy"
+      <img class="avatar" src="${App.avatarUrl(tweet.user_id)}" loading="lazy"
            onclick="App.startChatWith(${tweet.user_id},'${esc(tweet.username)}','${tweet.color}')">
       <div class="tweet-body">
         <div class="tweet-meta">

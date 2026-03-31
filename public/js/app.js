@@ -61,7 +61,7 @@ const App = {
     if (!App.user) return
     // Update composer avatar
     const composerAvatar = document.getElementById('composerAvatar')
-    if (composerAvatar) composerAvatar.src = '/api/users/' + App.user.id + '/avatar.svg'
+    if (composerAvatar) composerAvatar.src = App.avatarUrl(App.user.id)
   },
 
   // ─── Registration ───
@@ -224,12 +224,21 @@ const App = {
   },
 
   // ─── Shared Render Helpers ───
+  avatarUrl(userId) {
+    // Cache-buster ensures avatar updates propagate immediately
+    return `/api/users/${userId}/avatar.svg?v=${App._avatarVersion ?? 0}`
+  },
+
   renderHeader(item) {
-    return `<img class="avatar" src="/api/users/${item.user_id}/avatar.svg" loading="lazy">
+    return `<img class="avatar" src="${App.avatarUrl(item.user_id)}" loading="lazy">
       <div class="item-header">
         <b style="color:${colorHex(item.color)}">${item.username}</b>
         <small class="muted">${timeAgo(item.created_at)}</small>
       </div>`
+  },
+
+  bumpAvatarVersion() {
+    App._avatarVersion = Date.now()
   }
 }
 
