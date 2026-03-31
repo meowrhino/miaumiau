@@ -1,6 +1,11 @@
 name = "miaumiau"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
+workers_dev = true
+routes = [
+  { pattern = "miaumiauonline.com/*", zone_name = "miaumiauonline.com" },
+  { pattern = "www.miaumiauonline.com/*", zone_name = "miaumiauonline.com" }
+]
 
 [assets]
 directory = "public"
@@ -8,7 +13,7 @@ directory = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "miaumiau-db"
-database_id = "placeholder"
+database_id = "d7373829-9b9d-430c-b318-f6d67a9a472e"
 
 [[r2_buckets]]
 binding = "STORAGE"
