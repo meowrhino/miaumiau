@@ -4,15 +4,34 @@ const App = {
   mode: null,
 
   init() {
+    // Apply saved theme (light/dark)
+    const savedTheme = localStorage.getItem('miau_theme') ?? 'light'
+    document.documentElement.setAttribute('data-theme', savedTheme === 'dark' ? 'dark' : '')
+    App._updateThemeIcon()
+
     const saved = localStorage.getItem('miau_user')
     if (saved) {
       App.user = JSON.parse(saved)
-      applyTheme(App.user.theme ?? 'oscuro')
       App.updateHeader()
       App.go('tweets')
     } else {
       App.showRegistration()
     }
+  },
+
+  toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme')
+    const next = current === 'dark' ? '' : 'dark'
+    document.documentElement.setAttribute('data-theme', next)
+    localStorage.setItem('miau_theme', next || 'light')
+    App._updateThemeIcon()
+  },
+
+  _updateThemeIcon() {
+    const btn = document.getElementById('themeToggle')
+    if (!btn) return
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    btn.textContent = isDark ? '☀' : '☾'
   },
 
   save() {
