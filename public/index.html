@@ -122,10 +122,14 @@
 
       <div class="profile-section">
         <h2>tu clave secreta</h2>
-        <p class="muted" style="font-size:0.75rem;margin-bottom:6px">guardala bien, sin ella no puedes reconectar</p>
+        <p class="muted" style="font-size:0.75rem;margin-bottom:6px">es tu contrasena. ponle algo que te mole y que recuerdes</p>
         <div class="profile-key">
           <code id="profileKey"></code>
           <button class="btn small" onclick="App.copyKey()">copiar</button>
+        </div>
+        <div class="profile-key-edit">
+          <input id="profileNewKey" type="text" placeholder="nueva clave (min 4 chars, se creativo)" maxlength="32" autocomplete="off">
+          <button class="btn small" onclick="App.changeKey()">cambiar</button>
         </div>
       </div>
 

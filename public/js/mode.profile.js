@@ -59,9 +59,25 @@ Object.assign(App, {
     navigator.clipboard.writeText(key).then(() => {
       showToast('clave copiada')
     }).catch(() => {
-      // fallback
       prompt('tu clave:', key)
     })
+  },
+
+  async changeKey() {
+    const input = document.getElementById('profileNewKey')
+    const newKey = input.value.trim()
+    if (newKey.length < 4) { showToast('minimo 4 caracteres'); return }
+    if (newKey.length > 32) { showToast('maximo 32 caracteres'); return }
+
+    try {
+      // Server needs a new endpoint to change tripcode
+      await API.post('/users/' + App.user.id + '/key', { new_secret: newKey })
+      App.user.secret = newKey
+      App.save()
+      document.getElementById('profileKey').textContent = App.user.username + '#' + newKey
+      input.value = ''
+      showToast('clave cambiada a: ' + App.user.username + '#' + newKey)
+    } catch (e) { showToast(e.message) }
   },
 
   setTheme(theme) {

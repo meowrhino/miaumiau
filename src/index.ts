@@ -62,6 +62,20 @@ app.put('/api/users/:id', async (c) => {
   return json(updated)
 })
 
+app.post('/api/users/:id/key', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  if (user.id !== Number(c.req.param('id'))) return err('No autorizado', 403)
+
+  const body = await c.req.json<{ new_secret: string }>()
+  if (!body.new_secret || body.new_secret.length < 4 || body.new_secret.length > 32) {
+    return err('Clave: 4-32 caracteres')
+  }
+  const newTrip = await tripcode(body.new_secret)
+  await c.env.DB.prepare('UPDATE users SET tripcode = ? WHERE id = ?').bind(newTrip, user.id).run()
+  return json({ ok: true })
+})
+
 app.delete('/api/users/:id', async (c) => {
   const user = await requireAuth(c)
   if (!user) return err('No autorizado', 401)
