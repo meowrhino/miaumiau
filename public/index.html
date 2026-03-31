@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>miaumiau</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header id="header">
+    <img id="headerAvatar" class="avatar" src="" alt="" onclick="App.openSettings()">
+    <h1 onclick="location.reload()">miaumiau</h1>
+    <button id="headerUnread" class="badge" hidden onclick="App.go('chat')">0</button>
+  </header>
+
+  <!-- Registration (shown if no user) -->
+  <section id="registration" class="mode" hidden>
+    <div class="card center">
+      <h2>bienvenido a miaumiau</h2>
+      <p class="muted">elige un nombre y un color para tu gato</p>
+      <input id="regName" type="text" placeholder="tu nombre" maxlength="25" autocomplete="off">
+      <div id="regColorGrid" class="color-grid"></div>
+      <div id="regAvatarPreview" class="avatar-preview"></div>
+      <button id="regSubmit" class="btn primary" onclick="App.register()">entrar</button>
+      <p id="regError" class="error" hidden></p>
+    </div>
+  </section>
+
+  <!-- Login (recover from another device) -->
+  <section id="login" class="mode" hidden>
+    <div class="card center">
+      <h2>reconectar</h2>
+      <input id="loginKey" type="text" placeholder="usuario#clave" autocomplete="off">
+      <button class="btn primary" onclick="App.login()">entrar</button>
+      <button class="btn" onclick="App.showRegistration()">crear cuenta nueva</button>
+      <p id="loginError" class="error" hidden></p>
+    </div>
+  </section>
+
+  <!-- Mode: Stories -->
+  <section id="mode-stories" class="mode" hidden>
+    <div id="storyBubbles" class="story-bubbles"></div>
+    <button class="fab" onclick="App.openStoryEditor()">+</button>
+  </section>
+
+  <!-- Mode: Posts -->
+  <section id="mode-posts" class="mode" hidden>
+    <div id="postFeed" class="feed"></div>
+    <button id="postsMore" class="btn load-more" hidden onclick="App.loadPosts(++App.postsPage)">cargar m&aacute;s</button>
+    <button class="fab" onclick="App.openPostComposer()">+</button>
+  </section>
+
+  <!-- Mode: Tweets -->
+  <section id="mode-tweets" class="mode" hidden>
+    <div id="tweetComposer" class="composer">
+      <textarea id="tweetInput" placeholder="miau..." maxlength="1000" rows="2"></textarea>
+      <div class="composer-bar">
+        <span id="tweetCount" class="char-count">0/1000</span>
+        <button class="btn primary small" onclick="App.createTweet()">miau</button>
+      </div>
+    </div>
+    <div id="tweetTimeline" class="feed"></div>
+    <button id="tweetsMore" class="btn load-more" hidden onclick="App.loadTweets(++App.tweetsPage)">cargar m&aacute;s</button>
+  </section>
+
+  <!-- Mode: Chat -->
+  <section id="mode-chat" class="mode" hidden>
+    <div id="chatConversations" class="feed"></div>
+    <div id="chatThread" class="chat-thread" hidden>
+      <div id="chatHeader" class="chat-header">
+        <button class="btn small" onclick="App.closeChat()">&larr;</button>
+        <span id="chatWith"></span>
+      </div>
+      <div id="chatMessages" class="chat-messages"></div>
+      <div class="composer">
+        <input id="chatInput" type="text" placeholder="escribe..." maxlength="2000"
+               onkeydown="if(event.key==='Enter')App.sendMessage()">
+        <button class="btn primary small" onclick="App.sendMessage()">enviar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal" hidden>
+    <div class="modal-content card">
+      <h2>ajustes</h2>
+      <label>color</label>
+      <div id="settingsColorGrid" class="color-grid"></div>
+      <label>tema</label>
+      <div id="settingsThemeGrid" class="theme-grid"></div>
+      <label>bio</label>
+      <textarea id="settingsBio" maxlength="200" rows="2"></textarea>
+      <div class="modal-actions">
+        <button class="btn" onclick="App.closeSettings()">cerrar</button>
+        <button class="btn primary" onclick="App.saveSettings()">guardar</button>
+      </div>
+      <hr>
+      <button class="btn danger small" onclick="App.deleteAccount()">eliminar cuenta</button>
+    </div>
+  </div>
+
+  <!-- Reply Modal -->
+  <div id="replyModal" class="modal" hidden>
+    <div class="modal-content card">
+      <div id="replyThread"></div>
+      <textarea id="replyInput" placeholder="responder..." maxlength="1000" rows="2"></textarea>
+      <div class="modal-actions">
+        <button class="btn" onclick="App.closeReply()">cerrar</button>
+        <button class="btn primary" onclick="App.submitReply()">responder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post Composer Modal -->
+  <div id="postModal" class="modal" hidden>
+    <div class="modal-content card">
+      <h2>nueva publicaci&oacute;n</h2>
+      <input id="postFile" type="file" accept="image/*">
+      <img id="postPreview" class="post-preview" hidden>
+      <span id="postSize" class="muted"></span>
+      <textarea id="postCaption" placeholder="escribe algo..." maxlength="500" rows="2"></textarea>
+      <div class="modal-actions">
+        <button class="btn" onclick="App.closePostComposer()">cerrar</button>
+        <button class="btn primary" onclick="App.submitPost()">publicar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Story Viewer -->
+  <div id="storyViewer" class="story-viewer" hidden>
+    <div id="storyProgress" class="story-progress"></div>
+    <img id="storyImage" class="story-image">
+    <div id="storyLayers" class="story-layers"></div>
+    <div class="story-nav">
+      <div class="story-nav-left" onclick="App.storyPrev()"></div>
+      <div class="story-nav-right" onclick="App.storyNext()"></div>
+    </div>
+    <button class="story-close" onclick="App.closeStoryViewer()">&times;</button>
+  </div>
+
+  <!-- Story Editor Modal -->
+  <div id="storyEditor" class="story-editor" hidden>
+    <div class="story-editor-toolbar">
+      <button class="btn small active" data-tool="draw" onclick="StoryEditor.setTool('draw')">dibujar</button>
+      <button class="btn small" data-tool="text" onclick="StoryEditor.setTool('text')">texto</button>
+      <button class="btn small" data-tool="link" onclick="StoryEditor.setTool('link')">link</button>
+      <input id="storyDrawColor" type="color" value="#ffffff" onchange="StoryEditor.drawColor=this.value">
+      <select id="storyDrawSize" onchange="StoryEditor.drawSize=+this.value">
+        <option value="2">fino</option>
+        <option value="4" selected>normal</option>
+        <option value="8">grueso</option>
+        <option value="16">mega</option>
+      </select>
+      <button class="btn small" onclick="StoryEditor.toggleEraser()">borrador</button>
+    </div>
+    <div id="storyEditorCanvas" class="story-editor-canvas">
+      <img id="storyEditorBg">
+      <canvas id="storyEditorDraw"></canvas>
+      <div id="storyEditorOverlays"></div>
+    </div>
+    <div class="story-editor-actions">
+      <input id="storyFile" type="file" accept="image/*" onchange="StoryEditor.loadImage(this.files[0])">
+      <button class="btn" onclick="StoryEditor.close()">cancelar</button>
+      <button class="btn primary" onclick="StoryEditor.publish()">publicar</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Bottom Nav -->
+  <nav id="bottomNav">
+    <button data-mode="stories" onclick="App.go('stories')">
+      <span class="nav-icon">🔥</span><span class="nav-label">stories</span>
+    </button>
+    <button data-mode="posts" onclick="App.go('posts')">
+      <span class="nav-icon">📷</span><span class="nav-label">posts</span>
+    </button>
+    <button data-mode="tweets" onclick="App.go('tweets')">
+      <span class="nav-icon">💬</span><span class="nav-label">miau</span>
+    </button>
+    <button data-mode="chat" onclick="App.go('chat')">
+      <span class="nav-icon">✉️</span><span class="nav-label">chat</span>
+    </button>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="/js/colors.js"></script>
+  <script src="/js/themes.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/media.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/mode.tweets.js"></script>
+  <script src="/js/mode.posts.js"></script>
+  <script src="/js/mode.stories.js"></script>
+  <script src="/js/mode.chat.js"></script>
+  <script src="/js/story-editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+-- miaumiau database schema
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    tripcode TEXT,
+    color TEXT NOT NULL DEFAULT 'Coral',
+    theme TEXT NOT NULL DEFAULT 'oscuro',
+    avatar_seed INTEGER NOT NULL,
+    bio TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tweets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    parent_id INTEGER REFERENCES tweets(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    reports INTEGER DEFAULT 0,
+    hidden INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_tweets_created ON tweets(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tweets_parent ON tweets(parent_id);
+
+CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    caption TEXT DEFAULT '',
+    media_key TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    reports INTEGER DEFAULT 0,
+    hidden INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS post_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES posts(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_comments_post ON post_comments(post_id);
+
+CREATE TABLE IF NOT EXISTS reactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id INTEGER NOT NULL,
+    emoji TEXT NOT NULL DEFAULT '😻',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, target_type, target_id)
+);
+CREATE INDEX IF NOT EXISTS idx_reactions_target ON reactions(target_type, target_id);
+
+CREATE TABLE IF NOT EXISTS stories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    media_key TEXT NOT NULL,
+    layers_json TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at);
+CREATE INDEX IF NOT EXISTS idx_stories_user ON stories(user_id);
+
+CREATE TABLE IF NOT EXISTS story_views (
+    story_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    viewed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (story_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL REFERENCES users(id),
+    receiver_id INTEGER NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    media_key TEXT,
+    read_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(sender_id, receiver_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(receiver_id, read_at);
+
+CREATE TABLE IF NOT EXISTS conversations (
+    user_a INTEGER NOT NULL,
+    user_b INTEGER NOT NULL,
+    last_message_at TEXT,
+    last_message_preview TEXT,
+    PRIMARY KEY (user_a, user_b)
+);
+CREATE INDEX IF NOT EXISTS idx_conv_a ON conversations(user_a, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conv_b ON conversations(user_b, last_message_at DESC);
