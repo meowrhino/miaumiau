@@ -79,6 +79,35 @@
     </div>
   </section>
 
+  <!-- Mode: BeReal -->
+  <section id="mode-bereal" class="mode" hidden>
+    <div class="feed bereal-feed">
+      <div class="bereal-header">
+        <h2>miau real</h2>
+        <p class="muted">una foto al dia. sin filtros. se tu gato.</p>
+      </div>
+      <div id="berealGrid" class="bereal-grid"></div>
+      <button class="fab" onclick="App.openBerealCapture()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- BeReal Capture Modal -->
+  <div id="berealModal" class="modal" hidden>
+    <div class="modal-content bereal-capture">
+      <h2>tu miau real de hoy</h2>
+      <p class="muted">que estas haciendo ahora mismo?</p>
+      <input id="berealFile" type="file" accept="image/*" capture="environment">
+      <img id="berealPreview" class="bereal-preview" hidden>
+      <input id="berealCaption" type="text" placeholder="algo breve..." maxlength="200">
+      <div class="modal-actions">
+        <button class="btn" onclick="$('#berealModal').hidden=true">cancelar</button>
+        <button class="btn primary" onclick="App.submitBereal()">publicar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Mode: Chat -->
   <section id="mode-chat" class="mode" hidden>
     <div id="chatConversations" class="feed"></div>
@@ -249,6 +278,10 @@
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <span class="nav-label">chat</span>
     </button>
+    <button data-mode="bereal" onclick="App.go('bereal')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      <span class="nav-label">real</span>
+    </button>
     <button data-mode="profile" onclick="App.go('profile')">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/><path d="M7 3.5L9 6M17 3.5L15 6"/></svg>
       <span class="nav-label">tu gato</span>
@@ -267,6 +300,7 @@
   <script src="/js/mode.posts.js"></script>
   <script src="/js/mode.stories.js"></script>
   <script src="/js/mode.chat.js"></script>
+  <script src="/js/mode.bereal.js"></script>
   <script src="/js/cat-editor.js"></script>
   <script src="/js/mode.profile.js"></script>
   <script src="/js/story-editor.js"></script>

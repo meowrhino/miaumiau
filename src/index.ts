@@ -177,6 +177,47 @@ app.post('/api/posts/:id/comments', async (c) => {
   return json(comment, 201)
 })
 
+// ─── BeReal ───
+
+app.get('/api/bereal', async (c) => {
+  const page = num(c.req.query('page'), 1)
+  const limit = Math.min(num(c.req.query('limit'), 20), 50)
+  const bereals = await c.env.DB.prepare(`
+    SELECT b.*, u.username, u.color, u.avatar_seed
+    FROM bereals b JOIN users u ON b.user_id = u.id
+    ORDER BY b.created_at DESC LIMIT ? OFFSET ?
+  `).bind(limit, (page - 1) * limit).all()
+  return json(bereals.results)
+})
+
+app.post('/api/bereal', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip, 2)) return err('Demasiadas peticiones', 429)
+
+  // Check if user already posted today
+  const today = await c.env.DB.prepare(`
+    SELECT id FROM bereals WHERE user_id = ? AND date(created_at) = date('now')
+  `).bind(user.id).first()
+  if (today) return err('Ya has publicado tu miau real hoy! vuelve manana')
+
+  const form = await c.req.formData()
+  const image = form.get('image') as File | null
+  const caption = esc((form.get('caption') as string ?? '').slice(0, 200))
+  if (!image) return err('Falta imagen')
+  if (image.size > 500_000) return err('Imagen demasiado grande (max 500KB)')
+
+  const key = `br_${Date.now()}_${user.id}.webp`
+  await c.env.STORAGE.put('media/bereal/' + key, image.stream(), {
+    httpMetadata: { contentType: 'image/webp' }
+  })
+  const bereal = await c.env.DB.prepare(
+    'INSERT INTO bereals (user_id, media_key, caption) VALUES (?, ?, ?) RETURNING *'
+  ).bind(user.id, key, caption).first()
+  return json(bereal, 201)
+})
+
 // ─── Reactions ───
 
 app.post('/api/reactions', async (c) => {

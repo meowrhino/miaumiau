@@ -25,6 +25,7 @@
   --pop-posts: #007AFF;
   --pop-tweets: #FFCC00;
   --pop-chat: #34C759;
+  --pop-bereal: #FF9500;
   --pop: var(--pop-tweets); /* active tab color */
 }
 
@@ -103,6 +104,8 @@ small, .muted { color: var(--text-secondary); }
 #bottomNav button.active[data-mode="posts"]::after { background: var(--pop-posts); }
 #bottomNav button.active[data-mode="tweets"]::after { background: var(--pop-tweets); }
 #bottomNav button.active[data-mode="chat"]::after { background: var(--pop-chat); }
+#bottomNav button.active[data-mode="bereal"] { color: var(--pop-bereal); }
+#bottomNav button.active[data-mode="bereal"]::after { background: var(--pop-bereal); }
 .nav-icon { width: 22px; height: 22px; }
 #bottomNav button.active .nav-icon { stroke-width: 2; }
 .nav-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
@@ -513,6 +516,42 @@ input:focus, textarea:focus {
 .profile-key-edit input { flex: 1; margin-bottom: 0; font-size: 0.85rem; }
 .profile-theme-row { display: flex; gap: 8px; }
 .profile-theme-row .btn { flex: 1; text-align: center; }
+
+/* ─── BeReal ─── */
+.bereal-header {
+  padding: 20px 16px 12px; text-align: center;
+}
+.bereal-header h2 {
+  font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--pop-bereal);
+}
+.bereal-grid {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 0 16px 16px;
+}
+.bereal-card {
+  border: 1px solid var(--border); overflow: hidden;
+  background: var(--surface);
+}
+.bereal-card-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+}
+.bereal-card-name { font-weight: 600; font-size: 0.85rem; }
+.bereal-card-time { font-size: 0.7rem; color: var(--text-secondary); margin-left: auto; }
+.bereal-card-image {
+  width: 100%; display: block;
+  background: var(--accent-soft);
+  min-height: 120px;
+}
+.bereal-card-caption {
+  padding: 10px 12px; font-size: 0.9rem;
+}
+.bereal-preview {
+  width: 100%; max-height: 300px; object-fit: contain;
+  margin: 8px 0; background: var(--accent-soft);
+}
+.bereal-capture h2 { color: var(--pop-bereal); }
 
 /* ─── Cat Editor ─── */
 .cat-editor { max-width: 440px; }

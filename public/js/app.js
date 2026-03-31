@@ -53,7 +53,7 @@ const App = {
     })
     document.getElementById('bottomNav').hidden = false
     // update pop color
-    const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', profile: 'var(--text)' }
+    const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', bereal: 'var(--pop-bereal)', profile: 'var(--text)' }
     document.documentElement.style.setProperty('--pop', popMap[mode] ?? 'var(--text)')
   },
 
