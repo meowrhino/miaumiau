@@ -96,6 +96,7 @@ Object.assign(App, {
 
   // ─── Polling ───
   _startChatPoll() {
+    if (!App.user) return
     App._chatPollSince = new Date().toISOString()
     App._chatPollInterval = 5000
     App._pollChat()

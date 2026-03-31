@@ -1,7 +1,6 @@
 // ─── Posts Mode ───
 Object.assign(App, {
   postsPage: 1,
-  _postFile: null,
   _postBlob: null,
 
   enter_posts() {
@@ -103,8 +102,6 @@ Object.assign(App, {
     } catch (e) { showToast(e.message) }
   },
 
-  // Override submitReply to handle both tweets and post comments
-  _origSubmitReply: null
 })
 
 // Patch submitReply to support comments

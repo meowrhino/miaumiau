@@ -13,10 +13,14 @@ Object.assign(App, {
   },
 
   async loadTweets(page) {
+    const container = $('#tweetTimeline')
+    if (page === 1) container.innerHTML = '<div class="loading">cargando...</div>'
     try {
       const tweets = await API.get('/tweets?page=' + page + '&limit=20')
-      const container = $('#tweetTimeline')
       if (page === 1) container.innerHTML = ''
+      if (tweets.length === 0 && page === 1) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">🐱</div><p>no hay miaus todavia. se el primero!</p></div>'
+      }
       tweets.forEach(t => App.renderTweet(t, container))
       $('#tweetsMore').hidden = tweets.length < 20
     } catch (e) { showToast(e.message) }

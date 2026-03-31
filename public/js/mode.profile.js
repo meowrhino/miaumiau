@@ -143,7 +143,8 @@ Object.assign(App, {
         el.innerHTML = `
           <img class="avatar" src="${App.avatarUrl(f.id)}">
           <span class="friend-name" style="color:${colorHex(f.color)}">${esc(f.username)}</span>
-          <span class="muted" style="font-size:0.7rem">${f.bio || ''}</span>`
+          <span class="muted" style="font-size:0.7rem;flex:1">${f.bio || ''}</span>
+          <button class="btn small" onclick="App.unfriend(${f.id},'${esc(f.username)}')" title="quitar amigo">x</button>`
         listEl.appendChild(el)
       })
     } catch (e) { console.error(e) }
@@ -187,6 +188,15 @@ Object.assign(App, {
     try {
       await API.post('/friends/accept/' + requestId)
       showToast('amigo aceptado!')
+      App.loadFriends()
+    } catch (e) { showToast(e.message) }
+  },
+
+  async unfriend(userId, username) {
+    if (!confirm('quitar a ' + username + ' de amigos?')) return
+    try {
+      await API.del('/friends/' + userId)
+      showToast(username + ' eliminado de amigos')
       App.loadFriends()
     } catch (e) { showToast(e.message) }
   },

@@ -93,10 +93,6 @@ small, .muted { color: var(--text-secondary); }
   content: ''; position: absolute; top: 0; left: 20%; right: 20%;
   height: 2.5px; background: var(--pop);
 }
-#bottomNav button[data-mode="stories"] { --btn-pop: var(--pop-stories); }
-#bottomNav button[data-mode="posts"] { --btn-pop: var(--pop-posts); }
-#bottomNav button[data-mode="tweets"] { --btn-pop: var(--pop-tweets); }
-#bottomNav button[data-mode="chat"] { --btn-pop: var(--pop-chat); }
 #bottomNav button.active[data-mode="stories"] { color: var(--pop-stories); }
 #bottomNav button.active[data-mode="posts"] { color: var(--pop-posts); }
 #bottomNav button.active[data-mode="tweets"] { color: var(--pop-tweets); }
@@ -217,6 +213,12 @@ input[type="text"], input[type="file"], textarea, select {
 input:focus, textarea:focus {
   outline: none; border-color: var(--text);
 }
+:focus-visible {
+  outline: 2px solid var(--pop); outline-offset: 2px;
+}
+input:focus-visible, textarea:focus-visible {
+  outline: none; border-color: var(--pop);
+}
 
 /* ─── Tweet Composer (Twitter-style) ─── */
 .tweet-composer {
@@ -263,6 +265,10 @@ input:focus, textarea:focus {
   padding: 16px;
 }
 [data-theme="dark"] .modal { background: rgba(0,0,0,0.6); }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 16px;
+}
 .modal-content {
   background: var(--surface); border: 1px solid var(--border);
   padding: 20px; max-width: 480px; width: 100%;
@@ -415,7 +421,7 @@ input:focus, textarea:focus {
 .message small { font-size: 0.6rem; opacity: 0.5; }
 .chat-thread .composer {
   flex-direction: row; align-items: center; padding: 8px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border); border-bottom: none;
 }
 .chat-thread .composer input { margin-bottom: 0; flex: 1; }
 
@@ -617,19 +623,39 @@ input:focus, textarea:focus {
   border-color: var(--pop); font-weight: 600;
 }
 
-/* ─── Empty States ─── */
+/* ─── Empty States & Loading ─── */
 .empty {
   text-align: center; padding: 48px 20px;
   color: var(--text-secondary); font-size: 0.85rem;
 }
 .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+.loading {
+  text-align: center; padding: 32px 20px;
+  color: var(--text-secondary); font-size: 0.8rem;
+}
+.loading::after {
+  content: ''; display: inline-block;
+  animation: dots 1.2s steps(3) infinite;
+}
+@keyframes dots {
+  0% { content: ''; }
+  33% { content: '.'; }
+  66% { content: '..'; }
+  100% { content: '...'; }
+}
 
 /* ─── Toast ─── */
 .toast {
   position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%);
   background: var(--text); color: var(--bg);
   padding: 8px 16px; font-size: 0.8rem; z-index: 999;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow); max-width: 90vw;
+}
+@media (min-width: 768px) {
+  .toast { bottom: 24px; left: calc(220px + 50%); transform: translateX(calc(-50% - 110px)); }
+}
+@media (min-width: 1200px) {
+  .toast { left: calc(260px + 50%); transform: translateX(calc(-50% - 130px)); }
 }
 
 /* ─── Reply ─── */

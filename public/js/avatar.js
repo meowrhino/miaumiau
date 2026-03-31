@@ -230,65 +230,24 @@ const CAT_TRAITS = {
   cheeks:    { name: 'mejillas',  count: 2, labels: ['sin', 'sonrojadas'] },
 }
 
-// Generate from explicit traits (used by editor)
-function generateCatSvgFromTraits(colorName, traits) {
-  // Pack traits into a fake seed that produces those exact values
-  // Simpler: just modify generateCatSvg to accept optional overrides
-  const base = colorHex(colorName)
-  const [h, s, l] = hexToHsl(base)
-  const fur = hsl(h, s, Math.max(l, 45))
-  const furLight = hsl(h, Math.max(s-10, 20), Math.min(l+20, 85))
-  const furDark = hsl(h, s, Math.max(l-15, 25))
-  const noseC = hsl((h+10)%360, 50, 70)
-  const innerEar = hsl((h+5)%360, 60, 75)
-  const pupil = hsl(h, 15, 15)
-  const eyeY = 30, noseY = 34
-
-  // Same arrays as generateCatSvg (reusing by calling with a seed that matches)
-  // For simplicity, we generate with a temp seed and override
-  // Actually the cleanest way: build a seed from the traits
-  let packed = 0
-  packed = traits.body + packed * 3
-  packed = traits.ear + packed * 3
-  packed = traits.eye + packed * 5
-  packed = traits.mouth + packed * 4
-  packed = traits.pattern + packed * 5
-  packed = traits.accessory + packed * 8
-  packed = traits.tail + packed * 3
-  packed = traits.cheeks + packed * 2
-
-  // We need a seed that produces these exact traits.
-  // Brute-force is impractical. Instead, let's just duplicate the SVG assembly.
-  // The simplest approach: pass traits directly to a builder.
-
-  // Actually, let me just call generateCatSvg with a custom RNG that returns preset values
-  const values = [traits.body, traits.ear, traits.eye, traits.mouth, traits.pattern, traits.accessory, traits.tail, traits.cheeks]
-  let idx = 0
-  const fakeRng = { int: () => values[idx++], next: () => 0.5 }
-
-  // We need to reconstruct... this is getting messy. Let me just use the simplest approach:
-  // Store traits as avatar_seed by encoding them.
-  return generateCatSvg(traitsToSeed(traits), colorName)
-}
-
 // Encode traits into a seed that will reproduce them
 function traitsToSeed(traits) {
-  // We need to find a seed where seedRng produces exactly these trait values.
-  // Since the RNG is deterministic, we can brute-force (it's fast for small spaces).
-  for (let seed = 0; seed < 1000000; seed++) {
+  // Brute-force: find a seed that produces these exact trait values.
+  // 43,200 combinations, RNG is uniform enough that most hit within 5M.
+  for (let seed = 0; seed < 5000000; seed++) {
     const r = seedRng(seed)
-    if (r.int(3) === traits.body &&
-        r.int(3) === traits.ear &&
-        r.int(5) === traits.eye &&
-        r.int(4) === traits.mouth &&
-        r.int(5) === traits.pattern &&
-        r.int(8) === traits.accessory &&
-        r.int(3) === traits.tail &&
-        r.int(2) === traits.cheeks) {
-      return seed
-    }
+    if (r.int(3) !== traits.body) continue
+    if (r.int(3) !== traits.ear) continue
+    if (r.int(5) !== traits.eye) continue
+    if (r.int(4) !== traits.mouth) continue
+    if (r.int(5) !== traits.pattern) continue
+    if (r.int(8) !== traits.accessory) continue
+    if (r.int(3) !== traits.tail) continue
+    if (r.int(2) !== traits.cheeks) continue
+    return seed
   }
-  return 42 // fallback
+  // Very unlikely fallback — just use a random seed
+  return Math.floor(Math.random() * 0xFFFFFFFF)
 }
 
 // Decode seed to traits

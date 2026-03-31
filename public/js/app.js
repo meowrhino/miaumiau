@@ -160,52 +160,12 @@ const App = {
       if (!me) throw new Error('usuario no encontrado')
       App.user = { ...me, secret }
       App.save()
-      applyTheme(App.user.theme ?? 'oscuro')
       App.updateHeader()
       App.go('tweets')
     } catch (e) {
       App.user = null
       errEl.textContent = e.message
       errEl.hidden = false
-    }
-  },
-
-  // ─── Settings ───
-  openSettings() {
-    const modal = document.getElementById('settingsModal')
-    modal.hidden = false
-    App._settingsColor = App.user.color
-    App._settingsTheme = App.user.theme ?? 'oscuro'
-    renderColorGrid(document.getElementById('settingsColorGrid'), App.user.color, c => {
-      App._settingsColor = c
-    })
-    renderThemeGrid(document.getElementById('settingsThemeGrid'), App._settingsTheme, t => {
-      App._settingsTheme = t
-      applyTheme(t)
-    })
-    document.getElementById('settingsBio').value = App.user.bio ?? ''
-  },
-
-  closeSettings() {
-    document.getElementById('settingsModal').hidden = true
-    applyTheme(App.user.theme ?? 'oscuro')
-  },
-
-  async saveSettings() {
-    try {
-      const updated = await API.put('/users/' + App.user.id, {
-        color: App._settingsColor,
-        theme: App._settingsTheme,
-        bio: document.getElementById('settingsBio').value.trim()
-      })
-      App.user = { ...App.user, ...updated }
-      App.save()
-      applyTheme(App.user.theme)
-      App.updateHeader()
-      App.closeSettings()
-      showToast('guardado')
-    } catch (e) {
-      showToast(e.message)
     }
   },
 
