@@ -217,3 +217,85 @@ function generateCatSvg(seed, colorName) {
   ${accessory}
 </svg>`
 }
+
+// Trait metadata for the cat editor
+const CAT_TRAITS = {
+  body:      { name: 'cuerpo',    count: 3, labels: ['redondo', 'normal', 'gordito'] },
+  ear:       { name: 'orejas',    count: 3, labels: ['puntudas', 'redondas', 'dobladas'] },
+  eye:       { name: 'ojos',      count: 5, labels: ['redondos', 'grandes', 'dormilones', 'guiño', 'rasgados'] },
+  mouth:     { name: 'boca',      count: 4, labels: ['sonrisa', ':3', 'abierta', 'lengua'] },
+  pattern:   { name: 'patron',    count: 5, labels: ['liso', 'tabby', 'bicolor', 'manchas', 'mascara'] },
+  accessory: { name: 'accesorio', count: 8, labels: ['nada', 'nada', 'nada', 'lazo', 'gafas', 'collar', 'sombrero', 'flor'] },
+  tail:      { name: 'cola',      count: 3, labels: ['curvada', 'elegante', 'esponjosa'] },
+  cheeks:    { name: 'mejillas',  count: 2, labels: ['sin', 'sonrojadas'] },
+}
+
+// Generate from explicit traits (used by editor)
+function generateCatSvgFromTraits(colorName, traits) {
+  // Pack traits into a fake seed that produces those exact values
+  // Simpler: just modify generateCatSvg to accept optional overrides
+  const base = colorHex(colorName)
+  const [h, s, l] = hexToHsl(base)
+  const fur = hsl(h, s, Math.max(l, 45))
+  const furLight = hsl(h, Math.max(s-10, 20), Math.min(l+20, 85))
+  const furDark = hsl(h, s, Math.max(l-15, 25))
+  const noseC = hsl((h+10)%360, 50, 70)
+  const innerEar = hsl((h+5)%360, 60, 75)
+  const pupil = hsl(h, 15, 15)
+  const eyeY = 30, noseY = 34
+
+  // Same arrays as generateCatSvg (reusing by calling with a seed that matches)
+  // For simplicity, we generate with a temp seed and override
+  // Actually the cleanest way: build a seed from the traits
+  let packed = 0
+  packed = traits.body + packed * 3
+  packed = traits.ear + packed * 3
+  packed = traits.eye + packed * 5
+  packed = traits.mouth + packed * 4
+  packed = traits.pattern + packed * 5
+  packed = traits.accessory + packed * 8
+  packed = traits.tail + packed * 3
+  packed = traits.cheeks + packed * 2
+
+  // We need a seed that produces these exact traits.
+  // Brute-force is impractical. Instead, let's just duplicate the SVG assembly.
+  // The simplest approach: pass traits directly to a builder.
+
+  // Actually, let me just call generateCatSvg with a custom RNG that returns preset values
+  const values = [traits.body, traits.ear, traits.eye, traits.mouth, traits.pattern, traits.accessory, traits.tail, traits.cheeks]
+  let idx = 0
+  const fakeRng = { int: () => values[idx++], next: () => 0.5 }
+
+  // We need to reconstruct... this is getting messy. Let me just use the simplest approach:
+  // Store traits as avatar_seed by encoding them.
+  return generateCatSvg(traitsToSeed(traits), colorName)
+}
+
+// Encode traits into a seed that will reproduce them
+function traitsToSeed(traits) {
+  // We need to find a seed where seedRng produces exactly these trait values.
+  // Since the RNG is deterministic, we can brute-force (it's fast for small spaces).
+  for (let seed = 0; seed < 1000000; seed++) {
+    const r = seedRng(seed)
+    if (r.int(3) === traits.body &&
+        r.int(3) === traits.ear &&
+        r.int(5) === traits.eye &&
+        r.int(4) === traits.mouth &&
+        r.int(5) === traits.pattern &&
+        r.int(8) === traits.accessory &&
+        r.int(3) === traits.tail &&
+        r.int(2) === traits.cheeks) {
+      return seed
+    }
+  }
+  return 42 // fallback
+}
+
+// Decode seed to traits
+function seedToTraits(seed) {
+  const r = seedRng(seed)
+  return {
+    body: r.int(3), ear: r.int(3), eye: r.int(5), mouth: r.int(4),
+    pattern: r.int(5), accessory: r.int(8), tail: r.int(3), cheeks: r.int(2)
+  }
+}

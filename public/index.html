@@ -101,7 +101,8 @@
     <div class="profile-page">
       <div class="profile-avatar-area">
         <div id="profileAvatar" class="profile-avatar-big"></div>
-        <button class="btn small" onclick="App.rerollProfileAvatar()">otro gato</button>
+        <button class="btn small" onclick="CatEditor.open()">editar mi gato</button>
+        <button class="btn small" onclick="App.rerollProfileAvatar()">aleatorio</button>
       </div>
 
       <div class="profile-section">
@@ -208,6 +209,21 @@
     </div>
   </div>
 
+  <!-- Cat Editor Modal -->
+  <div id="catEditorModal" class="modal" hidden>
+    <div class="modal-content cat-editor">
+      <h2>editar tu gato</h2>
+      <div class="cat-editor-preview">
+        <div id="catEditorAvatar" class="profile-avatar-big"></div>
+      </div>
+      <div id="catEditorTraits" class="cat-editor-traits"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="CatEditor.close()">cancelar</button>
+        <button class="btn primary" onclick="CatEditor.save()">guardar gato</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
@@ -247,6 +263,7 @@
   <script src="/js/mode.posts.js"></script>
   <script src="/js/mode.stories.js"></script>
   <script src="/js/mode.chat.js"></script>
+  <script src="/js/cat-editor.js"></script>
   <script src="/js/mode.profile.js"></script>
   <script src="/js/story-editor.js"></script>
 </body>
