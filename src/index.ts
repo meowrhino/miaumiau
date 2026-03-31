@@ -53,7 +53,11 @@ app.put('/api/users/:id', async (c) => {
   if (!user) return err('No autorizado', 401)
   if (user.id !== Number(c.req.param('id'))) return err('No autorizado', 403)
 
-  const body = await c.req.json<{ color?: string; theme?: string; bio?: string }>()
+  const body = await c.req.json<{ color?: string; theme?: string; bio?: string; avatar_seed?: number }>()
+  // Update avatar_seed if provided
+  if (body.avatar_seed !== undefined) {
+    await c.env.DB.prepare('UPDATE users SET avatar_seed = ? WHERE id = ?').bind(body.avatar_seed, user.id).run()
+  }
   const updated = await db.userUpdate(c.env.DB, user.id,
     body.color ?? user.color,
     body.theme ?? user.theme,

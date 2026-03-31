@@ -91,6 +91,7 @@ Object.assign(App, {
   closeReply() {
     $('#replyModal').hidden = true
     App._replyToId = null
+    App._commentPostId = null
   },
 
   async submitReply() {

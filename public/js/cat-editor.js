@@ -53,19 +53,25 @@ const CatEditor = {
 
   async save() {
     const seed = traitsToSeed(CatEditor.traits)
-    App.user.avatar_seed = seed
-    App.save()
 
-    // Update profile preview
-    const preview = document.getElementById('profileAvatar')
-    preview.innerHTML = generateCatSvg(seed, CatEditor.color)
+    try {
+      // Persist to server
+      await API.put('/users/' + App.user.id, { avatar_seed: seed })
 
-    // Update composer avatar
-    App.updateHeader()
+      App.user.avatar_seed = seed
+      App.save()
 
-    App.bumpAvatarVersion()
-    showToast('gato actualizado')
-    CatEditor.close()
+      // Update profile preview
+      const preview = document.getElementById('profileAvatar')
+      preview.innerHTML = generateCatSvg(seed, CatEditor.color)
+
+      // Update composer avatar
+      App.bumpAvatarVersion()
+      App.updateHeader()
+
+      showToast('gato actualizado')
+      CatEditor.close()
+    } catch (e) { showToast(e.message) }
   },
 
   close() {

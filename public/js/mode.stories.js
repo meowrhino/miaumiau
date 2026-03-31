@@ -32,7 +32,7 @@ Object.assign(App, {
       App._storyGroups.forEach((group, gi) => {
         const el = document.createElement('button')
         el.className = 'story-bubble'
-        el.innerHTML = `<img class="avatar big" src="/api/users/${group.user_id}/avatar.svg">
+        el.innerHTML = `<img class="avatar big" src="${App.avatarUrl(group.user_id)}">
           <span style="color:${colorHex(group.color)}">${group.username}</span>`
         el.onclick = () => App.viewStories(gi)
         container.appendChild(el)

@@ -125,7 +125,6 @@ const App = {
       })
       App.user = { ...user, secret }
       App.save()
-      applyTheme('oscuro')
       App.updateHeader()
       App.go('tweets')
       showToast('tu clave: ' + name + '#' + secret + ' — guardala!', 10000)

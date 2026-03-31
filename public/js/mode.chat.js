@@ -26,7 +26,7 @@ Object.assign(App, {
         const el = document.createElement('div')
         el.className = 'item conversation'
         el.innerHTML = `
-          <img class="avatar" src="/api/users/${c.other_id}/avatar.svg" loading="lazy">
+          <img class="avatar" src="${App.avatarUrl(c.other_id)}" loading="lazy">
           <div class="item-body">
             <b style="color:${colorHex(c.other_color)}">${c.other_username}</b>
             <p class="muted truncate">${esc(c.last_message_preview || '')}</p>
