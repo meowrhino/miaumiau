@@ -529,8 +529,74 @@ input:focus, textarea:focus {
 .reply { padding-left: 32px; border-left: 2px solid var(--border); }
 
 /* ─── Responsive ─── */
+
+/* Mobile */
 @media (max-width: 480px) {
+  .tweet { padding: 10px 12px; }
   .item { padding: 10px 12px; }
   .story-bubbles { gap: 10px; padding: 10px 12px; }
   .reg-container { padding: 24px 16px; }
+}
+
+/* Desktop: sidebar nav, wider feed */
+@media (min-width: 768px) {
+  body { padding-bottom: 0; padding-left: 220px; }
+
+  #bottomNav {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 220px; height: 100dvh;
+    flex-direction: column; justify-content: flex-start;
+    border-top: none; border-right: 1px solid var(--border);
+    padding: 20px 0;
+    gap: 2px;
+  }
+  #bottomNav::before {
+    content: 'miaumiau';
+    display: block; padding: 8px 20px 20px;
+    font-size: 1.3rem; font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  #bottomNav button {
+    flex: none; flex-direction: row; justify-content: flex-start;
+    padding: 10px 20px; gap: 12px;
+    border-radius: 0;
+  }
+  #bottomNav button.active::after {
+    top: 0; bottom: 0; left: 0; right: auto;
+    width: 3px; height: 100%;
+  }
+  .nav-icon { width: 20px; height: 20px; }
+  .nav-label {
+    font-size: 0.8rem; text-transform: none;
+    letter-spacing: 0; font-weight: 500;
+  }
+
+  .feed {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .tweet { padding: 16px 20px; }
+  .tweet-text { font-size: 1rem; }
+  .tweet-composer { padding: 16px 20px; }
+
+  .profile-page { max-width: 500px; padding: 32px 24px; }
+  .profile-avatar-big { width: 120px; height: 120px; }
+
+  .modal-content { max-width: 520px; }
+
+  .chat-thread { max-width: 600px; }
+
+  .story-bubbles { max-width: 600px; padding: 16px 20px; }
+}
+
+/* Wide desktop: even more space */
+@media (min-width: 1200px) {
+  body { padding-left: 260px; }
+  #bottomNav { width: 260px; }
+  #bottomNav::before { font-size: 1.5rem; padding: 12px 24px 24px; }
+  #bottomNav button { padding: 12px 24px; }
+  .nav-label { font-size: 0.85rem; }
+  .feed { max-width: 640px; }
 }
