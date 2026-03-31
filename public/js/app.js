@@ -51,9 +51,29 @@ const App = {
     document.getElementById('header').hidden = true
 
     App._regColor = 'Coral'
+    App._regSeed = Math.floor(Math.random() * 0xFFFFFFFF)
     renderColorGrid(document.getElementById('regColorGrid'), 'Coral', c => {
       App._regColor = c
+      App.updateRegPreview()
     })
+    App.updateRegPreview()
+  },
+
+  rerollAvatar() {
+    App._regSeed = Math.floor(Math.random() * 0xFFFFFFFF)
+    App.updateRegPreview()
+  },
+
+  updateRegPreview() {
+    const preview = document.getElementById('regAvatarPreview')
+    const glow = document.getElementById('regAvatarGlow')
+    const svg = generateCatSvg(App._regSeed, App._regColor)
+    preview.innerHTML = svg
+    if (glow) glow.style.background = colorHex(App._regColor)
+    // animate on change
+    preview.classList.remove('pop')
+    void preview.offsetWidth
+    preview.classList.add('pop')
   },
 
   async register() {
@@ -73,7 +93,7 @@ const App = {
     }
 
     const secret = crypto.randomUUID().slice(0, 12)
-    const seed = Math.floor(Math.random() * 0xFFFFFFFF)
+    const seed = App._regSeed
 
     try {
       const user = await API.post('/users', {

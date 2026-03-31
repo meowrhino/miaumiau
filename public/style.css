@@ -312,13 +312,81 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .chat-thread .composer input { margin-bottom: 0; flex: 1; }
 
 /* ─── Registration ─── */
-#registration, #login {
+#registration {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100dvh; padding: 0;
+  background: radial-gradient(ellipse at 50% 30%, var(--bg3) 0%, var(--bg) 70%);
+}
+#login {
   display: flex; align-items: center; justify-content: center;
   min-height: 100dvh; padding: 1rem;
 }
-#registration .card, #login .card {
-  max-width: 400px; width: 100%;
+#login .card { max-width: 400px; width: 100%; }
+
+.reg-container {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1.5rem; max-width: 420px; width: 100%; padding: 2rem 1.5rem;
 }
+.reg-hero {
+  position: relative; display: flex; align-items: center; justify-content: center;
+}
+.reg-avatar {
+  width: 140px; height: 140px;
+  border-radius: 50%; overflow: hidden;
+  background: var(--bg2);
+  border: 3px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.reg-avatar svg { width: 100%; height: 100%; }
+.reg-avatar.pop {
+  animation: pop 0.3s ease;
+}
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.reg-avatar-glow {
+  position: absolute; width: 160px; height: 160px;
+  border-radius: 50%; filter: blur(40px); opacity: 0.3;
+  transition: background 0.5s;
+}
+.reg-form {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.75rem; width: 100%;
+}
+.reg-title {
+  font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em;
+  line-height: 1;
+}
+.reg-title-accent { color: var(--accent); }
+.reg-subtitle {
+  color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem;
+  text-align: center;
+}
+.reg-label {
+  font-size: 0.75rem; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.08em; align-self: flex-start; margin-bottom: -0.25rem;
+}
+.reg-form input[type="text"] {
+  font-size: 1.1rem; padding: 0.75rem 1rem;
+  border-radius: 12px; text-align: center;
+  background: var(--bg2); border: 2px solid var(--border);
+  transition: border-color 0.2s;
+}
+.reg-form input[type="text"]:focus { border-color: var(--accent); }
+.btn.big {
+  padding: 0.75rem 2rem; font-size: 1rem; border-radius: 12px;
+  width: 100%; font-weight: 600;
+}
+.btn-link {
+  background: none; border: none; color: var(--muted);
+  font-size: 0.8rem; cursor: pointer; padding: 0.25rem;
+  text-decoration: underline;
+}
+.btn-link:hover { color: var(--text); }
 
 /* ─── Toast ─── */
 .toast {
