@@ -11,10 +11,12 @@ Object.assign(App, {
       const bereals = await API.get('/bereal?limit=20')
       const grid = $('#berealGrid')
       grid.innerHTML = ''
+
       if (bereals.length === 0) {
         grid.innerHTML = '<div class="empty"><div class="empty-icon">📸</div><p>nadie ha publicado su miau real hoy.<br>se el primero!</p></div>'
         return
       }
+
       bereals.forEach(b => App.renderBereal(b, grid))
     } catch (e) { showToast(e.message) }
   },
@@ -22,14 +24,25 @@ Object.assign(App, {
   renderBereal(bereal, container) {
     const el = document.createElement('div')
     el.className = 'bereal-card'
+
+    // Format time as HH:MM
+    const d = new Date(bereal.created_at + 'Z')
+    const hours = String(d.getHours()).padStart(2, '0')
+    const mins = String(d.getMinutes()).padStart(2, '0')
+    const timeStr = hours + ':' + mins
+
+    // Is it today?
+    const today = new Date()
+    const isToday = d.toDateString() === today.toDateString()
+    const dateLabel = isToday ? 'hoy a las ' + timeStr : timeAgo(bereal.created_at)
+
     el.innerHTML = `
       <div class="bereal-card-header">
         <img class="avatar" src="${App.avatarUrl(bereal.user_id)}" loading="lazy">
         <span class="bereal-card-name" style="color:${colorHex(bereal.color)}">${esc(bereal.username)}</span>
-        <span class="bereal-card-time">${timeAgo(bereal.created_at)}</span>
+        <span class="bereal-card-time">${dateLabel}</span>
       </div>
-      <img class="bereal-card-image" src="/media/bereal/${bereal.media_key}" loading="lazy" alt=""
-           onerror="this.style.background='var(--accent-soft)';this.style.minHeight='200px'">
+      <img class="bereal-card-image" src="/media/bereal/${bereal.media_key}" loading="lazy" alt="">
       ${bereal.caption ? `<p class="bereal-card-caption">${esc(bereal.caption)}</p>` : ''}`
     container.appendChild(el)
   },
