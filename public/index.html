@@ -10,7 +10,7 @@
 
   <!-- Header -->
   <header id="header">
-    <img id="headerAvatar" class="avatar" src="" alt="" onclick="App.openSettings()">
+    <img id="headerAvatar" class="avatar" src="" alt="" onclick="App.go('profile')">
     <h1 onclick="location.reload()">miaumiau</h1>
     <button id="headerUnread" class="badge" hidden onclick="App.go('chat')">0</button>
     <button class="theme-toggle" onclick="App.toggleTheme()" title="cambiar tema" id="themeToggle"></button>
@@ -92,24 +92,51 @@
     </div>
   </section>
 
-  <!-- Settings Modal -->
-  <div id="settingsModal" class="modal" hidden>
-    <div class="modal-content card">
-      <h2>ajustes</h2>
-      <label>color</label>
-      <div id="settingsColorGrid" class="color-grid"></div>
-      <label>tema</label>
-      <div id="settingsThemeGrid" class="theme-grid"></div>
-      <label>bio</label>
-      <textarea id="settingsBio" maxlength="200" rows="2"></textarea>
-      <div class="modal-actions">
-        <button class="btn" onclick="App.closeSettings()">cerrar</button>
-        <button class="btn primary" onclick="App.saveSettings()">guardar</button>
+  <!-- Mode: Profile (5th tab) -->
+  <section id="mode-profile" class="mode" hidden>
+    <div class="profile-page">
+      <div class="profile-avatar-area">
+        <div id="profileAvatar" class="profile-avatar-big"></div>
+        <button class="btn small" onclick="App.rerollProfileAvatar()">otro gato</button>
       </div>
-      <hr>
-      <button class="btn danger small" onclick="App.deleteAccount()">eliminar cuenta</button>
+
+      <div class="profile-section">
+        <h2>tu gato</h2>
+        <p class="profile-label">color</p>
+        <div id="profileColorGrid" class="color-grid"></div>
+      </div>
+
+      <div class="profile-section">
+        <h2>perfil</h2>
+        <p class="profile-label">nombre</p>
+        <p id="profileName" class="profile-value"></p>
+        <p class="profile-label">bio</p>
+        <textarea id="profileBio" maxlength="200" rows="2" placeholder="algo sobre ti..."></textarea>
+        <button class="btn primary" onclick="App.saveProfile()">guardar</button>
+      </div>
+
+      <div class="profile-section">
+        <h2>tu clave secreta</h2>
+        <p class="muted" style="font-size:0.75rem;margin-bottom:6px">guardala bien, sin ella no puedes reconectar</p>
+        <div class="profile-key">
+          <code id="profileKey"></code>
+          <button class="btn small" onclick="App.copyKey()">copiar</button>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h2>tema</h2>
+        <div class="profile-theme-row">
+          <button class="btn" onclick="App.setTheme('light')" id="btnLight">claro</button>
+          <button class="btn" onclick="App.setTheme('dark')" id="btnDark">oscuro</button>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <button class="btn danger" onclick="App.deleteAccount()">eliminar cuenta</button>
+      </div>
     </div>
-  </div>
+  </section>
 
   <!-- Reply Modal -->
   <div id="replyModal" class="modal" hidden>
@@ -194,6 +221,9 @@
     <button data-mode="chat" onclick="App.go('chat')">
       <span class="nav-icon">✉️</span><span class="nav-label">chat</span>
     </button>
+    <button data-mode="profile" onclick="App.go('profile')">
+      <span class="nav-icon">🐱</span><span class="nav-label">tu gato</span>
+    </button>
   </nav>
 
   <!-- Scripts -->
@@ -208,6 +238,7 @@
   <script src="/js/mode.posts.js"></script>
   <script src="/js/mode.stories.js"></script>
   <script src="/js/mode.chat.js"></script>
+  <script src="/js/mode.profile.js"></script>
   <script src="/js/story-editor.js"></script>
 </body>
 </html>
