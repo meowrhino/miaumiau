@@ -4,6 +4,8 @@ import type { Context } from 'hono'
 export interface Env {
   DB: D1Database
   STORAGE: R2Bucket
+  TELEGRAM_TOKEN: string
+  TELEGRAM_CHAT_ID: string
 }
 
 export interface User {

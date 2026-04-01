@@ -13,6 +13,17 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
   status, headers: { 'Content-Type': 'application/json' }
 })
 const err = (msg: string, status = 400) => json({ error: msg }, status)
+
+// Telegram notification (fire-and-forget, never blocks)
+function notify(env: Env, msg: string) {
+  if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_CHAT_ID) return
+  const url = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' })
+  }).catch(() => {}) // silent fail
+}
 const num = (v: string | undefined, fallback: number) => { const n = Number(v); return isNaN(n) ? fallback : n }
 
 const requireAuth = async (c: any) => {
@@ -45,6 +56,7 @@ app.post('/api/users', async (c) => {
   const trip = await tripcode(body.secret)
   const seed = body.avatar_seed || Math.floor(Math.random() * 0xFFFFFFFF)
   const user = await db.userCreate(c.env.DB, body.username, trip, body.color, seed)
+  notify(c.env, `🐱 <b>nuevo gato!</b>\n${body.username} se ha unido a miaumiau (color: ${body.color})`)
   return json(user, 201)
 })
 
@@ -124,6 +136,7 @@ app.post('/api/tweets', async (c) => {
   if (!content) return err('Contenido: 1-1000 caracteres')
 
   const tweet = await db.tweetCreate(c.env.DB, user.id, content, body.parent_id ?? null)
+  notify(c.env, `💬 <b>${user.username}</b> miau:\n${content.slice(0, 200)}`)
   return json(tweet, 201)
 })
 
@@ -166,6 +179,7 @@ app.post('/api/posts', async (c) => {
     httpMetadata: { contentType: 'image/webp' }
   })
   const post = await db.postCreate(c.env.DB, user.id, caption, key)
+  notify(c.env, `📷 <b>${user.username}</b> nuevo post${caption ? ':\n' + caption.slice(0, 100) : ''}`)
   return json(post, 201)
 })
 
@@ -219,6 +233,7 @@ app.post('/api/bereal', async (c) => {
   const bereal = await c.env.DB.prepare(
     'INSERT INTO bereals (user_id, media_key, caption) VALUES (?, ?, ?) RETURNING *'
   ).bind(user.id, key, caption).first()
+  notify(c.env, `📸 <b>${user.username}</b> miau real${caption ? ':\n' + caption.slice(0, 100) : ''}`)
   return json(bereal, 201)
 })
 
@@ -314,6 +329,8 @@ app.post('/api/chat/:userId', async (c) => {
   if (!content) return err('Contenido: 1-2000 caracteres')
 
   const msg = await db.messageCreate(c.env.DB, user.id, receiverId, content, null)
+  const receiver = await db.userGetById(c.env.DB, receiverId)
+  notify(c.env, `✉️ <b>${user.username}</b> → <b>${receiver?.username ?? receiverId}</b>:\n${content.slice(0, 150)}`)
   return json(msg, 201)
 })
 
@@ -375,6 +392,8 @@ app.post('/api/friends/request/:userId', async (c) => {
 
   await c.env.DB.prepare('INSERT INTO friendships (requester_id, target_id) VALUES (?, ?)')
     .bind(user.id, targetId).run()
+  const target = await db.userGetById(c.env.DB, targetId)
+  notify(c.env, `🤝 <b>${user.username}</b> quiere ser amigo de <b>${target?.username ?? targetId}</b>`)
   return json({ ok: true }, 201)
 })
 
