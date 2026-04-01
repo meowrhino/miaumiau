@@ -454,6 +454,68 @@ app.get('/media/:path{.+}', async (c) => {
   return new Response(obj.body, { headers })
 })
 
+// ─── Telegram Bot Webhook ───
+
+app.post('/telegram/webhook', async (c) => {
+  const body = await c.req.json<any>()
+  const msg = body?.message
+  if (!msg?.text || !msg?.chat?.id) return json({ ok: true })
+
+  const chatId = String(msg.chat.id)
+  const text = msg.text.trim().toLowerCase()
+
+  // Only respond to the admin
+  if (chatId !== c.env.TELEGRAM_CHAT_ID) return json({ ok: true })
+
+  if (text === '/stats' || text === 'stats' || text === 'estado') {
+    const d = c.env.DB
+    const [users, tweets, posts, bereals, messages, convs, friendsAccepted, friendsPending] = await Promise.all([
+      d.prepare('SELECT COUNT(*) as c FROM users').first<{c:number}>(),
+      d.prepare('SELECT COUNT(*) as c FROM tweets').first<{c:number}>(),
+      d.prepare('SELECT COUNT(*) as c FROM posts').first<{c:number}>(),
+      d.prepare('SELECT COUNT(*) as c FROM bereals').first<{c:number}>(),
+      d.prepare('SELECT COUNT(*) as c FROM messages').first<{c:number}>(),
+      d.prepare('SELECT COUNT(*) as c FROM conversations').first<{c:number}>(),
+      d.prepare("SELECT COUNT(*) as c FROM friendships WHERE status = 'accepted'").first<{c:number}>(),
+      d.prepare("SELECT COUNT(*) as c FROM friendships WHERE status = 'pending'").first<{c:number}>(),
+    ])
+
+    // Recent users (last 7 days)
+    const recent = await d.prepare(
+      "SELECT username, color, created_at FROM users ORDER BY created_at DESC LIMIT 10"
+    ).all<{username:string, color:string, created_at:string}>()
+
+    const userList = recent.results.map(u =>
+      `  · <b>${u.username}</b> (${u.color}) — ${u.created_at.slice(0,10)}`
+    ).join('\n')
+
+    // Stories active
+    const stories = await d.prepare("SELECT COUNT(*) as c FROM stories WHERE expires_at > datetime('now')").first<{c:number}>()
+
+    const reply = `📊 <b>miaumiau stats</b>\n\n` +
+      `👤 <b>${users?.c ?? 0}</b> usuarios\n` +
+      `💬 <b>${tweets?.c ?? 0}</b> miaus\n` +
+      `📷 <b>${posts?.c ?? 0}</b> posts\n` +
+      `📸 <b>${bereals?.c ?? 0}</b> miau reals\n` +
+      `🔥 <b>${stories?.c ?? 0}</b> stories activas\n` +
+      `✉️ <b>${messages?.c ?? 0}</b> mensajes en <b>${convs?.c ?? 0}</b> chats\n` +
+      `🤝 <b>${friendsAccepted?.c ?? 0}</b> amistades · <b>${friendsPending?.c ?? 0}</b> pendientes\n\n` +
+      `<b>ultimos usuarios:</b>\n${userList}`
+
+    notify(c.env, reply)
+    return json({ ok: true })
+  }
+
+  if (text === '/help' || text === 'help' || text === 'ayuda') {
+    notify(c.env, `🐱 <b>miaumiau bot</b>\n\nComandos:\n· <b>stats</b> / <b>estado</b> — estadisticas completas\n· <b>ayuda</b> — este mensaje\n\nRecibo alertas automaticas de toda la actividad.`)
+    return json({ ok: true })
+  }
+
+  // Unknown command
+  notify(c.env, `miau? no entiendo. escribe <b>stats</b> o <b>ayuda</b>`)
+  return json({ ok: true })
+})
+
 // ─── Story Cleanup (scheduled) ───
 
 export default {
