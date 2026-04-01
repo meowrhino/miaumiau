@@ -14,16 +14,18 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
 })
 const err = (msg: string, status = 400) => json({ error: msg }, status)
 
-// Telegram notification (fire-and-forget, never blocks)
-function notify(env: Env, msg: string) {
-  if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_CHAT_ID) return
+// Telegram: send message (returns promise)
+function sendTelegram(env: Env, msg: string): Promise<void> {
+  if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_CHAT_ID) return Promise.resolve()
   const url = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`
-  fetch(url, {
+  return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' })
-  }).catch(() => {}) // silent fail
+  }).then(() => {}).catch(() => {})
 }
+// Fire-and-forget wrapper for non-webhook contexts
+function notify(env: Env, msg: string) { sendTelegram(env, msg) }
 const num = (v: string | undefined, fallback: number) => { const n = Number(v); return isNaN(n) ? fallback : n }
 
 const requireAuth = async (c: any) => {
@@ -502,17 +504,17 @@ app.post('/telegram/webhook', async (c) => {
       `🤝 <b>${friendsAccepted?.c ?? 0}</b> amistades · <b>${friendsPending?.c ?? 0}</b> pendientes\n\n` +
       `<b>ultimos usuarios:</b>\n${userList}`
 
-    notify(c.env, reply)
+    await sendTelegram(c.env, reply)
     return json({ ok: true })
   }
 
   if (text === '/help' || text === 'help' || text === 'ayuda') {
-    notify(c.env, `🐱 <b>miaumiau bot</b>\n\nComandos:\n· <b>stats</b> / <b>estado</b> — estadisticas completas\n· <b>ayuda</b> — este mensaje\n\nRecibo alertas automaticas de toda la actividad.`)
+    await sendTelegram(c.env, `🐱 <b>miaumiau bot</b>\n\nComandos:\n· <b>stats</b> / <b>estado</b> — estadisticas completas\n· <b>ayuda</b> — este mensaje\n\nRecibo alertas automaticas de toda la actividad.`)
     return json({ ok: true })
   }
 
   // Unknown command
-  notify(c.env, `miau? no entiendo. escribe <b>stats</b> o <b>ayuda</b>`)
+  await sendTelegram(c.env, `miau? no entiendo. escribe <b>stats</b> o <b>ayuda</b>`)
   return json({ ok: true })
 })
 
