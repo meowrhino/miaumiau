@@ -113,6 +113,11 @@
 
   <!-- Mode: Chat -->
   <section id="mode-chat" class="mode" hidden>
+    <div class="chat-search">
+      <input id="chatSearch" type="text" placeholder="buscar gatos para chatear..." autocomplete="off"
+             oninput="App.searchChatUsers(this.value)">
+      <div id="chatSearchResults"></div>
+    </div>
     <div id="chatConversations" class="feed"></div>
     <div id="chatThread" class="chat-thread" hidden>
       <div id="chatHeader" class="chat-header">

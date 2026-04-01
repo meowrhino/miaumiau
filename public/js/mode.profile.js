@@ -144,6 +144,7 @@ Object.assign(App, {
           <img class="avatar" src="${App.avatarUrl(f.id)}">
           <span class="friend-name" style="color:${colorHex(f.color)}">${esc(f.username)}</span>
           <span class="muted" style="font-size:0.7rem;flex:1">${f.bio || ''}</span>
+          <button class="btn small" onclick="App.startChatWith(${f.id},'${esc(f.username)}','${f.color}')" title="chatear">💬</button>
           <button class="btn small" onclick="App.unfriend(${f.id},'${esc(f.username)}')" title="quitar amigo">x</button>`
         listEl.appendChild(el)
       })

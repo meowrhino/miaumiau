@@ -5,12 +5,45 @@ Object.assign(App, {
   _chatPollSince: null,
   _chatPollInterval: 5000,
 
+  _chatSearchTimeout: null,
+
   enter_chat() {
     App._chatUserId = null
     $('#chatThread').hidden = true
     $('#chatConversations').hidden = false
+    $('.chat-search').hidden = false
+    $('#chatSearch').value = ''
+    $('#chatSearchResults').innerHTML = ''
     App.loadConversations()
     App._startChatPoll()
+  },
+
+  searchChatUsers(query) {
+    clearTimeout(App._chatSearchTimeout)
+    const results = $('#chatSearchResults')
+    if (!query || query.length < 1) { results.innerHTML = ''; return }
+    App._chatSearchTimeout = setTimeout(async () => {
+      try {
+        const users = await API.get('/users/search?q=' + encodeURIComponent(query))
+        results.innerHTML = ''
+        users.filter(u => u.id !== App.user.id).forEach(u => {
+          const el = document.createElement('div')
+          el.className = 'friend-row chat-search-row'
+          el.innerHTML = `
+            <img class="avatar" src="${App.avatarUrl(u.id)}">
+            <span class="friend-name" style="color:${colorHex(u.color)}">${esc(u.username)}</span>`
+          el.onclick = () => {
+            results.innerHTML = ''
+            $('#chatSearch').value = ''
+            App.openChat(u.id, u.username, u.color)
+          }
+          results.appendChild(el)
+        })
+        if (users.filter(u => u.id !== App.user.id).length === 0) {
+          results.innerHTML = '<p class="muted" style="padding:8px;font-size:0.8rem">no se encontro ningun gato</p>'
+        }
+      } catch (e) { console.error(e) }
+    }, 300)
   },
 
   async loadConversations() {
@@ -40,6 +73,7 @@ Object.assign(App, {
   async openChat(userId, username, color) {
     App._chatUserId = userId
     $('#chatConversations').hidden = true
+    $('.chat-search').hidden = true
     $('#chatThread').hidden = false
     $('#chatWith').innerHTML = `<b style="color:${colorHex(color)}">${username}</b>`
     $('#chatInput').value = ''
@@ -85,6 +119,7 @@ Object.assign(App, {
     App._chatUserId = null
     $('#chatThread').hidden = true
     $('#chatConversations').hidden = false
+    $('.chat-search').hidden = false
     App.loadConversations()
   },
 

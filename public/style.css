@@ -388,6 +388,16 @@ input:focus-visible, textarea:focus-visible {
 .story-editor-actions input[type="file"] { flex: 1; margin-bottom: 0; }
 
 /* ─── Chat ─── */
+.chat-search {
+  max-width: 580px; margin: 0 auto; padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+.chat-search input { margin-bottom: 0; }
+.chat-search-row { cursor: pointer; padding: 8px 4px; }
+.chat-search-row:hover { background: var(--accent-soft); }
 .conversation { cursor: pointer; }
 .conversation:hover { background: var(--accent-soft); }
 .chat-thread {
