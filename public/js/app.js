@@ -13,10 +13,19 @@ const App = {
     if (saved) {
       App.user = JSON.parse(saved)
       App.updateHeader()
-      App.go('tweets')
-    } else {
-      App.showRegistration()
     }
+
+    // Public page (/u/:username, /p/:id, /t/:id) — render read-only, no login required
+    if (window.__PUBLIC_CONTEXT__) {
+      document.querySelectorAll('.mode').forEach(s => s.hidden = true)
+      document.getElementById('mode-public').hidden = false
+      App.mode = 'public'
+      App.enter_public()
+      return
+    }
+
+    if (App.user) App.go('tweets')
+    else App.showRegistration()
   },
 
   toggleTheme() {

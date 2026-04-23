@@ -9,6 +9,7 @@ routes = [
 
 [assets]
 directory = "public"
+binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"

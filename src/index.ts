@@ -438,6 +438,159 @@ app.get('/api/users/search', async (c) => {
   return json(users.results)
 })
 
+// ─── Public pages (OG-ready HTML + JSON API) ───
+
+const ATTR_MAP: Record<string, string> = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}
+const attr = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ATTR_MAP[c])
+const safeJson = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c')
+// DB text is stored pre-escaped via esc(); decode for lengths/previews
+const UNESC_MAP: Record<string, string> = {amp:'&',lt:'<',gt:'>',quot:'"','#39':"'"}
+const unesc = (s: string) => s.replace(/&(amp|lt|gt|quot|#39);/g, (_, e: string) => UNESC_MAP[e])
+const clip = (s: string, n: number) => { const t = unesc(s); return t.length > n ? t.slice(0, n - 1) + '…' : t }
+
+async function renderPublicHtml(env: Env, req: Request, ctx: {
+  title: string
+  description: string
+  image: string
+  url: string
+  type?: 'profile' | 'article' | 'website'
+  bootstrap: unknown
+}): Promise<Response> {
+  const assetReq = new Request(new URL('/index.html', req.url).toString())
+  const assetRes = await env.ASSETS.fetch(assetReq)
+  let html = await assetRes.text()
+
+  const meta = `<title>${attr(ctx.title)}</title>
+  <meta name="description" content="${attr(ctx.description)}">
+  <meta property="og:title" content="${attr(ctx.title)}">
+  <meta property="og:description" content="${attr(ctx.description)}">
+  <meta property="og:image" content="${attr(ctx.image)}">
+  <meta property="og:url" content="${attr(ctx.url)}">
+  <meta property="og:type" content="${ctx.type ?? 'website'}">
+  <meta property="og:site_name" content="miaumiau">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${attr(ctx.title)}">
+  <meta name="twitter:description" content="${attr(ctx.description)}">
+  <meta name="twitter:image" content="${attr(ctx.image)}">
+  <link rel="canonical" href="${attr(ctx.url)}">
+  <script>window.__PUBLIC_CONTEXT__ = ${safeJson(ctx.bootstrap)};</script>`
+
+  html = html.replace(/<!-- meta:start -->[\s\S]*?<!-- meta:end -->/, meta)
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60' }
+  })
+}
+
+app.get('/api/public/users/:username', async (c) => {
+  const username = c.req.param('username')
+  const user = await db.userGet(c.env.DB, username)
+  if (!user) return err('Usuario no encontrado', 404)
+
+  const [tweets, posts, bereals] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT t.*, u.username, u.color, u.avatar_seed,
+        (SELECT COUNT(*) FROM tweets r WHERE r.parent_id = t.id) as reply_count
+      FROM tweets t JOIN users u ON t.user_id = u.id
+      WHERE t.user_id = ? AND t.parent_id IS NULL AND t.hidden = 0
+      ORDER BY t.created_at DESC LIMIT 30
+    `).bind(user.id).all(),
+    c.env.DB.prepare(`
+      SELECT p.*, u.username, u.color, u.avatar_seed,
+        (SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id = p.id) as comment_count
+      FROM posts p JOIN users u ON p.user_id = u.id
+      WHERE p.user_id = ? AND p.hidden = 0
+      ORDER BY p.created_at DESC LIMIT 24
+    `).bind(user.id).all(),
+    c.env.DB.prepare(`
+      SELECT b.*, u.username, u.color, u.avatar_seed
+      FROM bereals b JOIN users u ON b.user_id = u.id
+      WHERE b.user_id = ? ORDER BY b.created_at DESC LIMIT 24
+    `).bind(user.id).all().catch(() => ({ results: [] }))
+  ])
+
+  return json({
+    user: {
+      id: user.id, username: user.username, color: user.color,
+      avatar_seed: user.avatar_seed, bio: user.bio, created_at: user.created_at
+    },
+    tweets: tweets.results,
+    posts: posts.results,
+    bereals: (bereals as any).results ?? []
+  })
+})
+
+app.get('/u/:username', async (c) => {
+  const username = c.req.param('username')
+  const user = await db.userGet(c.env.DB, username)
+  const url = new URL(c.req.url)
+  if (!user) {
+    return renderPublicHtml(c.env, c.req.raw, {
+      title: `${username} no existe · miaumiau`,
+      description: 'este gato no existe en miaumiau',
+      image: `${url.origin}/favicon/favicon-32x32.png`,
+      url: url.href,
+      bootstrap: { kind: 'user_not_found', username }
+    })
+  }
+  const bioText = user.bio ? unesc(user.bio) : ''
+  return renderPublicHtml(c.env, c.req.raw, {
+    title: `@${user.username} · miaumiau`,
+    description: bioText || `el espacio de ${user.username} en miaumiau`,
+    image: `${url.origin}/api/users/${user.id}/avatar.svg`,
+    url: url.href,
+    type: 'profile',
+    bootstrap: { kind: 'user', username: user.username }
+  })
+})
+
+app.get('/p/:id', async (c) => {
+  const id = Number(c.req.param('id'))
+  const post = await db.postGet(c.env.DB, id) as any
+  const url = new URL(c.req.url)
+  if (!post) {
+    return renderPublicHtml(c.env, c.req.raw, {
+      title: 'post no encontrado · miaumiau',
+      description: 'este post ya no existe',
+      image: `${url.origin}/favicon/favicon-32x32.png`,
+      url: url.href,
+      bootstrap: { kind: 'post_not_found', id }
+    })
+  }
+  const caption = post.caption ? clip(post.caption, 60) : ''
+  return renderPublicHtml(c.env, c.req.raw, {
+    title: caption ? `${caption} · @${post.username}` : `foto de @${post.username} · miaumiau`,
+    description: caption || `una foto de ${post.username} en miaumiau`,
+    image: `${url.origin}/media/posts/${post.media_key}`,
+    url: url.href,
+    type: 'article',
+    bootstrap: { kind: 'post', id: post.id }
+  })
+})
+
+app.get('/t/:id', async (c) => {
+  const id = Number(c.req.param('id'))
+  const tweet = await db.tweetGet(c.env.DB, id) as any
+  const url = new URL(c.req.url)
+  if (!tweet) {
+    return renderPublicHtml(c.env, c.req.raw, {
+      title: 'miau no encontrado · miaumiau',
+      description: 'este miau ya no existe',
+      image: `${url.origin}/favicon/favicon-32x32.png`,
+      url: url.href,
+      bootstrap: { kind: 'tweet_not_found', id }
+    })
+  }
+  const preview = clip(tweet.content, 200)
+  return renderPublicHtml(c.env, c.req.raw, {
+    title: `@${tweet.username}: ${clip(tweet.content, 60)} · miaumiau`,
+    description: preview,
+    image: `${url.origin}/api/users/${tweet.user_id}/avatar.svg`,
+    url: url.href,
+    type: 'article',
+    bootstrap: { kind: 'tweet', id: tweet.id }
+  })
+})
+
 // ─── Media (R2) ───
 
 app.get('/media/:path{.+}', async (c) => {

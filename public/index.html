@@ -6,7 +6,15 @@
   <meta name="theme-color" content="#fffcf7">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <!-- meta:start -->
   <title>miaumiau</title>
+  <meta name="description" content="un espacio tranquilo. sin algoritmos. sin anuncios.">
+  <meta property="og:title" content="miaumiau">
+  <meta property="og:description" content="un espacio tranquilo. sin algoritmos. sin anuncios.">
+  <meta property="og:site_name" content="miaumiau">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <!-- meta:end -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
   <link rel="icon" href="/favicon/favicon.ico">
@@ -195,6 +203,16 @@
     </div>
   </section>
 
+  <!-- Mode: Public (read-only profile/post/tweet for /u/:username, /p/:id, /t/:id) -->
+  <section id="mode-public" class="mode" hidden>
+    <div class="public-page">
+      <div id="publicContent"></div>
+      <div class="public-cta">
+        <a href="/" class="btn primary">entrar a miaumiau</a>
+      </div>
+    </div>
+  </section>
+
   <!-- Reply Modal -->
   <div id="replyModal" class="modal" hidden>
     <div class="modal-content card">
@@ -328,6 +346,7 @@
   <script src="/js/mode.bereal.js"></script>
   <script src="/js/cat-editor.js"></script>
   <script src="/js/mode.profile.js"></script>
+  <script src="/js/mode.public.js"></script>
   <script src="/js/story-editor.js"></script>
 </body>
 </html>
