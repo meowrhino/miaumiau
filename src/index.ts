@@ -380,6 +380,32 @@ app.get('/api/system', async (c) => {
   return json({ maintenance: flag?.value === '1' })
 })
 
+// ─── Tracking (analytics) ───
+// Fire-and-forget event log. Auth optional (anon allowed). Rate limited per IP.
+app.post('/api/track', async (c) => {
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':track', 120)) return new Response(null, { status: 204 })
+  const user = await auth(c)  // optional
+  const body = await c.req.json<{ kind?: string; props?: unknown }>().catch(() => ({}))
+  const kind = typeof body.kind === 'string' ? body.kind.slice(0, 64) : null
+  if (!kind) return new Response(null, { status: 204 })
+  // Best-effort write — never blocks the client
+  try { await db.eventInsert(c.env.DB, user?.id ?? null, kind, body.props ?? null) } catch (_) {}
+  return new Response(null, { status: 204 })
+})
+
+// ─── Admin Stats (owner-only) ───
+// Whitelist of accounts that may view /admin/stats. Add others here if needed.
+const ADMIN_ACCOUNTS = new Set(['manu'])
+app.get('/api/admin/stats', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const isAdmin = ADMIN_ACCOUNTS.has(user.account_name ?? '') || ADMIN_ACCOUNTS.has(user.username ?? '')
+  if (!isAdmin) return err('Acceso restringido', 403)
+  const data = await db.stats(c.env.DB)
+  return json(data)
+})
+
 // ─── BeReal ───
 
 app.get('/api/bereal', async (c) => {
@@ -880,7 +906,7 @@ app.post('/telegram/webhook', async (c) => {
 
 // ─── SPA catch-all: serve index.html for app routes (/tweets, /stories, etc.) ───
 // Static assets (CSS, JS, images) are auto-served by the [assets] binding before this handler runs.
-const SPA_ROUTES = new Set(['', 'tweets', 'stories', 'posts', 'chat', 'bereal', 'profile', 'city'])
+const SPA_ROUTES = new Set(['', 'tweets', 'stories', 'posts', 'chat', 'bereal', 'profile', 'city', 'admin'])
 app.get('*', async (c) => {
   const url = new URL(c.req.url)
   const path = url.pathname

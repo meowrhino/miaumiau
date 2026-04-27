@@ -2,7 +2,7 @@
 // Public pages (/u/:user, /p/:id, /t/:id) are server-rendered first,
 // then the SPA takes over.
 ;(function () {
-  const SECTIONS = ['tweets', 'stories', 'posts', 'chat', 'bereal', 'profile', 'city']
+  const SECTIONS = ['tweets', 'stories', 'posts', 'chat', 'bereal', 'profile', 'city', 'admin']
 
   // path → { mode, params }
   function parse(path) {

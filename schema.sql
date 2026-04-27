@@ -137,3 +137,13 @@ CREATE TABLE IF NOT EXISTS system_flags (
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    kind TEXT NOT NULL,
+    props_json TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_events_kind_created ON events(kind, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id, created_at DESC);

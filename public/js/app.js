@@ -94,6 +94,8 @@ const App = {
     if (App.user && mode !== 'city' && window.City && City.writePresenceForMode) {
       City.writePresenceForMode(mode)
     }
+    // Track section view (analytics — drives /admin/stats)
+    if (window.track) track('view:section', { section: mode })
     // update pop color
     const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', bereal: 'var(--pop-bereal)', profile: 'var(--pop-profile)' }
     document.documentElement.style.setProperty('--pop', popMap[mode] ?? 'var(--text)')
@@ -253,6 +255,7 @@ const App = {
       App.user = { ...data.user, token: data.token, username: data.user.display_name }
       App.save()
       App.updateHeader()
+      if (window.track) track('auth:register', { color: App._regColor })
       App.go('tweets')
       showToast('¡bienvenido al mundo miau!', 4000)
     } catch (e) {
@@ -284,6 +287,7 @@ const App = {
       App.user = { ...data.user, token: data.token, username: data.user.display_name }
       App.save()
       App.updateHeader()
+      if (window.track) track('auth:login')
       App.go('tweets')
     } catch (e) {
       App.user = null

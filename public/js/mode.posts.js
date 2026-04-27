@@ -75,6 +75,7 @@ Object.assign(App, {
       await API.upload('/posts', fd)
       App.closePostComposer()
       App.loadPosts(1)
+      if (window.track) track('create:post', { hasCaption: !!caption })
       showToast('publicado')
     } catch (e) { showToast(e.message) }
   },

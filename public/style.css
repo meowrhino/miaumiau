@@ -622,6 +622,92 @@ small, .muted { color: var(--text-secondary); }
 }
 .city-canvas:active { cursor: grabbing; }
 
+/* ─── ADMIN DASHBOARD (/admin — owner-only stats) ─── */
+#mode-admin { min-height: auto; }
+.admin-page {
+  max-width: 760px; margin: 18px auto; padding: 18px 18px 100px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.admin-title {
+  font-family: var(--font-display);
+  font-size: 2rem; font-weight: 800; letter-spacing: -0.025em;
+  background: linear-gradient(105deg, var(--text), color-mix(in srgb, var(--text) 55%, var(--pop-stories)));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.admin-sub { font-family: var(--font-pixel); color: var(--text-secondary); font-size: 0.78rem; letter-spacing: 0.04em; }
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.admin-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px 10px;
+  background: var(--surface-glass-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft), var(--bevel-glass);
+}
+.admin-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.admin-stat-label {
+  font-family: var(--font-pixel);
+  font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.04em;
+}
+.admin-block {
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-soft), var(--bevel-glass);
+}
+.admin-block h2 {
+  font-family: var(--font-display);
+  font-size: 1.05rem; font-weight: 700; letter-spacing: -0.015em;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.admin-bar-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px 0;
+}
+.admin-bar-label { width: 90px; font-size: 0.85rem; font-weight: 600; }
+.admin-bar { flex: 1; height: 14px; background: var(--accent-soft); border-radius: 999px; overflow: hidden; }
+.admin-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pop-tweets), var(--pop-stories));
+  border-radius: 999px;
+  transition: width var(--t-mid) var(--ease);
+}
+.admin-bar-count { font-size: 0.78rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
+.admin-hours {
+  display: flex; gap: 4px; align-items: flex-end;
+  height: 100px;
+}
+.admin-hour-bar {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  height: 100%;
+}
+.admin-hour-bar > div {
+  width: 100%; min-height: 2px;
+  background: linear-gradient(180deg, var(--pop-posts), color-mix(in srgb, var(--pop-posts) 60%, var(--pop-tweets)));
+  border-radius: 4px 4px 0 0;
+}
+.admin-hour-bar > span { font-size: 0.62rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.admin-heatmap-wrap { width: 100%; }
+.admin-heatmap-wrap canvas {
+  width: 100%; height: auto;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  display: block;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+
 /* ─── ZONE SHEET (bottom-sheet over the city — Phase 4) ─── */
 .zone-sheet {
   position: fixed; inset: 0; z-index: 220;

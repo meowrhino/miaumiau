@@ -231,6 +231,8 @@
           else World.applyHabitat('city')
         }
         City.writePresence(true)  // immediate write on zone change
+        // Track zone entry (drives heatmap)
+        if (newZone && window.track) track('enter:zone', { zone: newZone })
       }
     },
 

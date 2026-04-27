@@ -67,6 +67,7 @@ Object.assign(App, {
       const tweet = await API.post('/tweets', { content })
       input.value = ''
       $('#tweetCount').textContent = '0/1000'
+      if (window.track) track('create:tweet', { len: content.length })
       // reload to get full data with username etc
       App.loadTweets(1)
     } catch (e) { showToast(e.message) }

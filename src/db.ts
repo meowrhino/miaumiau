@@ -239,6 +239,69 @@ export const presenceList = (db: DB, secondsActive: number = 90) =>
 export const presenceClear = (db: DB, userId: number) =>
   db.prepare('DELETE FROM presence WHERE user_id = ?').bind(userId).run()
 
+// ─── Events (analytics: drives /admin/stats + city heatmap) ───
+
+export const eventInsert = (db: DB, userId: number | null, kind: string, props: unknown) => {
+  const propsJson = props ? JSON.stringify(props) : null
+  return db.prepare('INSERT INTO events (user_id, kind, props_json) VALUES (?, ?, ?)')
+    .bind(userId, kind, propsJson).run()
+}
+
+// Stats aggregator — single roundtrip with several aggregates.
+// Returns: counts, sectionViews, zoneEntries (heatmap), hourly histogram, recent events.
+export async function stats(db: DB) {
+  const [users, tweets, posts, bereals, msgs, sectionViews, zoneEntries, hourly, dailyActive7, dailyActive30] = await Promise.all([
+    db.prepare("SELECT COUNT(*) as c FROM users").first<{ c: number }>(),
+    db.prepare("SELECT COUNT(*) as c FROM tweets WHERE hidden = 0").first<{ c: number }>(),
+    db.prepare("SELECT COUNT(*) as c FROM posts WHERE hidden = 0").first<{ c: number }>(),
+    db.prepare("SELECT COUNT(*) as c FROM bereals").first<{ c: number }>(),
+    db.prepare("SELECT COUNT(*) as c FROM messages").first<{ c: number }>(),
+    db.prepare(`
+      SELECT json_extract(props_json,'$.section') AS section, COUNT(*) AS c
+      FROM events
+      WHERE kind = 'view:section' AND created_at > datetime('now', '-7 days')
+      GROUP BY section ORDER BY c DESC
+    `).all<{ section: string; c: number }>(),
+    db.prepare(`
+      SELECT json_extract(props_json,'$.zone') AS zone, COUNT(*) AS c
+      FROM events
+      WHERE kind = 'enter:zone' AND created_at > datetime('now', '-7 days')
+      GROUP BY zone ORDER BY c DESC
+    `).all<{ zone: string; c: number }>(),
+    db.prepare(`
+      SELECT CAST(strftime('%H', created_at) AS INTEGER) AS hour, COUNT(*) AS c
+      FROM events WHERE created_at > datetime('now', '-7 days')
+      GROUP BY hour ORDER BY hour
+    `).all<{ hour: number; c: number }>(),
+    db.prepare(`
+      SELECT COUNT(DISTINCT user_id) AS c FROM events
+      WHERE user_id IS NOT NULL AND created_at > datetime('now', '-7 days')
+    `).first<{ c: number }>(),
+    db.prepare(`
+      SELECT COUNT(DISTINCT user_id) AS c FROM events
+      WHERE user_id IS NOT NULL AND created_at > datetime('now', '-30 days')
+    `).first<{ c: number }>(),
+  ])
+  return {
+    counts: {
+      users: users?.c ?? 0,
+      tweets: tweets?.c ?? 0,
+      posts: posts?.c ?? 0,
+      bereals: bereals?.c ?? 0,
+      messages: msgs?.c ?? 0,
+      active7: dailyActive7?.c ?? 0,
+      active30: dailyActive30?.c ?? 0,
+    },
+    sectionViews: sectionViews.results,
+    zoneEntries: zoneEntries.results,
+    hourly: hourly.results,
+  }
+}
+
+// Cleanup: prune events older than `days` days. Run via cron.
+export const eventsCleanup = (db: DB, days: number = 90) =>
+  db.prepare("DELETE FROM events WHERE created_at < datetime('now', '-' || ? || ' days')").bind(days).run()
+
 // ─── System flags (maintenance kill switch) ───
 
 export const flagGet = (db: DB, key: string) =>
