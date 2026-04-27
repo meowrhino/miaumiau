@@ -1,12 +1,35 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { Env } from './middleware'
-import { auth, rateLimit, validateText, tripcode, esc } from './middleware'
+import {
+  auth, rateLimit, validateText, tripcode, esc,
+  hashPassword, verifyPassword, issueToken,
+  validateAccountName, validateDisplayName, validatePassword,
+} from './middleware'
 import * as db from './db'
 import { generateCatSvg, COLOR_NAMES } from './poporing'
 
 const app = new Hono<{ Bindings: Env }>()
 app.use('*', cors())
+
+// ─── Maintenance kill switch ───
+// When system_flags.maintenance_mode = '1', refuse writes (POST/PUT/DELETE).
+// GET still works (read-only mode). Telegram webhook is exempt so admin can toggle off.
+app.use('/api/*', async (c, next) => {
+  const method = c.req.method
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next()
+  // Allow these endpoints even in maintenance (so admin can recover, users can see status)
+  const path = new URL(c.req.url).pathname
+  if (path === '/api/system') return next()
+  const flag = await db.flagGet(c.env.DB, 'maintenance_mode').catch(() => null)
+  if (flag?.value === '1') {
+    return new Response(JSON.stringify({ error: 'miaumiau está en mantenimiento. vuelve en un rato 🐱', maintenance: true }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '300' },
+    })
+  }
+  return next()
+})
 
 // ─── Helpers ───
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
@@ -34,6 +57,107 @@ const requireAuth = async (c: any) => {
   return user
 }
 
+// ─── Auth (v2) ───
+
+app.post('/api/auth/register', async (c) => {
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':register', 5)) return err('Demasiadas peticiones', 429)
+
+  const body = await c.req.json<{
+    account_name?: string; display_name?: string; password?: string;
+    color?: string; avatar_seed?: number
+  }>()
+  const accountName = validateAccountName(body.account_name)
+  if (!accountName) return err('Nombre de cuenta: 3-25 chars, solo a-z 0-9 _ -')
+  const displayName = validateDisplayName(body.display_name)
+  if (!displayName) return err('Nombre público: 1-25 chars')
+  const password = validatePassword(body.password)
+  if (!password) return err('Contraseña: 6-128 chars')
+  if (!body.color || !COLOR_NAMES.includes(body.color)) return err('Color no válido')
+
+  // Uniqueness checks
+  const accExists = await db.userByAccountName(c.env.DB, accountName)
+  if (accExists) return err('Nombre de cuenta ya en uso')
+  const dispExists = await db.userByDisplayName(c.env.DB, displayName)
+  if (dispExists) return err('Nombre público ya en uso')
+
+  const passwordHash = await hashPassword(password)
+  const seed = body.avatar_seed || Math.floor(Math.random() * 0xFFFFFFFF)
+  const user = await db.userCreateV2(c.env.DB, accountName, displayName, passwordHash, body.color, seed)
+  if (!user) return err('Error creando cuenta', 500)
+  const token = await issueToken(c.env.AUTH_SECRET, user.id)
+  notify(c.env, `🐱 <b>nuevo gato!</b>\n${displayName} (@${accountName}) se ha unido a miaumiau (color: ${body.color})`)
+  return json({ user: publicUser(user), token }, 201)
+})
+
+app.post('/api/auth/login', async (c) => {
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':login', 10)) return err('Demasiadas peticiones', 429)
+
+  const body = await c.req.json<{ account_name?: string; password?: string }>()
+  const accountName = validateAccountName(body.account_name)
+  if (!accountName) return err('Cuenta o contraseña incorrectas', 401)
+  const password = validatePassword(body.password)
+  if (!password) return err('Cuenta o contraseña incorrectas', 401)
+
+  const user = await db.userByAccountName(c.env.DB, accountName)
+  if (!user || !user.password_hash) return err('Cuenta o contraseña incorrectas', 401)
+  const ok = await verifyPassword(password, user.password_hash)
+  if (!ok) return err('Cuenta o contraseña incorrectas', 401)
+
+  const token = await issueToken(c.env.AUTH_SECRET, user.id)
+  return json({ user: publicUser(user), token })
+})
+
+// Legacy v1 user → set v2 password (one-shot migration). Auth via X-Miau (legacy).
+app.post('/api/auth/migrate', async (c) => {
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':migrate', 5)) return err('Demasiadas peticiones', 429)
+
+  const user = await auth(c)  // accepts X-Miau legacy
+  if (!user) return err('No autorizado', 401)
+
+  const body = await c.req.json<{ account_name?: string; display_name?: string; password?: string }>()
+  const accountName = validateAccountName(body.account_name)
+  if (!accountName) return err('Nombre de cuenta: 3-25 chars, solo a-z 0-9 _ -')
+  const displayName = validateDisplayName(body.display_name)
+  if (!displayName) return err('Nombre público: 1-25 chars')
+  const password = validatePassword(body.password)
+  if (!password) return err('Contraseña: 6-128 chars')
+
+  // Check account_name uniqueness against OTHER users
+  const accExists = await db.userByAccountName(c.env.DB, accountName)
+  if (accExists && accExists.id !== user.id) return err('Nombre de cuenta ya en uso')
+  const dispExists = await db.userByDisplayName(c.env.DB, displayName)
+  if (dispExists && dispExists.id !== user.id) return err('Nombre público ya en uso')
+
+  const passwordHash = await hashPassword(password)
+  await c.env.DB.prepare(
+    'UPDATE users SET account_name = ?, display_name = ?, password_hash = ? WHERE id = ?'
+  ).bind(accountName, displayName, passwordHash, user.id).run()
+
+  const updated = await db.userGetById(c.env.DB, user.id)
+  if (!updated) return err('Error', 500)
+  const token = await issueToken(c.env.AUTH_SECRET, updated.id)
+  return json({ user: publicUser(updated), token })
+})
+
+// Strip private fields from user before sending to client
+function publicUser(u: any) {
+  return {
+    id: u.id,
+    account_name: u.account_name,
+    username: u.display_name ?? u.username,  // alias for client compat
+    display_name: u.display_name ?? u.username,
+    color: u.color,
+    theme: u.theme,
+    avatar_seed: u.avatar_seed,
+    bio: u.bio,
+    created_at: u.created_at,
+    needs_migration: !u.password_hash,  // client shows migrate prompt if true
+  }
+}
+
 // ─── Users ───
 
 app.get('/api/users', async (c) => {
@@ -41,6 +165,8 @@ app.get('/api/users', async (c) => {
   return json({ users: users.results, colors: COLOR_NAMES })
 })
 
+// Legacy v1 register — kept temporarily for clients that haven't updated.
+// New clients should use /api/auth/register.
 app.post('/api/users', async (c) => {
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
   if (rateLimit(ip + ':register', 5)) return err('Demasiadas peticiones', 429)
@@ -143,7 +269,27 @@ app.post('/api/tweets', async (c) => {
 })
 
 app.post('/api/tweets/:id/report', async (c) => {
-  await db.tweetReport(c.env.DB, Number(c.req.param('id')))
+  const id = Number(c.req.param('id'))
+  await db.tweetReport(c.env.DB, id)
+  // Fetch context for the alert
+  const tweet = await db.tweetGet(c.env.DB, id) as any
+  if (tweet) {
+    const reports = (tweet.reports ?? 0) + 1  // already incremented by query, fetch reflects it
+    notify(c.env, `🚨 <b>tweet reportado</b> (${reports} reportes)\n@${tweet.username}: ${String(tweet.content).slice(0, 200)}\nLink: miaumiauonline.com/t/${id}`)
+  }
+  return json({ ok: true })
+})
+
+app.post('/api/posts/:id/report', async (c) => {
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(
+    'UPDATE posts SET reports = reports + 1, hidden = CASE WHEN reports >= 4 THEN 1 ELSE hidden END WHERE id = ?'
+  ).bind(id).run()
+  const post = await db.postGet(c.env.DB, id) as any
+  if (post) {
+    const reports = (post.reports ?? 0)
+    notify(c.env, `🚨 <b>post reportado</b> (${reports} reportes)\n@${post.username}: ${String(post.caption || '(sin caption)').slice(0, 200)}\nLink: miaumiauonline.com/p/${id}`)
+  }
   return json({ ok: true })
 })
 
@@ -197,13 +343,50 @@ app.post('/api/posts/:id/comments', async (c) => {
   return json(comment, 201)
 })
 
+// ─── City Presence ───
+
+const ZONE_VALID = new Set(['tweets','posts','stories','chat','bereal','profile','plaza','city'])
+
+app.post('/api/city/presence', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':presence', 60)) return err('Demasiadas peticiones', 429)
+  const body = await c.req.json<{ zone?: string | null; x?: number; y?: number }>()
+  const zone = body.zone && ZONE_VALID.has(body.zone) ? body.zone : null
+  const x = Math.max(0, Math.min(1280, Number(body.x) || 640))
+  const y = Math.max(0, Math.min(720, Number(body.y) || 374))
+  await db.presenceUpsert(c.env.DB, user.id, zone, x, y)
+  return json({ ok: true })
+})
+
+app.get('/api/city/presence', async (c) => {
+  // No auth required — anyone in the city sees other inhabitants
+  const rows = await db.presenceList(c.env.DB, 90)
+  return json(rows.results)
+})
+
+app.delete('/api/city/presence', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  await db.presenceClear(c.env.DB, user.id)
+  return json({ ok: true })
+})
+
+// ─── System status (maintenance flag) ───
+
+app.get('/api/system', async (c) => {
+  const flag = await db.flagGet(c.env.DB, 'maintenance_mode')
+  return json({ maintenance: flag?.value === '1' })
+})
+
 // ─── BeReal ───
 
 app.get('/api/bereal', async (c) => {
   const page = num(c.req.query('page'), 1)
   const limit = Math.min(num(c.req.query('limit'), 20), 50)
   const bereals = await c.env.DB.prepare(`
-    SELECT b.*, u.username, u.color, u.avatar_seed
+    SELECT b.*, COALESCE(u.display_name, u.username) AS username, u.color, u.avatar_seed
     FROM bereals b JOIN users u ON b.user_id = u.id
     ORDER BY b.created_at DESC LIMIT ? OFFSET ?
   `).bind(limit, (page - 1) * limit).all()
@@ -246,7 +429,7 @@ app.post('/api/reactions', async (c) => {
   if (!user) return err('No autorizado', 401)
 
   const body = await c.req.json<{ target_type: string; target_id: number; emoji?: string }>()
-  if (!['tweet', 'post'].includes(body.target_type)) return err('Tipo no válido')
+  if (!['tweet', 'post', 'story', 'bereal'].includes(body.target_type)) return err('Tipo no válido')
   const result = await db.reactionToggle(c.env.DB, user.id, body.target_type, body.target_id, body.emoji ?? '😻')
   return json({ toggled: !!result })
 })
@@ -363,7 +546,7 @@ app.get('/api/friends', async (c) => {
   if (!user) return err('No autorizado', 401)
 
   const friends = await c.env.DB.prepare(`
-    SELECT u.id, u.username, u.color, u.avatar_seed, u.bio,
+    SELECT u.id, COALESCE(u.display_name, u.username) AS username, u.color, u.avatar_seed, u.bio,
       CASE WHEN f.requester_id = ? THEN 'sent' ELSE 'received' END as direction
     FROM friendships f
     JOIN users u ON u.id = CASE WHEN f.requester_id = ? THEN f.target_id ELSE f.requester_id END
@@ -371,7 +554,7 @@ app.get('/api/friends', async (c) => {
   `).bind(user.id, user.id, user.id, user.id).all()
 
   const pending = await c.env.DB.prepare(`
-    SELECT u.id, u.username, u.color, u.avatar_seed, f.id as request_id
+    SELECT u.id, COALESCE(u.display_name, u.username) AS username, u.color, u.avatar_seed, f.id as request_id
     FROM friendships f JOIN users u ON u.id = f.requester_id
     WHERE f.target_id = ? AND f.status = 'pending'
   `).bind(user.id).all()
@@ -432,13 +615,16 @@ app.delete('/api/friends/:userId', async (c) => {
   return json({ ok: true })
 })
 
-// Search users (for adding friends)
+// Search users (for adding friends) — searches display_name AND legacy username
 app.get('/api/users/search', async (c) => {
   const q = c.req.query('q')
   if (!q || q.length < 1) return json([])
   const users = await c.env.DB.prepare(
-    "SELECT id, username, color, avatar_seed, bio FROM users WHERE username LIKE ? LIMIT 10"
-  ).bind('%' + q + '%').all()
+    `SELECT id, COALESCE(display_name, username) AS username, color, avatar_seed, bio
+     FROM users
+     WHERE display_name LIKE ? OR username LIKE ?
+     LIMIT 10`
+  ).bind('%' + q + '%', '%' + q + '%').all()
   return json(users.results)
 })
 
@@ -492,21 +678,21 @@ app.get('/api/public/users/:username', async (c) => {
 
   const [tweets, posts, bereals] = await Promise.all([
     c.env.DB.prepare(`
-      SELECT t.*, u.username, u.color, u.avatar_seed,
+      SELECT t.*, COALESCE(u.display_name, u.username) AS username, u.color, u.avatar_seed,
         (SELECT COUNT(*) FROM tweets r WHERE r.parent_id = t.id) as reply_count
       FROM tweets t JOIN users u ON t.user_id = u.id
       WHERE t.user_id = ? AND t.parent_id IS NULL AND t.hidden = 0
       ORDER BY t.created_at DESC LIMIT 30
     `).bind(user.id).all(),
     c.env.DB.prepare(`
-      SELECT p.*, u.username, u.color, u.avatar_seed,
+      SELECT p.*, COALESCE(u.display_name, u.username) AS username, u.color, u.avatar_seed,
         (SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id = p.id) as comment_count
       FROM posts p JOIN users u ON p.user_id = u.id
       WHERE p.user_id = ? AND p.hidden = 0
       ORDER BY p.created_at DESC LIMIT 24
     `).bind(user.id).all(),
     c.env.DB.prepare(`
-      SELECT b.*, u.username, u.color, u.avatar_seed
+      SELECT b.*, COALESCE(u.display_name, u.username) AS username, u.color, u.avatar_seed
       FROM bereals b JOIN users u ON b.user_id = u.id
       WHERE b.user_id = ? ORDER BY b.created_at DESC LIMIT 24
     `).bind(user.id).all().catch(() => ({ results: [] }))
@@ -514,7 +700,7 @@ app.get('/api/public/users/:username', async (c) => {
 
   return json({
     user: {
-      id: user.id, username: user.username, color: user.color,
+      id: user.id, username: user.display_name ?? user.username, color: user.color,
       avatar_seed: user.avatar_seed, bio: user.bio, created_at: user.created_at
     },
     tweets: tweets.results,
@@ -641,7 +827,7 @@ app.post('/telegram/webhook', async (c) => {
 
     // Recent users (last 7 days)
     const recent = await d.prepare(
-      "SELECT username, color, created_at FROM users ORDER BY created_at DESC LIMIT 10"
+      "SELECT COALESCE(display_name, username) AS username, color, created_at FROM users ORDER BY created_at DESC LIMIT 10"
     ).all<{username:string, color:string, created_at:string}>()
 
     const userList = recent.results.map(u =>
@@ -666,13 +852,54 @@ app.post('/telegram/webhook', async (c) => {
   }
 
   if (text === '/help' || text === 'help' || text === 'ayuda') {
-    await sendTelegram(c.env, `🐱 <b>miaumiau bot</b>\n\nComandos:\n· <b>stats</b> / <b>estado</b> — estadisticas completas\n· <b>ayuda</b> — este mensaje\n\nRecibo alertas automaticas de toda la actividad.`)
+    await sendTelegram(c.env, `🐱 <b>miaumiau bot</b>\n\nComandos:\n· <b>stats</b> / <b>estado</b> — estadisticas completas\n· <b>maintenance on/off</b> — kill switch (devuelve 503 a todos)\n· <b>ayuda</b> — este mensaje\n\nRecibo alertas automaticas de toda la actividad.`)
+    return json({ ok: true })
+  }
+
+  if (text.startsWith('maintenance') || text.startsWith('/maintenance')) {
+    const arg = text.replace(/^\/?maintenance\s*/, '').trim()
+    if (arg === 'on' || arg === '1' || arg === 'true') {
+      await db.flagSet(c.env.DB, 'maintenance_mode', '1')
+      await sendTelegram(c.env, `🛑 <b>maintenance ON</b>\nLa app está en modo mantenimiento. Solo lectura.`)
+      return json({ ok: true })
+    }
+    if (arg === 'off' || arg === '0' || arg === 'false') {
+      await db.flagSet(c.env.DB, 'maintenance_mode', '0')
+      await sendTelegram(c.env, `✅ <b>maintenance OFF</b>\nApp restaurada.`)
+      return json({ ok: true })
+    }
+    const cur = await db.flagGet(c.env.DB, 'maintenance_mode')
+    await sendTelegram(c.env, `maintenance está <b>${cur?.value === '1' ? 'ON' : 'OFF'}</b>\nUsa <b>maintenance on</b> o <b>maintenance off</b>`)
     return json({ ok: true })
   }
 
   // Unknown command
   await sendTelegram(c.env, `miau? no entiendo. escribe <b>stats</b> o <b>ayuda</b>`)
   return json({ ok: true })
+})
+
+// ─── SPA catch-all: serve index.html for app routes (/tweets, /stories, etc.) ───
+// Static assets (CSS, JS, images) are auto-served by the [assets] binding before this handler runs.
+const SPA_ROUTES = new Set(['', 'tweets', 'stories', 'posts', 'chat', 'bereal', 'profile', 'city'])
+app.get('*', async (c) => {
+  const url = new URL(c.req.url)
+  const path = url.pathname
+  // Skip API/media/telegram (already 404'd by Hono if we got here)
+  if (path.startsWith('/api/') || path.startsWith('/media/') || path.startsWith('/telegram')) {
+    return err('No encontrado', 404)
+  }
+  // For SPA routes (and unknown routes), return index.html shell so the SPA boots
+  const head = path.replace(/^\/|\/$/g, '').split('/')[0]
+  if (SPA_ROUTES.has(head)) {
+    const assetReq = new Request(new URL('/index.html', c.req.url).toString())
+    const res = await c.env.ASSETS.fetch(assetReq)
+    // Pass through but ensure cache headers don't pin a stale shell
+    return new Response(res.body, {
+      status: res.status,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
+    })
+  }
+  return err('No encontrado', 404)
 })
 
 // ─── Story Cleanup (scheduled) ───

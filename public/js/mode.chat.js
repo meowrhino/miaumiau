@@ -141,10 +141,24 @@ Object.assign(App, {
   },
 
   _renderMessage(msg, container, opts = {}) {
-    const el = document.createElement('div')
     const isMine = msg.sender_id === App.user.id
-    el.className = 'message ' + (isMine ? 'sent' : 'received')
-    if (opts.group) el.classList.add(opts.group)
+    // Wrap each message row so we can place a tiny avatar to the left of received messages
+    const row = document.createElement('div')
+    row.className = 'message-row ' + (isMine ? 'sent' : 'received')
+    if (opts.group) row.classList.add(opts.group)
+    // Tiny avatar gutter — shown only on the LAST received message in a group (keeps it clean)
+    const showAvatar = !isMine && (opts.showMeta !== false)
+    if (!isMine) {
+      const gutter = document.createElement('div')
+      gutter.className = 'message-avatar-gutter'
+      if (showAvatar) {
+        gutter.innerHTML = `<img class="message-avatar" src="${App.avatarUrl(msg.sender_id)}" alt="" loading="lazy">`
+      }
+      row.appendChild(gutter)
+    }
+    const bubble = document.createElement('div')
+    bubble.className = 'message ' + (isMine ? 'sent' : 'received')
+    if (opts.group) bubble.classList.add(opts.group)
     let metaHtml = ''
     if (opts.showMeta !== false) {
       const time = msg.created_at ? App._formatTime(msg.created_at) : ''
@@ -153,8 +167,9 @@ Object.assign(App, {
         : ''
       metaHtml = `<div class="message-meta"><span>${time}</span>${ticks}</div>`
     }
-    el.innerHTML = `<p>${linkify(esc(msg.content))}</p>${metaHtml}`
-    container.appendChild(el)
+    bubble.innerHTML = `<p>${linkify(esc(msg.content))}</p>${metaHtml}`
+    row.appendChild(bubble)
+    container.appendChild(row)
   },
 
   async sendMessage() {

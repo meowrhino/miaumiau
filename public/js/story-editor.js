@@ -13,8 +13,8 @@ const StoryEditor = {
 
   open() {
     $('#storyEditor').hidden = false
-    $('#bottomNav').hidden = true
-    // header removed
+    if (window.HUD) HUD.hide()
+    if (window.Pet) Pet.hide()
     StoryEditor.texts = []
     StoryEditor.links = []
     StoryEditor.bgBlob = null
@@ -39,8 +39,8 @@ const StoryEditor = {
 
   close() {
     $('#storyEditor').hidden = true
-    $('#bottomNav').hidden = false
-    // header removed
+    if (window.HUD) HUD.show()
+    if (window.Pet && App.user) Pet.show()
   },
 
   async loadImage(file) {

@@ -15,18 +15,31 @@ const App = {
       App.updateHeader()
     }
 
+    // Boot world + pet + hud + routes modules
+    if (window.World) World.init()
+    if (window.Pet)   Pet.mount()
+    if (window.HUD)   HUD.mount()
+    if (window.Routes) Routes.init()
+
     // Public page (/u/:username, /p/:id, /t/:id) — render read-only, no login required
     if (window.__PUBLIC_CONTEXT__) {
       document.querySelectorAll('.mode').forEach(s => s.hidden = true)
       document.getElementById('mode-public').hidden = false
       const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
       App.mode = 'public'
+      if (window.HUD) HUD.hide()
+      if (window.Pet) Pet.hide()
       App.enter_public()
       return
     }
 
-    if (App.user) App.go('tweets')
-    else App.showRegistration()
+    if (App.user) {
+      // Read URL → which section to open on cold load
+      const initial = window.Routes ? Routes.parse(location.pathname) : { mode: 'tweets', params: {} }
+      App.go(initial.mode || 'tweets', { ...initial.params, _fromBoot: true })
+    } else {
+      App.showRegistration()
+    }
   },
 
   toggleTheme() {
@@ -49,20 +62,38 @@ const App = {
   },
 
   // ─── Navigation ───
-  go(mode) {
+  go(mode, params = {}) {
+    const fromRoute = params._fromRoute
+    const fromBoot  = params._fromBoot
+    // Leave hooks for previous mode (e.g. city stops its render loop)
+    if (App.mode && App.mode !== mode && App['leave_' + App.mode]) App['leave_' + App.mode]()
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     const el = document.getElementById('mode-' + mode)
     if (el) {
       el.hidden = false
+      const previousMode = App.mode
       App.mode = mode
       App._renderBanner(mode)
       if (App['enter_' + mode]) App['enter_' + mode]()
+      // Update URL via Routes (idempotent — Routes won't push if same path)
+      if (window.Routes && !fromRoute && !fromBoot) {
+        const path = Routes.pathFor(mode, params)
+        if (location.pathname !== path) history.pushState({ mode }, '', path)
+      }
+      document.title = mode === 'tweets' ? 'miaumiau' : `${mode} · miaumiau`
+      // World atmosphere swap
+      if (window.World) World.applyHabitat(mode)
+      // Pet walks across when section changes
+      if (window.Pet && previousMode && previousMode !== mode) Pet.walk(mode)
     }
-    // update nav
-    document.querySelectorAll('#bottomNav button').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === mode)
-    })
-    document.getElementById('bottomNav').hidden = false
+    // HUD active state
+    if (window.HUD) HUD.setActive(mode)
+    if (window.HUD) HUD.show()
+    if (window.Pet && App.user) Pet.show()
+    // Presence write (city.js handles its own; other modes write via the helper)
+    if (App.user && mode !== 'city' && window.City && City.writePresenceForMode) {
+      City.writePresenceForMode(mode)
+    }
     // update pop color
     const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', bereal: 'var(--pop-bereal)', profile: 'var(--pop-profile)' }
     document.documentElement.style.setProperty('--pop', popMap[mode] ?? 'var(--text)')
@@ -152,15 +183,18 @@ const App = {
     // Update composer avatar
     const composerAvatar = document.getElementById('composerAvatar')
     if (composerAvatar) composerAvatar.src = App.avatarUrl(App.user.id)
+    // HUD profile button + Pet sprite
+    if (window.HUD) HUD.refreshProfileAvatar()
+    if (window.Pet) Pet.refresh()
   },
 
   // ─── Registration ───
   showRegistration() {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('registration').hidden = false
-    document.getElementById('bottomNav').hidden = true
+    if (window.HUD) HUD.hide()
+    if (window.Pet) Pet.hide()
     const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
-    // header removed
 
     App._regColor = 'Coral'
     App._regSeed = Math.floor(Math.random() * 0xFFFFFFFF)
@@ -189,36 +223,38 @@ const App = {
   },
 
   async register() {
-    const name = document.getElementById('regName').value.trim()
+    const display = document.getElementById('regDisplayName').value.trim()
+    const account = document.getElementById('regAccountName').value.trim().toLowerCase()
+    const password = document.getElementById('regPassword').value
     const errEl = document.getElementById('regError')
     errEl.hidden = true
 
-    if (!name || name.length < 1 || name.length > 25) {
-      errEl.textContent = 'nombre: 1-25 caracteres'
-      errEl.hidden = false
-      return
+    if (!display || display.length < 1 || display.length > 25) {
+      errEl.textContent = 'nombre público: 1-25 caracteres'; errEl.hidden = false; return
     }
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-      errEl.textContent = 'solo letras, numeros, _ y -'
-      errEl.hidden = false
-      return
+    if (!account || account.length < 3 || account.length > 25) {
+      errEl.textContent = 'nombre de cuenta: 3-25 caracteres'; errEl.hidden = false; return
     }
-
-    const secret = crypto.randomUUID().slice(0, 12)
-    const seed = App._regSeed
+    if (!/^[a-z0-9_-]+$/.test(account)) {
+      errEl.textContent = 'cuenta: solo letras, numeros, _ y -'; errEl.hidden = false; return
+    }
+    if (!password || password.length < 6) {
+      errEl.textContent = 'contraseña: mínimo 6 caracteres'; errEl.hidden = false; return
+    }
 
     try {
-      const user = await API.post('/users', {
-        username: name,
-        secret: secret,
+      const data = await API.post('/auth/register', {
+        account_name: account,
+        display_name: display,
+        password,
         color: App._regColor,
-        avatar_seed: seed
+        avatar_seed: App._regSeed,
       })
-      App.user = { ...user, secret }
+      App.user = { ...data.user, token: data.token, username: data.user.display_name }
       App.save()
       App.updateHeader()
       App.go('tweets')
-      showToast('tu clave: ' + name + '#' + secret + ' — guardala!', 10000)
+      showToast('¡bienvenido al mundo miau!', 4000)
     } catch (e) {
       errEl.textContent = e.message
       errEl.hidden = false
@@ -228,33 +264,91 @@ const App = {
   showLogin() {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('login').hidden = false
-    document.getElementById('bottomNav').hidden = true
+    if (window.HUD) HUD.hide()
+    if (window.Pet) Pet.hide()
     const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
   },
 
   async login() {
-    const key = document.getElementById('loginKey').value.trim()
+    const account = document.getElementById('loginAccountName').value.trim().toLowerCase()
+    const password = document.getElementById('loginPassword').value
     const errEl = document.getElementById('loginError')
     errEl.hidden = true
 
-    const i = key.indexOf('#')
-    if (i < 1) { errEl.textContent = 'formato: usuario#clave'; errEl.hidden = false; return }
+    if (!account || !password) {
+      errEl.textContent = 'falta cuenta o contraseña'; errEl.hidden = false; return
+    }
 
-    const username = key.slice(0, i)
-    const secret = key.slice(i + 1)
-
-    // test auth by trying to get user list with this credential
-    App.user = { username, secret, id: 0 }
     try {
-      const data = await API.get('/users')
-      const me = data.users.find(u => u.username === username)
-      if (!me) throw new Error('usuario no encontrado')
-      App.user = { ...me, secret }
+      const data = await API.post('/auth/login', { account_name: account, password })
+      App.user = { ...data.user, token: data.token, username: data.user.display_name }
       App.save()
       App.updateHeader()
       App.go('tweets')
     } catch (e) {
       App.user = null
+      errEl.textContent = e.message
+      errEl.hidden = false
+    }
+  },
+
+  // Legacy v1 login → uses old key, then prompts for new credentials
+  async legacyLogin() {
+    const key = document.getElementById('loginLegacyKey').value.trim()
+    const errEl = document.getElementById('loginError')
+    errEl.hidden = true
+
+    const i = key.indexOf('#')
+    if (i < 1) { errEl.textContent = 'formato: usuario#clave'; errEl.hidden = false; return }
+    const username = key.slice(0, i)
+    const secret = key.slice(i + 1)
+
+    // Validate via /users list (X-Miau header is checked server-side on auth routes)
+    App.user = { username, secret, id: 0 }
+    try {
+      const data = await API.get('/users')
+      const me = data.users.find(u => u.username === username)
+      if (!me) throw new Error('usuario no encontrado')
+      App.user = { ...me, secret, username: me.username }
+      // Save temporarily, then show migrate prompt
+      document.getElementById('migrateDisplayName').value = me.username
+      document.getElementById('migrateAccountName').value = me.username.toLowerCase().replace(/[^a-z0-9_-]/g, '')
+      document.getElementById('migrateModal').hidden = false
+    } catch (e) {
+      App.user = null
+      errEl.textContent = e.message
+      errEl.hidden = false
+    }
+  },
+
+  async completeMigration() {
+    const display = document.getElementById('migrateDisplayName').value.trim()
+    const account = document.getElementById('migrateAccountName').value.trim().toLowerCase()
+    const password = document.getElementById('migratePassword').value
+    const errEl = document.getElementById('migrateError')
+    errEl.hidden = true
+
+    if (!display) { errEl.textContent = 'falta nombre público'; errEl.hidden = false; return }
+    if (!account || !/^[a-z0-9_-]{3,25}$/.test(account)) {
+      errEl.textContent = 'cuenta: 3-25, solo a-z 0-9 _ -'; errEl.hidden = false; return
+    }
+    if (!password || password.length < 6) {
+      errEl.textContent = 'contraseña: mínimo 6'; errEl.hidden = false; return
+    }
+
+    try {
+      const data = await API.post('/auth/migrate', {
+        account_name: account,
+        display_name: display,
+        password,
+      })
+      App.user = { ...data.user, token: data.token, username: data.user.display_name }
+      App.save()
+      document.getElementById('migrateModal').hidden = true
+      App.updateHeader()
+      App.go('tweets')
+      showToast('¡cuenta actualizada!', 4000)
+    } catch (e) {
       errEl.textContent = e.message
       errEl.hidden = false
     }
@@ -290,7 +384,10 @@ const App = {
 
   bumpAvatarVersion() {
     App._avatarVersion = Date.now()
-  }
+  },
+
+  enter_city() { if (window.City) City.enter() },
+  leave_city() { if (window.City) City.leave() },
 }
 
 // ─── Utils ───
@@ -313,6 +410,9 @@ function timeAgo(dateStr) {
 
 const $ = sel => document.querySelector(sel)
 const $$ = sel => document.querySelectorAll(sel)
+
+// Expose for cross-module access (Routes/HUD/Pet/World read window.App)
+window.App = App
 
 // ─── Boot ───
 document.addEventListener('DOMContentLoaded', () => App.init())

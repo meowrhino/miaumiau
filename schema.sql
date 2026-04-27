@@ -2,8 +2,13 @@
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
+    -- Legacy (kept for backwards compat with v1 users; new users have NULL here)
+    username TEXT UNIQUE,
     tripcode TEXT,
+    -- v2: separate account/display + real password
+    account_name TEXT,
+    display_name TEXT,
+    password_hash TEXT,
     color TEXT NOT NULL DEFAULT 'Coral',
     theme TEXT NOT NULL DEFAULT 'oscuro',
     avatar_seed INTEGER NOT NULL,
@@ -11,6 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     last_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_account_name ON users(account_name) WHERE account_name IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_display_lower ON users(LOWER(display_name)) WHERE display_name IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS tweets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,3 +122,18 @@ CREATE TABLE IF NOT EXISTS friendships (
 );
 CREATE INDEX IF NOT EXISTS idx_friendships_target ON friendships(target_id, status);
 CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id, status);
+
+CREATE TABLE IF NOT EXISTS presence (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    zone TEXT,
+    x INTEGER NOT NULL DEFAULT 640,
+    y INTEGER NOT NULL DEFAULT 374,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_presence_updated ON presence(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS system_flags (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

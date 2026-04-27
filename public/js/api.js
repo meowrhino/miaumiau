@@ -1,9 +1,21 @@
 // API wrapper — un solo lugar para auth headers
+// v2: Bearer token (preferred). v1 legacy: X-Miau (only for users that haven't migrated).
 const API = {
-  async fetch(method, path, body) {
+  _authHeaders() {
     const headers = {}
     const user = App?.user
-    if (user) headers['X-Miau'] = user.username + '#' + user.secret
+    if (!user) return headers
+    if (user.token) {
+      headers['Authorization'] = 'Bearer ' + user.token
+    } else if (user.secret && user.username) {
+      // legacy users still use tripcode until they migrate
+      headers['X-Miau'] = user.username + '#' + user.secret
+    }
+    return headers
+  },
+
+  async fetch(method, path, body) {
+    const headers = API._authHeaders()
     if (body && !(body instanceof FormData)) {
       headers['Content-Type'] = 'application/json'
       body = JSON.stringify(body)
@@ -22,9 +34,7 @@ const API = {
   del: (path) => API.fetch('DELETE', path),
 
   async upload(path, formData) {
-    const headers = {}
-    const user = App?.user
-    if (user) headers['X-Miau'] = user.username + '#' + user.secret
+    const headers = API._authHeaders()
     const resp = await fetch('/api' + path, { method: 'POST', headers, body: formData })
     if (!resp.ok) {
       const data = await resp.json().catch(() => ({}))

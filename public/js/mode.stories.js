@@ -51,8 +51,8 @@ Object.assign(App, {
     App._storyGroupIdx = groupIdx
     App._storyIdx = 0
     $('#storyViewer').hidden = false
-    document.getElementById('bottomNav').hidden = true
-    // header removed
+    if (window.HUD) HUD.hide()
+    if (window.Pet) Pet.hide()
     App._showStory()
   },
 
@@ -112,6 +112,10 @@ Object.assign(App, {
 
     // mark viewed (server + local cache)
     API.post('/stories/' + story.id + '/view').catch(() => {})
+
+    // load like state for this story
+    App._storyLikedMap = App._storyLikedMap || {}
+    App._loadStoryReactions(story.id)
     try {
       const seen = JSON.parse(localStorage.getItem('miau_story_seen') || '{}')
       seen[story.id] = Date.now()
@@ -141,8 +145,36 @@ Object.assign(App, {
   closeStoryViewer() {
     clearTimeout(App._storyTimer)
     $('#storyViewer').hidden = true
-    document.getElementById('bottomNav').hidden = false
-    // header removed
+    if (window.HUD) HUD.show()
+    if (window.Pet && App.user) Pet.show()
+  },
+
+  async _loadStoryReactions(storyId) {
+    try {
+      const counts = await API.get('/reactions/story/' + storyId)
+      const total = counts.reduce((s, c) => s + (c.count || 0), 0)
+      const btn = $('#storyLikeBtn')
+      const cnt = $('#storyLikeCount')
+      if (cnt) cnt.textContent = total > 0 ? String(total) : ''
+      // Note: we don't know server-side whether *this* user reacted, so optimistic UI
+      if (btn) btn.classList.toggle('liked', !!App._storyLikedMap[storyId])
+    } catch (_) {}
+  },
+
+  async toggleStoryLike() {
+    const group = App._storyGroups[App._storyGroupIdx]
+    if (!group) return
+    const story = group.stories[App._storyIdx]
+    if (!story) return
+    try {
+      App._storyLikedMap[story.id] = !App._storyLikedMap[story.id]
+      const btn = $('#storyLikeBtn')
+      btn.classList.toggle('liked', App._storyLikedMap[story.id])
+      btn.classList.add('pop')
+      setTimeout(() => btn.classList.remove('pop'), 400)
+      await API.post('/reactions', { target_type: 'story', target_id: story.id, emoji: '❤️' })
+      App._loadStoryReactions(story.id)
+    } catch (e) { showToast(e.message) }
   },
 
   openStoryEditor() {

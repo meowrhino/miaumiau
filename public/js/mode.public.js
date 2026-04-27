@@ -5,8 +5,9 @@ Object.assign(App, {
     const root = $('#publicContent')
     if (!ctx) { root.innerHTML = empty('sin contexto') ; return }
 
-    // Hide bottom nav + CTA handling
-    $('#bottomNav').hidden = true
+    // Hide HUD/Pet on public read-only pages
+    if (window.HUD) HUD.hide()
+    if (window.Pet) Pet.hide()
     document.documentElement.style.setProperty('--pop', 'var(--text)')
 
     // If logged in, the CTA goes to main app instead of registration
