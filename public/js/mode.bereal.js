@@ -36,10 +36,12 @@ Object.assign(App, {
     const isToday = d.toDateString() === today.toDateString()
     const dateLabel = isToday ? 'hoy a las ' + timeStr : timeAgo(bereal.created_at)
 
+    const hex = colorHex(bereal.color)
     el.innerHTML = `
       <div class="bereal-card-header">
-        <img class="avatar" src="${App.avatarUrl(bereal.user_id)}" loading="lazy">
-        <span class="bereal-card-name" style="color:${colorHex(bereal.color)}">${esc(bereal.username)}</span>
+        <img class="avatar" src="${App.avatarUrl(bereal.user_id)}" loading="lazy"
+             style="border-color:${hex};box-shadow:0 0 0 2px color-mix(in srgb, ${hex} 18%, transparent)">
+        <a class="bereal-card-name display" href="/u/${encodeURIComponent(bereal.username)}" style="color:${hex}">${esc(bereal.username)}</a>
         <span class="bereal-card-time">${dateLabel}</span>
       </div>
       <img class="bereal-card-image" src="/media/bereal/${bereal.media_key}" loading="lazy" alt="">
@@ -53,6 +55,8 @@ Object.assign(App, {
     $('#berealCaption').value = ''
     $('#berealFile').value = ''
     $('#berealModal').hidden = false
+    const dz = $('#berealDropZone'); if (dz) dz.classList.remove('has-file')
+    const hint = $('#berealDropHint'); if (hint) hint.textContent = 'o sube una desde el rollo'
 
     $('#berealFile').onchange = async (e) => {
       const file = e.target.files[0]
@@ -62,6 +66,8 @@ Object.assign(App, {
         App._berealBlob = blob
         $('#berealPreview').src = URL.createObjectURL(blob)
         $('#berealPreview').hidden = false
+        if (dz) dz.classList.add('has-file')
+        if (hint) hint.textContent = 'foto lista · ' + (file.name || '').slice(0, 40)
       } catch (err) { showToast('error: ' + err.message) }
     }
   },

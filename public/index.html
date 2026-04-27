@@ -119,8 +119,15 @@
   <div id="berealModal" class="modal" hidden>
     <div class="modal-content bereal-capture">
       <h2>tu miau real de hoy</h2>
-      <p class="muted">que estas haciendo ahora mismo?</p>
-      <input id="berealFile" type="file" accept="image/*" capture="environment">
+      <p class="muted" style="margin-bottom:14px">que estas haciendo ahora mismo?</p>
+      <label class="drop-zone" for="berealFile" id="berealDropZone">
+        <span class="drop-zone-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="3.5"/><path d="M21 7h-3.2L16 5H8L6.2 7H3v12h18z"/></svg>
+        </span>
+        <span class="drop-zone-text">haz una foto</span>
+        <span class="drop-zone-hint" id="berealDropHint">o sube una desde el rollo</span>
+      </label>
+      <input id="berealFile" type="file" accept="image/*" capture="environment" hidden>
       <img id="berealPreview" class="bereal-preview" hidden>
       <input id="berealCaption" type="text" placeholder="algo breve..." maxlength="200">
       <div class="modal-actions">
@@ -240,10 +247,17 @@
   <div id="postModal" class="modal" hidden>
     <div class="modal-content card">
       <h2>nueva publicaci&oacute;n</h2>
-      <input id="postFile" type="file" accept="image/*">
+      <label class="drop-zone" for="postFile" id="postDropZone">
+        <span class="drop-zone-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L8 19"/></svg>
+        </span>
+        <span class="drop-zone-text">elige una foto</span>
+        <span class="drop-zone-hint" id="postDropHint">o arr&aacute;strala aqu&iacute;</span>
+      </label>
+      <input id="postFile" type="file" accept="image/*" hidden>
       <img id="postPreview" class="post-preview" hidden>
       <span id="postSize" class="muted"></span>
-      <textarea id="postCaption" placeholder="escribe algo..." maxlength="500" rows="2"></textarea>
+      <textarea id="postCaption" placeholder="escribe algo..." maxlength="500" rows="3"></textarea>
       <div class="modal-actions">
         <button class="btn" onclick="App.closePostComposer()">cerrar</button>
         <button class="btn primary" onclick="App.submitPost()">publicar</button>

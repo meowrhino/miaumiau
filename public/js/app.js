@@ -280,9 +280,10 @@ const App = {
   },
 
   renderHeader(item) {
-    return `<img class="avatar" src="${App.avatarUrl(item.user_id)}" loading="lazy">
+    const hex = colorHex(item.color)
+    return `<img class="avatar" src="${App.avatarUrl(item.user_id)}" loading="lazy" style="border-color:${hex};box-shadow:0 0 0 2px color-mix(in srgb, ${hex} 18%, transparent)">
       <div class="item-header">
-        <b style="color:${colorHex(item.color)}">${item.username}</b>
+        <b class="display" style="color:${hex}">${esc(item.username)}</b>
         <small class="muted">${timeAgo(item.created_at)}</small>
       </div>`
   },

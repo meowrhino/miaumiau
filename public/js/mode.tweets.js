@@ -31,13 +31,15 @@ Object.assign(App, {
   renderTweet(tweet, container) {
     const el = document.createElement('div')
     el.className = 'tweet'
+    const hex = colorHex(tweet.color)
     const replies = tweet.reply_count ? `<span class="tweet-count">${tweet.reply_count}</span>` : ''
     el.innerHTML = `
       <img class="avatar" src="${App.avatarUrl(tweet.user_id)}" loading="lazy"
+           style="border-color:${hex};box-shadow:0 0 0 2px color-mix(in srgb, ${hex} 18%, transparent)"
            onclick="App.startChatWith(${tweet.user_id},'${esc(tweet.username)}','${tweet.color}')">
       <div class="tweet-body">
         <div class="tweet-meta">
-          <span class="tweet-name" style="color:${colorHex(tweet.color)}">${esc(tweet.username)}</span>
+          <a class="tweet-name" href="/u/${encodeURIComponent(tweet.username)}" style="color:${hex}">${esc(tweet.username)}</a>
           <span class="tweet-time">${timeAgo(tweet.created_at)}</span>
         </div>
         <p class="tweet-text">${linkify(esc(tweet.content))}</p>

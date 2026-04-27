@@ -41,6 +41,8 @@ Object.assign(App, {
     $('#postSize').textContent = ''
     $('#postCaption').value = ''
     App._postBlob = null
+    const dz = $('#postDropZone'); if (dz) dz.classList.remove('has-file')
+    const hint = $('#postDropHint'); if (hint) hint.textContent = 'o arrástrala aquí'
 
     $('#postFile').onchange = async (e) => {
       const file = e.target.files[0]
@@ -52,6 +54,8 @@ Object.assign(App, {
         $('#postPreview').src = url
         $('#postPreview').hidden = false
         $('#postSize').textContent = formatSize(blob.size)
+        if (dz) dz.classList.add('has-file')
+        if (hint) hint.textContent = 'foto lista · ' + formatSize(blob.size)
       } catch (err) { showToast('error comprimiendo: ' + err.message) }
     }
   },
