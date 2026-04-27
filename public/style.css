@@ -115,6 +115,14 @@ small, .muted { color: var(--text-secondary); }
   border: 1.5px solid var(--border-strong);
   transition: transform 0.15s, border-color 0.15s;
   background: var(--surface);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+.public-avatar img, .profile-avatar-big svg, .reg-avatar svg {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 .avatar:hover { transform: scale(1.08); border-color: var(--pop); }
 .avatar.big { width: 52px; height: 52px; }

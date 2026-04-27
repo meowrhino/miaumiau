@@ -94,3 +94,24 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 CREATE INDEX IF NOT EXISTS idx_conv_a ON conversations(user_a, last_message_at DESC);
 CREATE INDEX IF NOT EXISTS idx_conv_b ON conversations(user_b, last_message_at DESC);
+
+CREATE TABLE IF NOT EXISTS bereals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    media_key TEXT NOT NULL,
+    caption TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_bereals_created ON bereals(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bereals_user_day ON bereals(user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS friendships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    requester_id INTEGER NOT NULL REFERENCES users(id),
+    target_id INTEGER NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(requester_id, target_id)
+);
+CREATE INDEX IF NOT EXISTS idx_friendships_target ON friendships(target_id, status);
+CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id, status);

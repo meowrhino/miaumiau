@@ -1,4 +1,4 @@
-// ─── Cat Editor Modal ───
+// ─── Poporing Editor Modal (replaces cat-editor; same hooks for backward compat) ───
 const CatEditor = {
   traits: null,
   color: null,
@@ -8,11 +8,10 @@ const CatEditor = {
     CatEditor.color = App._profileColor ?? App.user.color
     CatEditor.traits = seedToTraits(App.user.avatar_seed)
 
-    // Build trait selectors
     const container = document.getElementById('catEditorTraits')
     container.innerHTML = ''
 
-    for (const [key, meta] of Object.entries(CAT_TRAITS)) {
+    for (const [key, meta] of Object.entries(POPORING_TRAITS)) {
       const section = document.createElement('div')
       section.className = 'cat-trait-row'
 
@@ -23,10 +22,10 @@ const CatEditor = {
       const options = document.createElement('div')
       options.className = 'cat-trait-options'
 
-      for (let i = 0; i < meta.count; i++) {
+      for (let i = 0; i < meta.options.length; i++) {
         const btn = document.createElement('button')
         btn.className = 'cat-trait-btn' + (CatEditor.traits[key] === i ? ' active' : '')
-        btn.textContent = meta.labels[i]
+        btn.textContent = meta.labels[i] || meta.options[i]
         btn.onclick = () => {
           CatEditor.traits[key] = i
           options.querySelectorAll('.active').forEach(b => b.classList.remove('active'))
@@ -53,23 +52,15 @@ const CatEditor = {
 
   async save() {
     const seed = traitsToSeed(CatEditor.traits)
-
     try {
-      // Persist to server
       await API.put('/users/' + App.user.id, { avatar_seed: seed })
-
       App.user.avatar_seed = seed
       App.save()
-
-      // Update profile preview
       const preview = document.getElementById('profileAvatar')
       preview.innerHTML = generateCatSvg(seed, CatEditor.color)
-
-      // Update composer avatar
       App.bumpAvatarVersion()
       App.updateHeader()
-
-      showToast('gato actualizado')
+      showToast('poporing actualizado')
       CatEditor.close()
     } catch (e) { showToast(e.message) }
   },

@@ -3,7 +3,7 @@ import { cors } from 'hono/cors'
 import type { Env } from './middleware'
 import { auth, rateLimit, validateText, tripcode, esc } from './middleware'
 import * as db from './db'
-import { generateCatSvg, COLOR_NAMES } from './avatar'
+import { generateCatSvg, COLOR_NAMES } from './poporing'
 
 const app = new Hono<{ Bindings: Env }>()
 app.use('*', cors())
@@ -43,7 +43,7 @@ app.get('/api/users', async (c) => {
 
 app.post('/api/users', async (c) => {
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
-  if (rateLimit(ip, 5)) return err('Demasiadas peticiones', 429)
+  if (rateLimit(ip + ':register', 5)) return err('Demasiadas peticiones', 429)
 
   const body = await c.req.json<{ username: string; secret: string; color: string; avatar_seed: number }>()
   const username = validateText(body.username, 1, 25)
@@ -131,7 +131,7 @@ app.post('/api/tweets', async (c) => {
   const user = await requireAuth(c)
   if (!user) return err('No autorizado', 401)
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
-  if (rateLimit(ip, 5)) return err('Demasiadas peticiones', 429)
+  if (rateLimit(ip + ':tweet', 10)) return err('Demasiadas peticiones', 429)
 
   const body = await c.req.json<{ content: string; parent_id?: number }>()
   const content = validateText(body.content, 1, 1000)
@@ -167,7 +167,7 @@ app.post('/api/posts', async (c) => {
   const user = await requireAuth(c)
   if (!user) return err('No autorizado', 401)
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
-  if (rateLimit(ip, 3)) return err('Demasiadas peticiones', 429)
+  if (rateLimit(ip + ':post', 5)) return err('Demasiadas peticiones', 429)
 
   const form = await c.req.formData()
   const image = form.get('image') as File | null
@@ -214,7 +214,7 @@ app.post('/api/bereal', async (c) => {
   const user = await requireAuth(c)
   if (!user) return err('No autorizado', 401)
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
-  if (rateLimit(ip, 2)) return err('Demasiadas peticiones', 429)
+  if (rateLimit(ip + ':bereal', 5)) return err('Demasiadas peticiones', 429)
 
   // Check if user already posted today
   const today = await c.env.DB.prepare(`
@@ -267,7 +267,7 @@ app.post('/api/stories', async (c) => {
   const user = await requireAuth(c)
   if (!user) return err('No autorizado', 401)
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
-  if (rateLimit(ip, 3)) return err('Demasiadas peticiones', 429)
+  if (rateLimit(ip + ':story', 5)) return err('Demasiadas peticiones', 429)
 
   const form = await c.req.formData()
   const image = form.get('image') as File | null
@@ -323,16 +323,20 @@ app.post('/api/chat/:userId', async (c) => {
   const user = await requireAuth(c)
   if (!user) return err('No autorizado', 401)
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
-  if (rateLimit(ip, 20)) return err('Demasiadas peticiones', 429)
+  if (rateLimit(ip + ':chat', 30)) return err('Demasiadas peticiones', 429)
 
   const receiverId = Number(c.req.param('userId'))
+  if (!Number.isFinite(receiverId) || receiverId <= 0) return err('Usuario inválido')
+  if (receiverId === user.id) return err('No puedes chatearte a ti mismo')
+  const receiver = await db.userGetById(c.env.DB, receiverId)
+  if (!receiver) return err('Usuario no encontrado', 404)
+
   const body = await c.req.json<{ content: string }>()
   const content = validateText(body.content, 1, 2000)
   if (!content) return err('Contenido: 1-2000 caracteres')
 
   const msg = await db.messageCreate(c.env.DB, user.id, receiverId, content, null)
-  const receiver = await db.userGetById(c.env.DB, receiverId)
-  notify(c.env, `✉️ <b>${user.username}</b> → <b>${receiver?.username ?? receiverId}</b>:\n${content.slice(0, 150)}`)
+  notify(c.env, `✉️ <b>${user.username}</b> → <b>${receiver.username}</b>:\n${content.slice(0, 150)}`)
   return json(msg, 201)
 })
 
