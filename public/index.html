@@ -18,12 +18,27 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
   <link rel="icon" href="/favicon/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800;9..144,900&family=Inter:wght@400;500;600;700&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
   <!-- Unread badge (floating, no header) -->
   <button id="headerUnread" class="unread-badge" hidden onclick="App.go('chat')">0</button>
+
+  <!-- Mode Banner: per-section habitat (gradient + mascota + particles) -->
+  <header id="modeBanner" class="mode-banner" hidden>
+    <div class="banner-particles" id="bannerParticles"></div>
+    <div class="banner-content">
+      <div class="banner-text">
+        <h1 id="bannerTitle" class="banner-title"></h1>
+        <p id="bannerSubtitle" class="banner-subtitle"></p>
+      </div>
+      <div id="bannerMascot" class="banner-mascot"></div>
+    </div>
+  </header>
 
   <!-- Registration (shown if no user) -->
   <section id="registration" class="mode" hidden>
@@ -93,10 +108,6 @@
   <!-- Mode: BeReal -->
   <section id="mode-bereal" class="mode" hidden>
     <div class="feed bereal-feed">
-      <div class="bereal-header">
-        <h2>miau real</h2>
-        <p class="muted">una foto al dia. sin filtros. se tu gato.</p>
-      </div>
       <div id="berealGrid" class="bereal-grid"></div>
       <button class="fab" onclick="App.openBerealCapture()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>

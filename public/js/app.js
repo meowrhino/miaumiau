@@ -19,6 +19,7 @@ const App = {
     if (window.__PUBLIC_CONTEXT__) {
       document.querySelectorAll('.mode').forEach(s => s.hidden = true)
       document.getElementById('mode-public').hidden = false
+      const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
       App.mode = 'public'
       App.enter_public()
       return
@@ -54,6 +55,7 @@ const App = {
     if (el) {
       el.hidden = false
       App.mode = mode
+      App._renderBanner(mode)
       if (App['enter_' + mode]) App['enter_' + mode]()
     }
     // update nav
@@ -62,8 +64,87 @@ const App = {
     })
     document.getElementById('bottomNav').hidden = false
     // update pop color
-    const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', bereal: 'var(--pop-bereal)', profile: 'var(--text)' }
+    const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', bereal: 'var(--pop-bereal)', profile: 'var(--pop-profile)' }
     document.documentElement.style.setProperty('--pop', popMap[mode] ?? 'var(--text)')
+    // scroll to top on mode change for clarity
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  },
+
+  // ─── Per-mode Habitats (banner + mascot + particles) ───
+  _modeVibes: {
+    stories: {
+      title: 'stories',
+      subtitle: 'lo que pasa hoy. desaparece en 24h.',
+      traits: { eyes: 'sleepy', mouth: 'smile', cheeks: 'blush', headTop: 'spike' },
+      mascotColor: 'Tomato',
+      particle: 'ember',
+    },
+    posts: {
+      title: 'posts',
+      subtitle: 'tu galería personal.',
+      traits: { eyes: 'sparkle', mouth: 'cat', cheeks: 'blush', headTop: 'droplet' },
+      mascotColor: 'DodgerBlue',
+      particle: 'sparkle',
+    },
+    tweets: {
+      title: 'miaus',
+      subtitle: 'pensamientos al vuelo.',
+      traits: { eyes: 'classic', mouth: 'open', cheeks: 'blush', headTop: 'leaf' },
+      mascotColor: 'Gold',
+      particle: 'bubble',
+    },
+    chat: {
+      title: 'chat',
+      subtitle: 'conversaciones en privado.',
+      traits: { eyes: 'heart', mouth: 'smile', cheeks: 'blush', headTop: 'none' },
+      mascotColor: 'MediumSeaGreen',
+      particle: 'soft',
+    },
+    bereal: {
+      title: 'miau real',
+      subtitle: 'una foto al día. sin filtros.',
+      traits: { eyes: 'round', mouth: 'o', cheeks: 'freckles', headTop: 'antenna' },
+      mascotColor: 'DarkOrange',
+      particle: 'sun',
+    },
+    profile: {
+      title: 'tu gato',
+      subtitle: 'tu rincón. tu look.',
+      traits: { eyes: 'star', mouth: 'smirk', cheeks: 'blush', headTop: 'antenna' },
+      mascotColor: 'MediumPurple',
+      particle: 'star',
+    },
+  },
+
+  _renderBanner(mode) {
+    const banner = document.getElementById('modeBanner')
+    const cfg = App._modeVibes[mode]
+    if (!banner || !cfg) { if (banner) banner.hidden = true; return }
+    banner.hidden = false
+    banner.dataset.mode = mode
+    document.getElementById('bannerTitle').textContent = cfg.title
+    document.getElementById('bannerSubtitle').textContent = cfg.subtitle
+
+    // mascot poporing
+    const mascotEl = document.getElementById('bannerMascot')
+    if (typeof generatePoporingFromTraits === 'function') {
+      mascotEl.innerHTML = generatePoporingFromTraits(cfg.traits, cfg.mascotColor)
+    }
+
+    // particles
+    const part = document.getElementById('bannerParticles')
+    part.innerHTML = ''
+    part.dataset.particle = cfg.particle
+    const count = cfg.particle === 'sun' ? 6 : 14
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('span')
+      dot.className = 'particle particle-' + cfg.particle
+      dot.style.left = Math.random() * 100 + '%'
+      dot.style.top = Math.random() * 100 + '%'
+      dot.style.animationDelay = (Math.random() * 4) + 's'
+      dot.style.animationDuration = (3 + Math.random() * 4) + 's'
+      part.appendChild(dot)
+    }
   },
 
   updateHeader() {
@@ -78,6 +159,7 @@ const App = {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('registration').hidden = false
     document.getElementById('bottomNav').hidden = true
+    const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
     // header removed
 
     App._regColor = 'Coral'
@@ -147,7 +229,7 @@ const App = {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('login').hidden = false
     document.getElementById('bottomNav').hidden = true
-    // header removed
+    const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
   },
 
   async login() {

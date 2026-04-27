@@ -77,6 +77,7 @@ Object.assign(App, {
     $('#chatConversations').hidden = true
     $('.chat-search').hidden = true
     $('#chatThread').hidden = false
+    document.getElementById('modeBanner').hidden = true
     $('#chatWith').innerHTML = `<b style="color:${colorHex(color)}">${esc(username)}</b>`
     $('#chatInput').value = ''
     // tint thread accent with other user's color
@@ -176,6 +177,7 @@ Object.assign(App, {
     $('#chatThread').hidden = true
     $('#chatConversations').hidden = false
     $('.chat-search').hidden = false
+    document.getElementById('modeBanner').hidden = false
     App.loadConversations()
   },
 

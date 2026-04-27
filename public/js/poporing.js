@@ -187,6 +187,20 @@
     return gridToSvg(g, p)
   }
 
+  // Build a poporing with explicit traits (for branded mascots per section)
+  window.generatePoporingFromTraits = function (traits, colorName) {
+    const filledTraits = {
+      eyes:    traits.eyes    || 'classic',
+      mouth:   traits.mouth   || 'smile',
+      cheeks:  traits.cheeks  || 'blush',
+      headTop: traits.headTop || 'none',
+    }
+    const base = (typeof colorHex === 'function' ? colorHex(colorName) : null) || colorName || '#a6c081'
+    const p = pal(base)
+    const g = buildGrid(filledTraits)
+    return gridToSvg(g, p)
+  }
+
   // trait metadata for a future poporing editor (replaces CAT_TRAITS)
   window.POPORING_TRAITS = {
     eyes:    { name: 'ojos',     options: EYE_KEYS,     labels: ['clásicos','redondos','punto','dormidos','estrella','corazón','brillo'] },

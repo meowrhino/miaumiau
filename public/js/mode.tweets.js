@@ -118,7 +118,30 @@ Object.assign(App, {
       btn.classList.remove('pop'); void btn.offsetWidth
       btn.classList.add('pop')
       setTimeout(() => btn.classList.remove('pop'), 600)
+      // sparkle particles burst
+      if (result.toggled) App._emitSparkles(btn)
     } catch (e) { showToast(e.message) }
+  },
+
+  _emitSparkles(btn) {
+    let wrap = btn.querySelector('.sparkles')
+    if (!wrap) {
+      wrap = document.createElement('span')
+      wrap.className = 'sparkles'
+      btn.appendChild(wrap)
+    }
+    wrap.innerHTML = ''
+    const N = 8
+    for (let i = 0; i < N; i++) {
+      const s = document.createElement('span')
+      const angle = (Math.PI * 2 * i / N) + (Math.random() - 0.5) * 0.4
+      const dist = 22 + Math.random() * 14
+      s.style.setProperty('--dx', Math.cos(angle) * dist + 'px')
+      s.style.setProperty('--dy', Math.sin(angle) * dist + 'px')
+      s.style.animationDelay = (Math.random() * 0.08) + 's'
+      wrap.appendChild(s)
+    }
+    setTimeout(() => { if (wrap) wrap.innerHTML = '' }, 800)
   },
 
   async reportTweet(id) {
