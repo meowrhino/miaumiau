@@ -52,7 +52,9 @@ Object.assign(App, {
       const container = $('#chatConversations')
       container.innerHTML = ''
       if (convs.length === 0) {
-        container.innerHTML = '<p class="muted center">no hay conversaciones todavia</p>'
+        container.innerHTML = (typeof empty === 'function')
+          ? empty('aún no hay conversaciones. busca un gato arriba!')
+          : '<p class="muted center">no hay conversaciones</p>'
         return
       }
       convs.forEach(c => {
@@ -75,15 +77,18 @@ Object.assign(App, {
     $('#chatConversations').hidden = true
     $('.chat-search').hidden = true
     $('#chatThread').hidden = false
-    $('#chatWith').innerHTML = `<b style="color:${colorHex(color)}">${username}</b>`
+    $('#chatWith').innerHTML = `<b style="color:${colorHex(color)}">${esc(username)}</b>`
     $('#chatInput').value = ''
+    // tint thread accent with other user's color
+    document.documentElement.style.setProperty('--pop', colorHex(color))
 
     try {
       const msgs = await API.get('/chat/' + userId + '?limit=50')
       const container = $('#chatMessages')
       container.innerHTML = ''
       // messages come DESC, reverse for display
-      msgs.reverse().forEach(m => App._renderMessage(m, container))
+      const ordered = msgs.reverse()
+      App._renderMessageList(ordered, container)
       container.scrollTop = container.scrollHeight
 
       // mark read
@@ -91,12 +96,63 @@ Object.assign(App, {
     } catch (e) { showToast(e.message) }
   },
 
-  _renderMessage(msg, container) {
+  _renderMessageList(msgs, container) {
+    let lastDate = null
+    for (let i = 0; i < msgs.length; i++) {
+      const m = msgs[i]
+      const d = (m.created_at || '').slice(0, 10)
+      if (d && d !== lastDate) {
+        const sep = document.createElement('div')
+        sep.className = 'chat-date-sep'
+        sep.textContent = App._formatDateSep(m.created_at)
+        container.appendChild(sep)
+        lastDate = d
+      }
+      const prev = msgs[i - 1], next = msgs[i + 1]
+      const sameAsPrev = prev && prev.sender_id === m.sender_id
+        && d === (prev.created_at || '').slice(0, 10)
+        && Math.abs(new Date(m.created_at + 'Z') - new Date(prev.created_at + 'Z')) < 3 * 60_000
+      const sameAsNext = next && next.sender_id === m.sender_id
+        && d === (next.created_at || '').slice(0, 10)
+        && Math.abs(new Date(next.created_at + 'Z') - new Date(m.created_at + 'Z')) < 3 * 60_000
+      let group = ''
+      if (sameAsPrev && sameAsNext) group = 'group-mid'
+      else if (sameAsPrev) group = 'group-end'
+      else if (sameAsNext) group = 'group-start'
+      App._renderMessage(m, container, { group, showMeta: !sameAsNext })
+    }
+  },
+
+  _formatDateSep(dateStr) {
+    const d = new Date(dateStr + 'Z')
+    const today = new Date()
+    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
+    const sameDay = (a, b) => a.toDateString() === b.toDateString()
+    if (sameDay(d, today)) return 'hoy'
+    if (sameDay(d, yesterday)) return 'ayer'
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+    return d.getDate() + ' ' + months[d.getMonth()]
+  },
+
+  _formatTime(dateStr) {
+    const d = new Date(dateStr + 'Z')
+    return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0')
+  },
+
+  _renderMessage(msg, container, opts = {}) {
     const el = document.createElement('div')
     const isMine = msg.sender_id === App.user.id
     el.className = 'message ' + (isMine ? 'sent' : 'received')
-    el.innerHTML = `<p>${linkify(esc(msg.content))}</p>
-      <small class="muted">${timeAgo(msg.created_at)}</small>`
+    if (opts.group) el.classList.add(opts.group)
+    let metaHtml = ''
+    if (opts.showMeta !== false) {
+      const time = msg.created_at ? App._formatTime(msg.created_at) : ''
+      const ticks = isMine
+        ? (msg.read_at ? '<span class="ticks read">✓✓</span>' : '<span class="ticks">✓</span>')
+        : ''
+      metaHtml = `<div class="message-meta"><span>${time}</span>${ticks}</div>`
+    }
+    el.innerHTML = `<p>${linkify(esc(msg.content))}</p>${metaHtml}`
     container.appendChild(el)
   },
 
@@ -110,7 +166,7 @@ Object.assign(App, {
     try {
       const msg = await API.post('/chat/' + App._chatUserId, { content })
       const container = $('#chatMessages')
-      App._renderMessage({ ...msg, sender_id: App.user.id }, container)
+      App._renderMessage({ ...msg, sender_id: App.user.id }, container, { showMeta: true })
       container.scrollTop = container.scrollHeight
     } catch (e) { showToast(e.message) }
   },

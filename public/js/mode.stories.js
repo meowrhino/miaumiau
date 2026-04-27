@@ -25,15 +25,22 @@ Object.assign(App, {
       App._storyGroups = Object.values(groups)
 
       if (App._storyGroups.length === 0) {
-        container.innerHTML = '<p class="muted center">no hay stories todavia</p>'
+        container.innerHTML = (typeof empty === 'function')
+          ? empty('aún no hay stories. comparte la primera!')
+          : '<p class="muted center">no hay stories todavía</p>'
         return
       }
 
+      const seen = JSON.parse(localStorage.getItem('miau_story_seen') || '{}')
       App._storyGroups.forEach((group, gi) => {
+        const allSeen = group.stories.every(s => seen[s.id])
         const el = document.createElement('button')
-        el.className = 'story-bubble'
-        el.innerHTML = `<img class="avatar big" src="${App.avatarUrl(group.user_id)}">
-          <span style="color:${colorHex(group.color)}">${group.username}</span>`
+        el.className = 'story-bubble' + (allSeen ? ' seen' : '')
+        el.innerHTML = `
+          <div class="story-ring">
+            <img class="avatar" src="${App.avatarUrl(group.user_id)}">
+          </div>
+          <span class="username" style="color:${colorHex(group.color)}">${esc(group.username)}</span>`
         el.onclick = () => App.viewStories(gi)
         container.appendChild(el)
       })
@@ -103,8 +110,13 @@ Object.assign(App, {
       })
     } catch (_) {}
 
-    // mark viewed
+    // mark viewed (server + local cache)
     API.post('/stories/' + story.id + '/view').catch(() => {})
+    try {
+      const seen = JSON.parse(localStorage.getItem('miau_story_seen') || '{}')
+      seen[story.id] = Date.now()
+      localStorage.setItem('miau_story_seen', JSON.stringify(seen))
+    } catch (_) {}
 
     // auto advance
     clearTimeout(App._storyTimer)

@@ -19,7 +19,9 @@ Object.assign(App, {
       const tweets = await API.get('/tweets?page=' + page + '&limit=20')
       if (page === 1) container.innerHTML = ''
       if (tweets.length === 0 && page === 1) {
-        container.innerHTML = '<div class="empty"><div class="empty-icon">🐱</div><p>no hay miaus todavia. se el primero!</p></div>'
+        container.innerHTML = (typeof empty === 'function')
+          ? empty('aún no hay miaus. sé el primero!')
+          : '<div class="empty"><div class="empty-icon">🐱</div><p>no hay miaus todavia</p></div>'
       }
       tweets.forEach(t => App.renderTweet(t, container))
       $('#tweetsMore').hidden = tweets.length < 20
@@ -113,6 +115,9 @@ Object.assign(App, {
     try {
       const result = await API.post('/reactions', { target_type: type, target_id: id })
       btn.classList.toggle('reacted', result.toggled)
+      btn.classList.remove('pop'); void btn.offsetWidth
+      btn.classList.add('pop')
+      setTimeout(() => btn.classList.remove('pop'), 600)
     } catch (e) { showToast(e.message) }
   },
 

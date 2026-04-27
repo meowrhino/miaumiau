@@ -35,16 +35,33 @@ Object.assign(App, {
     const hex = colorHex(u.color)
     const joined = new Date(u.created_at + 'Z')
     const joinedStr = joined.toLocaleDateString('es', { month: 'long', year: 'numeric' })
+    const fmt = n => n >= 1000 ? (n / 1000).toFixed(n < 10000 ? 1 : 0).replace('.0', '') + 'K' : String(n)
 
     const root = $('#publicContent')
     root.innerHTML = `
       <header class="public-header" style="--user-accent:${hex}">
+        <div class="public-banner"></div>
         <div class="public-avatar">
           <img src="${App.avatarUrl(u.id)}" alt="avatar de ${esc(u.username)}">
         </div>
         <h1 class="public-name">${esc(u.username)}</h1>
         ${u.bio ? `<p class="public-bio">${linkify(u.bio)}</p>` : ''}
         <p class="public-meta">aquí desde ${joinedStr}</p>
+        <div class="public-stats">
+          <div class="public-stat">
+            <span class="public-stat-value">${fmt(data.posts.length)}</span>
+            <span class="public-stat-label">fotos</span>
+          </div>
+          <div class="public-stat">
+            <span class="public-stat-value">${fmt(data.tweets.length)}</span>
+            <span class="public-stat-label">miaus</span>
+          </div>
+          ${data.bereals && data.bereals.length ? `
+          <div class="public-stat">
+            <span class="public-stat-value">${fmt(data.bereals.length)}</span>
+            <span class="public-stat-label">reales</span>
+          </div>` : ''}
+        </div>
       </header>
 
       ${data.posts.length ? `
@@ -72,7 +89,7 @@ Object.assign(App, {
           </div>
         </section>` : ''}
 
-      ${(!data.posts.length && !data.tweets.length) ? empty(esc(u.username) + ' no ha publicado aún', '🌱') : ''}
+      ${(!data.posts.length && !data.tweets.length) ? empty(esc(u.username) + ' no ha publicado aún todavía') : ''}
     `
   },
 
@@ -144,6 +161,14 @@ Object.assign(App, {
   }
 })
 
-function empty(msg, icon = '🐈') {
-  return `<div class="empty"><div class="empty-icon">${icon}</div>${msg}</div>`
+function empty(msg, icon) {
+  // Use a poporing as the empty illustration. Random seed + cycling colors.
+  const colors = ['Coral', 'DodgerBlue', 'MediumSeaGreen', 'Plum', 'Gold']
+  const seed = Math.floor(Math.random() * 0xFFFFFFFF)
+  const color = colors[Math.floor(Math.random() * colors.length)]
+  const svg = (typeof generateCatSvg === 'function') ? generateCatSvg(seed, color) : null
+  const visual = svg
+    ? `<div class="empty-poporing">${svg}</div>`
+    : `<div class="empty-icon">${icon || '🐈'}</div>`
+  return `<div class="empty">${visual}<p class="empty-msg">${msg}</p></div>`
 }
