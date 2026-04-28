@@ -7,22 +7,50 @@
   const PLAYER_SPEED = 200  // px/sec
   const PLAYER_SIZE = 56    // sprite render size
 
-  // 6 zones laid out 3x2 with a central plaza area.
-  // building: emoji sprite + roof color define the silhouette.
+  // 6 zones placed asymmetrically across an organic village (no hex/circle pattern).
+  // Plaza sits SW (descentrada). Functional houses are spread out and mixed with
+  // decorative buildings (cottages, bakery, workshop, barn, mill, well, stalls, stage)
+  // so the world feels like a real lived-in town, not a 3x2 grid.
   const ZONES = [
-    { id: 'tweets',  name: 'el café',     x: 110,  y: 120, w: 320, h: 200, color: '#f0a85a', mascotColor: '#FFB800', habitat: 'tweets',  building: '☕', roof: '#c97a3a' },
-    { id: 'posts',   name: 'el tablón',   x: 480,  y: 60,  w: 320, h: 200, color: '#5fa3d8', mascotColor: '#007AFF', habitat: 'posts',   building: '📌', roof: '#3877a6' },
-    { id: 'stories', name: 'el miradero', x: 850,  y: 120, w: 320, h: 200, color: '#7a3a8e', mascotColor: '#BF7BD9', habitat: 'stories', building: '🌙', roof: '#552366' },
-    { id: 'chat',    name: 'el banquito', x: 110,  y: 420, w: 320, h: 200, color: '#4abd76', mascotColor: '#34C759', habitat: 'chat',    building: '🪑', roof: '#2f8f56' },
-    { id: 'bereal',  name: 'la polaroid', x: 480,  y: 460, w: 320, h: 200, color: '#ff8a3c', mascotColor: '#FF9500', habitat: 'bereal',  building: '📷', roof: '#cc6320' },
-    { id: 'profile', name: 'tu casa',     x: 850,  y: 420, w: 320, h: 200, color: '#a87dd8', mascotColor: '#BF7BD9', habitat: 'profile', building: '🏠', roof: '#7e54a8' },
+    { id: 'tweets',  name: 'el café',     x: 80,  y: 90,  w: 180, h: 140, color: '#f0a85a', mascotColor: '#FFB800', habitat: 'tweets',  building: '☕', roof: '#c97a3a' },
+    { id: 'posts',   name: 'el tablón',   x: 470, y: 320, w: 180, h: 140, color: '#5fa3d8', mascotColor: '#007AFF', habitat: 'posts',   building: '📌', roof: '#3877a6' },
+    { id: 'stories', name: 'el miradero', x: 920, y: 70,  w: 180, h: 140, color: '#7a3a8e', mascotColor: '#BF7BD9', habitat: 'stories', building: '🌙', roof: '#552366' },
+    { id: 'chat',    name: 'el banquito', x: 100, y: 450, w: 180, h: 140, color: '#4abd76', mascotColor: '#34C759', habitat: 'chat',    building: '🪑', roof: '#2f8f56' },
+    { id: 'bereal',  name: 'la polaroid', x: 600, y: 100, w: 180, h: 140, color: '#ff8a3c', mascotColor: '#FF9500', habitat: 'bereal',  building: '📷', roof: '#cc6320' },
+    { id: 'profile', name: 'tu casa',     x: 950, y: 420, w: 180, h: 140, color: '#a87dd8', mascotColor: '#BF7BD9', habitat: 'profile', building: '🏠', roof: '#7e54a8' },
   ]
-  const PLAZA = { x: 605, y: 340, w: 70, h: 70 }  // center
 
-  // Static decorations: trees, lamps, fountain. Hand-placed so the town feels lived-in.
-  const TREES   = [{ x: 70, y: 360 }, { x: 1210, y: 360 }, { x: 295, y: 380 }, { x: 985, y: 380 }]
-  const LAMPS   = [{ x: 460, y: 360 }, { x: 820, y: 360 }]
-  const FOUNTAIN = { x: 640, y: 380, r: 36 }
+  // Plaza descentrada al SO — fountain + stage + market stalls + well live here.
+  const PLAZA = { x: 400, y: 510, rx: 200, ry: 110 }
+  const FOUNTAIN = { x: 380, y: 510, r: 36 }
+
+  // Decorative buildings — visual filler so the village reads as a pueblo, not a hexagon.
+  // None of these are interactive (no doormat trigger). They depth-sort with everything else.
+  const DECO_BUILDINGS = [
+    { kind: 'cottage', seed: 11, x: 330, y: 210, h: 100 },  // top: between cafe and polaroid
+    { kind: 'cottage', seed: 22, x: 800, y: 240, h: 100 },  // middle: behind polaroid/miradero
+    { kind: 'cottage', seed: 33, x: 1180, y: 210, h: 100 }, // NE corner, neighbour to miradero
+    { kind: 'cottage', seed: 44, x: 60,  y: 350, h: 100 },  // far W, between cafe & banquito
+    { kind: 'bakery',  x: 740,  y: 470, h: 110 },           // commercial near tablon
+    { kind: 'workshop', x: 1140, y: 580, h: 110 },          // SE near tu casa
+    { kind: 'barn',    x: 880,  y: 660, h: 100 },           // far S behind zones
+    { kind: 'mill',    x: 1200, y: 200, h: 200 },           // NE tall, decorative landmark
+    { kind: 'well',    x: 480,  y: 600, h: 70 },            // in plaza
+    { kind: 'stage',   x: 320,  y: 590, h: 60 },            // in plaza
+    { kind: 'stall',   seed: 7,  x: 540, y: 555, h: 64 },   // plaza market
+    { kind: 'stall',   seed: 13, x: 600, y: 595, h: 64 },
+  ]
+
+  // Static decorations: trees, lamps. Hand-placed for "lived-in" feel.
+  const TREES = [
+    { x: 30,  y: 280 }, { x: 270, y: 80 },  { x: 430, y: 70 },
+    { x: 720, y: 90 },  { x: 1080, y: 240 }, { x: 1240, y: 380 },
+    { x: 50,  y: 580 }, { x: 380, y: 280 }, { x: 820, y: 380 },
+    { x: 1200, y: 540 }, { x: 700, y: 660 },
+  ]
+  const LAMPS = [
+    { x: 260, y: 460 }, { x: 540, y: 460 }, { x: 280, y: 600 },
+  ]
 
   const City = {
     canvas: null, ctx: null,
@@ -132,18 +160,32 @@
       ZONES.forEach(z => {
         houses[z.id] = MiauSprites.house(z.id, z.roof, z.id === 'profile' ? ownerHex : null)
       })
-      // Mix tree variants for each TREES position so the city looks varied
+      // Tree variants per position
       const trees = TREES.map((_, i) => {
         const seed = i * 31 + 7
-        const variant = i % 4
-        if (variant === 0) return MiauSprites.treeLush(seed)
-        if (variant === 1) return MiauSprites.treeSakura(seed)
-        if (variant === 2) return MiauSprites.treePine(seed)
+        const v = i % 4
+        if (v === 0) return MiauSprites.treeLush(seed)
+        if (v === 1) return MiauSprites.treeSakura(seed)
+        if (v === 2) return MiauSprites.treePine(seed)
         return MiauSprites.treeLush(seed + 13)
+      })
+      // Deco buildings — pre-render each one. Cottages get a seeded roof color so
+      // they don't all match.
+      const deco = DECO_BUILDINGS.map(d => {
+        if (d.kind === 'cottage')  return MiauSprites.cottage(d.seed, null)
+        if (d.kind === 'bakery')   return MiauSprites.bakery()
+        if (d.kind === 'workshop') return MiauSprites.workshop()
+        if (d.kind === 'barn')     return MiauSprites.barn()
+        if (d.kind === 'mill')     return MiauSprites.mill()
+        if (d.kind === 'well')     return MiauSprites.well()
+        if (d.kind === 'stage')    return MiauSprites.stage()
+        if (d.kind === 'stall')    return MiauSprites.marketStall(d.seed || 1)
+        return null
       })
       City.sprites = {
         house: houses,
         trees,
+        deco,
         bushes: [MiauSprites.bush(11), MiauSprites.bush(22), MiauSprites.bush(33), MiauSprites.bush(44)],
         flowers: [MiauSprites.flowerPatch(55), MiauSprites.flowerPatch(66), MiauSprites.flowerPatch(77)],
         fountain: MiauSprites.fountain(),
@@ -255,9 +297,25 @@
       City.hideOtherTooltip()
     },
 
+    // True when typing in an input/textarea OR a modal/sheet/overlay is open.
+    // While blocked, WASD and click-to-walk are disabled so the player doesn't run off
+    // while you're writing a post or reading a story.
+    isInputBlocked() {
+      const ae = document.activeElement
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return true
+      const open = document.querySelector('.modal:not([hidden]), .zone-sheet:not([hidden]), .story-viewer:not([hidden]), .story-editor:not([hidden]), .events-modal:not([hidden]), .pet-menu:not([hidden]), #zoneSheet:not([hidden])')
+      return !!open
+    },
+
     onKey(e) {
       const down = e.type === 'keydown'
       const k = e.key.toLowerCase()
+      // Block WASD/arrows whenever a modal/sheet is open or you're typing — let Esc still work.
+      if (City.isInputBlocked() && k !== 'escape') {
+        // Also drop any keys held before the modal opened so the player doesn't keep walking
+        City.keys.up = City.keys.down = City.keys.left = City.keys.right = false
+        return
+      }
       if (k === 'w' || k === 'arrowup')    { City.keys.up = down;    City.target = null }
       else if (k === 's' || k === 'arrowdown')  { City.keys.down = down;  City.target = null }
       else if (k === 'a' || k === 'arrowleft')  { City.keys.left = down;  City.target = null }
@@ -267,6 +325,9 @@
     },
 
     onPointer(e) {
+      // While a modal/sheet is open, the canvas is non-interactive (the overlay owns the
+      // input). Don't let stray clicks send the player walking under the modal.
+      if (City.isInputBlocked()) return
       const { x, y } = City.canvasCoords(e)
       // 1. Other player → open interaction popover (sesión 8)
       const other = City.findOtherAt(x, y)
@@ -327,6 +388,21 @@
       if (!sheet || sheet.hidden) return
       sheet.classList.remove('open')
       sheet.dataset.open = 'false'
+      // Step the player slightly off the doormat so the proximity trigger doesn't
+      // immediately re-open the sheet, and add a cooldown for safety.
+      const z = ZONES.find(zz => zz.id === City._matZoneId) || ZONES.find(zz => zz.id === City.currentZone)
+      if (z) {
+        // Push player just below the doormat (toward the plaza)
+        const cx = z.x + z.w/2, cy = z.y + z.h - 30
+        const px = W/2, py = H/2 + 20
+        const dx = px - cx, dy = py - cy
+        const len = Math.hypot(dx, dy) || 1
+        City.player.x = cx + (dx/len) * 60
+        City.player.y = cy + (dy/len) * 60
+      }
+      City._matCooldownUntil = performance.now() + 1500
+      City._matZoneId = null
+      City._matEnterTime = 0
       // After the slide-down transition, restore the .mode element back to its original parent
       setTimeout(() => {
         sheet.hidden = true
@@ -344,6 +420,28 @@
       const p = City.player
       const inside = ZONES.find(z => p.x >= z.x && p.x <= z.x + z.w && p.y >= z.y && p.y <= z.y + z.h)
       const newZone = inside ? inside.id : null
+      // Doormat proximity trigger: standing on the doormat (in front of the door,
+      // 28px around the mascot) for ≥420ms opens that zone's sheet automatically.
+      // While walking through, the timer resets, so passing by doesn't trigger.
+      const now = performance.now()
+      const cooldownActive = now < (City._matCooldownUntil || 0)
+      const sheetOpen = !!(document.getElementById('zoneSheet') && !document.getElementById('zoneSheet').hidden)
+      if (!cooldownActive && !sheetOpen) {
+        const onMat = ZONES.find(z => Math.hypot(p.x - (z.x + z.w/2), p.y - (z.y + z.h - 30)) < 28)
+        if (onMat) {
+          if (City._matZoneId !== onMat.id) {
+            City._matZoneId = onMat.id
+            City._matEnterTime = now
+          } else if (p.walking) {
+            City._matEnterTime = now   // walking through → keep resetting
+          } else if (now - (City._matEnterTime || now) > 420) {
+            City.openSheet(onMat)
+          }
+        } else if (City._matZoneId) {
+          City._matZoneId = null
+          City._matEnterTime = 0
+        }
+      }
       if (newZone !== City.currentZone) {
         City.currentZone = newZone
         if (window.World) {
@@ -486,21 +584,28 @@
       // ── 1. ground (tiled grass + plaza cobble + paths + bushes/flowers) ──
       City.drawGround(ctx, now, visL, visT, visR, visB)
 
-      // ── 2. ambient back layer: trees behind buildings ──
-      TREES.forEach((t, i) => { if (t.y < 400) City.drawTree(ctx, t.x, t.y, now, i) })
+      // ── 2. ambient back layer: trees and bushes behind anything they sit higher than
+      const PLAZA_Y = PLAZA.y - 40
+      TREES.forEach((t, i) => { if (t.y < PLAZA_Y) City.drawTree(ctx, t.x, t.y, now, i) })
 
-      // ── 3. buildings (depth-sorted: top rows first so bottom rows overlap) ──
-      const sortedZones = ZONES.slice().sort((a, b) => a.y - b.y)
-      sortedZones.forEach(z => City.drawBuilding(ctx, z, now))
+      // ── 3. all buildings (functional zones + decorative) depth-sorted by Y of base ──
+      const buildings = []
+      ZONES.forEach(z => buildings.push({ kind: 'zone', y: z.y + z.h, ref: z }))
+      DECO_BUILDINGS.forEach((d, i) => buildings.push({ kind: 'deco', y: d.y, ref: d, idx: i }))
+      buildings.sort((a, b) => a.y - b.y)
+      buildings.forEach(b => {
+        if (b.kind === 'zone') City.drawBuilding(ctx, b.ref, now)
+        else                   City.drawDecoBuilding(ctx, b.ref, City.sprites && City.sprites.deco[b.idx], now)
+      })
 
-      // ── 4. fountain in plaza ──
+      // ── 4. fountain in plaza (descentrada) ──
       City.drawFountain(ctx, FOUNTAIN.x, FOUNTAIN.y, now)
 
-      // ── 5. lamps (light on at night via World tint, but the post is always there) ──
+      // ── 5. lamps (warm halo, always lit thanks to World tint) ──
       LAMPS.forEach(l => City.drawLamp(ctx, l.x, l.y, now))
 
-      // ── 6. front-layer trees (in front of plaza) ──
-      TREES.forEach((t, i) => { if (t.y >= 400) City.drawTree(ctx, t.x, t.y, now, i) })
+      // ── 6. front-layer trees (in front of plaza area) ──
+      TREES.forEach((t, i) => { if (t.y >= PLAZA_Y) City.drawTree(ctx, t.x, t.y, now, i) })
 
       // ── 7. characters (others + me, sorted by y for fake parallax) ──
       const chars = City.others.map(o => ({ kind: 'other', y: o.y, data: o }))
@@ -537,9 +642,11 @@
         ctx.fillRect(visL, visT, visR - visL, visB - visT)
       }
 
-      const cx = W/2, cy = H/2 + 20
+      // Plaza descentrada al SO con cobble pixel-art
+      const cx = PLAZA.x, cy = PLAZA.y, prx = PLAZA.rx, pry = PLAZA.ry
 
-      // Caminos de tierra (línea ancha) desde plaza a cada edificio. Borde más oscuro.
+      // Caminos serpenteantes: desde la plaza a cada zona funcional. Asimétricos
+      // (cada uno tiene su propia longitud porque las zonas están repartidas org.).
       ZONES.forEach(z => {
         const tx = z.x + z.w/2, ty = z.y + z.h - 30
         ctx.save()
@@ -550,10 +657,10 @@
         ctx.strokeStyle = '#d6b988'
         ctx.lineWidth = 22
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(tx, ty); ctx.stroke()
-        // Pebble specks scattered along the path
+        // Pebble specks scattered along
         const dx = tx - cx, dy = ty - cy, len = Math.hypot(dx, dy)
         const nx = -dy/len, ny = dx/len
-        for (let t = 0.15; t < 0.95; t += 0.12) {
+        for (let t = 0.15; t < 0.95; t += 0.10) {
           const pxx = cx + dx*t + nx * (((t * 7919) % 7) - 3)
           const pyy = cy + dy*t + ny * (((t * 7919) % 7) - 3)
           ctx.fillStyle = '#a08868'
@@ -562,37 +669,37 @@
         ctx.restore()
       })
 
-      // Plaza central de adoquines pixel — clipped a una elipse para que las orillas queden suaves.
+      // Plaza (cobble tiles, clipped a la elipse)
       if (sp && sp.cobble) {
         ctx.save()
-        ctx.beginPath(); ctx.ellipse(cx, cy, 240, 140, 0, 0, Math.PI * 2)
+        ctx.beginPath(); ctx.ellipse(cx, cy, prx, pry, 0, 0, Math.PI * 2)
         ctx.clip()
         const ts = 16
-        for (let y = cy - 144; y < cy + 144; y += ts) {
-          for (let x = cx - 244; x < cx + 244; x += ts) {
+        for (let y = cy - pry - 8; y < cy + pry + 8; y += ts) {
+          for (let x = cx - prx - 8; x < cx + prx + 8; x += ts) {
             ctx.drawImage(sp.cobble, x|0, y|0)
           }
         }
-        // Inner shading at rim
         ctx.strokeStyle = 'rgba(140,100,60,0.35)'
         ctx.lineWidth = 4
-        ctx.beginPath(); ctx.ellipse(cx, cy, 238, 138, 0, 0, Math.PI * 2); ctx.stroke()
+        ctx.beginPath(); ctx.ellipse(cx, cy, prx - 2, pry - 2, 0, 0, Math.PI * 2); ctx.stroke()
         ctx.restore()
       } else {
         ctx.fillStyle = '#e8c898'
-        ctx.beginPath(); ctx.ellipse(cx, cy, 240, 140, 0, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.ellipse(cx, cy, prx, pry, 0, 0, Math.PI * 2); ctx.fill()
       }
 
-      // Static bushes & flower patches scattered around the world for ambient detail
+      // Bushes & flower patches scattered around the village ambiente.
       if (sp) {
         const decoSpots = [
-          { kind: 'bush',   x: 60,   y: 540, i: 0 },
-          { kind: 'bush',   x: 1220, y: 540, i: 1 },
-          { kind: 'bush',   x: 380,  y: 660, i: 2 },
-          { kind: 'bush',   x: 920,  y: 660, i: 3 },
-          { kind: 'flower', x: 220,  y: 690, i: 0 },
-          { kind: 'flower', x: 1080, y: 690, i: 1 },
-          { kind: 'flower', x: 640,  y: 700, i: 2 },
+          { kind: 'bush',   x: 30,   y: 380, i: 0 },
+          { kind: 'bush',   x: 690,  y: 700, i: 1 },
+          { kind: 'bush',   x: 1240, y: 660, i: 2 },
+          { kind: 'bush',   x: 220,  y: 700, i: 3 },
+          { kind: 'flower', x: 350,  y: 80,  i: 0 },
+          { kind: 'flower', x: 850,  y: 700, i: 1 },
+          { kind: 'flower', x: 1100, y: 80,  i: 2 },
+          { kind: 'flower', x: 60,   y: 480, i: 0 },
         ]
         for (const d of decoSpots) {
           const img = d.kind === 'bush' ? sp.bushes[d.i % sp.bushes.length] : sp.flowers[d.i % sp.flowers.length]
@@ -649,11 +756,29 @@
       ctx.fillText(z.building, sx, signTop + 14)
       ctx.restore()
 
-      // Mascot poporing in front of the door (clickable hotspot)
+      // Mascot poporing in front of the door (clickable hotspot + doormat trigger)
       const mascot = City.mascots[z.id]
       const my = z.y + z.h - 30
       const bob = Math.sin(now/600 + z.x*0.01) * 4
+      // Doormat aura — soft pulsing glow tells the player "stand here to enter".
+      // When the player is actually on the mat, the aura grows + a progress ring fills
+      // until 420ms have passed and the sheet opens.
+      const distToMat = Math.hypot(City.player.x - cx, City.player.y - my)
+      const isOnMat = City._matZoneId === z.id
       ctx.save()
+      if (distToMat < 100) {
+        const t = Math.max(0, 1 - distToMat / 100)
+        const pulse = (Math.sin(now/600) + 1) * 0.5
+        ctx.fillStyle = `rgba(255,236,168,${(0.10 + pulse * 0.15) * t})`
+        ctx.beginPath(); ctx.arc(cx, my + 4, 36, 0, Math.PI * 2); ctx.fill()
+      }
+      if (isOnMat && City._matEnterTime) {
+        const prog = Math.min(1, (performance.now() - City._matEnterTime) / 420)
+        // Progress ring around the mascot
+        ctx.strokeStyle = z.color
+        ctx.lineWidth = 3
+        ctx.beginPath(); ctx.arc(cx, my + 4, 30, -Math.PI/2, -Math.PI/2 + prog * Math.PI * 2); ctx.stroke()
+      }
       ctx.fillStyle = 'rgba(0,0,0,0.25)'
       ctx.beginPath(); ctx.ellipse(cx, my + 22, 18, 5, 0, 0, Math.PI * 2); ctx.fill()
       ctx.restore()
@@ -680,6 +805,74 @@
       ctx.textAlign = 'center'
       ctx.strokeText(z.name, cx, my + 36)
       ctx.fillText(z.name, cx, my + 36)
+      ctx.restore()
+    },
+
+    drawDecoBuilding(ctx, d, img, now) {
+      // Decorative buildings render at d.x (center) with their footprint base at d.y.
+      // d.h is the desired rendered height; width keeps the sprite's aspect ratio.
+      const sp = City.sprites
+      ctx.save()
+      ctx.imageSmoothingEnabled = false
+      // Floor shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'
+      ctx.beginPath(); ctx.ellipse(d.x, d.y - 4, (d.h * 0.42), 8, 0, 0, Math.PI * 2); ctx.fill()
+      if (img) {
+        const aspect = img.width / img.height
+        const rh = d.h, rw = rh * aspect
+        ctx.drawImage(img, d.x - rw/2, d.y - rh, rw, rh)
+        // Mill: spinning blades attached at the hub (sprite local (40, 36) → world coords)
+        if (d.kind === 'mill') {
+          const cxBlade = d.x
+          const cyBlade = d.y - rh + (36 / 120) * rh
+          const angle = now / 1500
+          ctx.save()
+          ctx.translate(cxBlade, cyBlade)
+          ctx.rotate(angle)
+          const bladeLen = 56, bladeW = 8
+          for (let i = 0; i < 4; i++) {
+            // Blade outline (dark)
+            ctx.fillStyle = '#3a2613'
+            ctx.fillRect(2, -bladeW/2 - 1, bladeLen + 2, bladeW + 2)
+            // Blade body
+            ctx.fillStyle = '#fff5e0'
+            ctx.fillRect(3, -bladeW/2, bladeLen, bladeW)
+            // Highlight stripe
+            ctx.fillStyle = '#e0d0a8'
+            ctx.fillRect(3, -bladeW/2 + bladeW - 2, bladeLen, 2)
+            // Sail panels
+            ctx.fillStyle = 'rgba(80,55,30,0.6)'
+            for (let s = 8; s < bladeLen; s += 8) ctx.fillRect(3 + s, -bladeW/2 + 1, 1, bladeW - 2)
+            ctx.rotate(Math.PI / 2)
+          }
+          // Hub cap (brown)
+          ctx.fillStyle = '#3a2010'
+          ctx.fillRect(-5, -5, 10, 10)
+          ctx.fillStyle = '#7a4d2a'
+          ctx.fillRect(-3, -3, 6, 6)
+          ctx.restore()
+        }
+        // Bakery: animated steam from the chimney (sprite local around x=58, y=12)
+        if (d.kind === 'bakery') {
+          const csx = d.x + (4 / aspect)
+          const csy = d.y - rh + 4
+          for (let i = 0; i < 3; i++) {
+            const t = ((now/1100) + i * 0.33) % 1
+            const ssx = csx + Math.sin(t * Math.PI * 2 + i) * 5
+            const ssy = csy - t * 24
+            ctx.fillStyle = `rgba(255,255,255,${0.50 - t*0.40})`
+            ctx.beginPath(); ctx.arc(ssx, ssy, 3 + t*3, 0, Math.PI * 2); ctx.fill()
+          }
+        }
+        // Workshop: glow from the forge window
+        if (d.kind === 'workshop') {
+          const flicker = (Math.sin(now/180) + 1) * 0.5
+          const fx = d.x - rw/2 + (23 / aspect) * (rh / img.height) * aspect
+          const fy = d.y - rh + (51 / img.height) * rh
+          ctx.fillStyle = `rgba(255,120,60,${0.20 + flicker * 0.20})`
+          ctx.beginPath(); ctx.arc(fx, fy, 12, 0, Math.PI * 2); ctx.fill()
+        }
+      }
       ctx.restore()
     },
 

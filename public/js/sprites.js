@@ -883,9 +883,413 @@
     return c
   }
 
+  // ─── DECORATIVE BUILDINGS ──────────────────────────────────────────────────
+  // Smaller "you can't enter these" buildings that fill the village. Same pixel-art
+  // style family as the 6 functional houses but visibly different roles.
+
+  // Cottage — tiny neighbour house, 64×64. Roof color seeded so they don't all match.
+  function cottage(seed, roofColor) {
+    const r = rng(seed)
+    const c = mkc(64, 64)
+    const ctx = c.ctx
+    const wall = '#f7ead0', wallS = dk(wall, 0.10)
+    const roof = roofColor || ['#c97a3a', '#5fa3d8', '#7a8e3a', '#a87dd8', '#b85258'][Math.floor(r() * 5)]
+    const stroke = '#3a2613', door = '#8a5a32', win = '#ffe9a8'
+    // Shadow
+    rect(ctx, 6, 60, 52, 3, 'rgba(40,25,15,0.30)')
+    // Walls
+    rect(ctx, 12, 30, 40, 28, wall)
+    rect(ctx, 12, 54, 40, 4, wallS)
+    rect(ctx, 12, 30, 1, 28, dk(wall, 0.22))
+    outline(ctx, 12, 30, 40, 28, stroke)
+    // Roof (gable)
+    tri(ctx, 32, 8, 26, 30, roof)
+    for (let i = 0; i <= 22; i++) {
+      const w = Math.round(26 * i / 22)
+      px(ctx, 32 - w, 8 + i, stroke)
+      px(ctx, 32 + w, 8 + i, stroke)
+    }
+    rect(ctx, 6, 30, 52, 1, stroke)
+    // Highlight on roof
+    for (let i = 0; i < 22; i += 2) px(ctx, 32 - Math.round(26 * i / 22) + 1, 8 + i, lt(roof, 0.18))
+    // Door
+    rect(ctx, 28, 42, 8, 16, door)
+    rect(ctx, 28, 42, 8, 1, lt(door, 0.20))
+    outline(ctx, 28, 42, 8, 16, stroke)
+    px(ctx, 34, 50, '#ffd86a')
+    // Window (one or two depending on seed)
+    rect(ctx, 16, 38, 8, 8, win)
+    outline(ctx, 16, 38, 8, 8, stroke)
+    rect(ctx, 20, 38, 1, 8, stroke); rect(ctx, 16, 42, 8, 1, stroke)
+    if (r() > 0.5) {
+      rect(ctx, 40, 38, 8, 8, win)
+      outline(ctx, 40, 38, 8, 8, stroke)
+      rect(ctx, 44, 38, 1, 8, stroke); rect(ctx, 40, 42, 8, 1, stroke)
+    }
+    // Optional chimney with seed
+    if (r() > 0.4) {
+      rect(ctx, 42, 12, 6, 14, '#a87859')
+      rect(ctx, 42, 12, 6, 2, '#7a4a30')
+      outline(ctx, 42, 12, 6, 14, stroke)
+    }
+    // Optional laundry line (sheet between corner posts)
+    if (r() > 0.5) {
+      rect(ctx, 4, 38, 1, 12, '#7a4d2a')
+      rect(ctx, 5, 39, 6, 1, 'rgba(120,90,60,0.6)')
+      rect(ctx, 5, 40, 4, 5, '#a8d0e8')
+    }
+    return c.c
+  }
+
+  // Bakery — comercio pequeño con escaparate y pan
+  function bakery() {
+    const c = mkc(88, 80)
+    const ctx = c.ctx
+    const wall = '#f0d8a8', wallS = dk(wall, 0.12)
+    const roof = '#9a4a2a', roofL = lt('#9a4a2a', 0.18)
+    const stroke = '#3a2613', door = '#5a3a20', win = '#fff1c8'
+    rect(ctx, 8, 76, 72, 3, 'rgba(40,25,15,0.30)')
+    // Walls (slightly wider than cottage)
+    rect(ctx, 12, 36, 64, 38, wall)
+    rect(ctx, 12, 70, 64, 4, wallS)
+    outline(ctx, 12, 36, 64, 38, stroke)
+    // Awning (tilted overhang above storefront)
+    paintBlocks(ctx, [
+      [10, 32, 68, 4, roof],
+      [10, 32, 68, 1, roofL],
+      [10, 35, 68, 1, '#3a1810'],
+    ])
+    // Roof — flatter mansard
+    paintBlocks(ctx, [
+      [16, 14, 56, 18, roof],
+      [16, 14, 56, 2, roofL],
+      [16, 30, 56, 2, '#3a1810'],
+    ])
+    outline(ctx, 16, 14, 56, 18, stroke)
+    for (let x = 20; x < 72; x += 4) px(ctx, x, 22, '#3a1810')
+    // Big shop window (left)
+    rect(ctx, 18, 44, 24, 18, win)
+    outline(ctx, 18, 44, 24, 18, stroke)
+    rect(ctx, 30, 44, 1, 18, stroke); rect(ctx, 18, 53, 24, 1, stroke)
+    // Bread loaves in window
+    paintBlocks(ctx, [
+      [21, 56, 6, 4, '#c89858'], [21, 56, 6, 1, '#e8b878'],
+      [29, 56, 5, 4, '#d8a868'], [29, 56, 5, 1, '#f0c888'],
+      [36, 56, 4, 4, '#c89858'], [36, 56, 4, 1, '#e8b878'],
+    ])
+    // Door (right side)
+    rect(ctx, 52, 50, 14, 24, door)
+    rect(ctx, 52, 50, 14, 2, lt(door, 0.20))
+    outline(ctx, 52, 50, 14, 24, stroke)
+    // Door window (small)
+    rect(ctx, 56, 54, 6, 6, win)
+    outline(ctx, 56, 54, 6, 6, stroke)
+    px(ctx, 64, 64, '#ffd86a')
+    // Sign hanging "PAN"
+    paintBlocks(ctx, [
+      [32, 4, 24, 10, '#fff5e0'],
+      [32, 4, 24, 1, dk('#fff5e0', 0.20)],
+      [44, 4, 1, 10, '#7a4d2a'],
+    ])
+    outline(ctx, 32, 4, 24, 10, stroke)
+    // Tiny baguette icon
+    rect(ctx, 36, 7, 8, 4, '#c89858')
+    rect(ctx, 38, 8, 1, 1, '#3a1810'); rect(ctx, 41, 8, 1, 1, '#3a1810')
+    return c.c
+  }
+
+  // Workshop / herrería — yunque y herramientas
+  function workshop() {
+    const c = mkc(80, 80)
+    const ctx = c.ctx
+    const wall = '#a8907a', wallS = dk(wall, 0.20)
+    const roof = '#4a3a2a', roofL = lt('#4a3a2a', 0.18)
+    const stroke = '#1a0e08', door = '#5a3018', win = '#ffd070'
+    rect(ctx, 6, 76, 68, 3, 'rgba(40,25,15,0.35)')
+    // Stone wall (chunky)
+    rect(ctx, 10, 36, 60, 38, wall)
+    rect(ctx, 10, 70, 60, 4, wallS)
+    outline(ctx, 10, 36, 60, 38, stroke)
+    // Stone texture
+    for (let y = 40; y < 70; y += 6) {
+      for (let x = 12; x < 70; x += 8) {
+        px(ctx, x + (y % 12 ? 0 : 4), y, dk(wall, 0.30))
+      }
+    }
+    // Roof (low gable, dark wood)
+    tri(ctx, 40, 14, 32, 36, roof)
+    for (let i = 0; i <= 22; i++) {
+      const w = Math.round(32 * i / 22)
+      px(ctx, 40 - w, 14 + i, stroke); px(ctx, 40 + w, 14 + i, stroke)
+    }
+    // Open forge window with red glow
+    rect(ctx, 16, 44, 14, 14, win)
+    rect(ctx, 16, 44, 14, 4, '#ff7838')
+    rect(ctx, 16, 56, 14, 2, '#a82010')
+    outline(ctx, 16, 44, 14, 14, stroke)
+    // Door (big, double)
+    rect(ctx, 38, 46, 18, 28, door)
+    rect(ctx, 38, 46, 18, 2, lt(door, 0.20))
+    rect(ctx, 47, 46, 1, 28, lt(door, 0.10))
+    outline(ctx, 38, 46, 18, 28, stroke)
+    // Anvil + hammer outside
+    paintBlocks(ctx, [
+      [62, 60, 10, 6, '#3a3a3a'],
+      [60, 66, 14, 4, '#3a3a3a'],
+      [62, 60, 10, 1, '#5a5a5a'],
+      [60, 70, 14, 2, '#1a1a1a'],
+    ])
+    rect(ctx, 64, 50, 2, 12, '#7a4d2a')   // hammer handle
+    rect(ctx, 62, 48, 6, 4, '#3a3a3a')    // hammer head
+    // Smoke from chimney top-right
+    rect(ctx, 58, 12, 6, 10, '#5a4030')
+    return c.c
+  }
+
+  // Barn / granero — rojo, con heno
+  function barn() {
+    const c = mkc(80, 72)
+    const ctx = c.ctx
+    const wall = '#c44030', wallS = dk(wall, 0.25), wallL = lt('#c44030', 0.18)
+    const trim = '#fff5e0'
+    const roof = '#3a2a1a'
+    const stroke = '#1a0a08', hay = '#e8c060'
+    rect(ctx, 6, 68, 68, 3, 'rgba(40,25,15,0.35)')
+    // Walls
+    rect(ctx, 10, 28, 60, 40, wall)
+    rect(ctx, 10, 64, 60, 4, wallS)
+    rect(ctx, 10, 28, 60, 2, wallL)
+    outline(ctx, 10, 28, 60, 40, stroke)
+    // Trim (white planks)
+    rect(ctx, 10, 28, 60, 2, trim)
+    rect(ctx, 10, 46, 60, 2, trim)
+    // Cross brace (X on the front)
+    rect(ctx, 12, 30, 2, 16, trim)        // diagonal hint
+    rect(ctx, 56, 30, 2, 16, trim)
+    // Roof (gambrel-ish: two slopes)
+    tri(ctx, 40, 4, 36, 28, roof)
+    for (let i = 0; i <= 24; i++) {
+      const w = Math.round(36 * i / 24)
+      px(ctx, 40 - w, 4 + i, stroke); px(ctx, 40 + w, 4 + i, stroke)
+    }
+    // Big sliding doors (closed)
+    rect(ctx, 28, 46, 24, 22, '#7a3020')
+    rect(ctx, 28, 46, 12, 22, dk('#7a3020', 0.15))
+    rect(ctx, 28, 46, 24, 1, lt('#7a3020', 0.20))
+    outline(ctx, 28, 46, 24, 22, stroke)
+    rect(ctx, 39, 46, 2, 22, stroke)        // gap between doors
+    // Hay loft window (top)
+    rect(ctx, 34, 12, 12, 8, hay)
+    rect(ctx, 34, 18, 12, 2, dk(hay, 0.30))
+    outline(ctx, 34, 12, 12, 8, stroke)
+    // Hay bales in front
+    paintBlocks(ctx, [
+      [56, 60, 10, 8, hay],
+      [56, 60, 10, 2, lt(hay, 0.20)],
+      [56, 66, 10, 2, dk(hay, 0.30)],
+    ])
+    for (let x = 57; x < 66; x += 2) px(ctx, x, 64, dk(hay, 0.30))
+    return c.c
+  }
+
+  // Mill — torre con base de piedra. Las aspas se renderizan dinámicamente desde city.js
+  function mill() {
+    const c = mkc(80, 120)
+    const ctx = c.ctx
+    const stone = '#bdb1a3', stoneD = dk(stone, 0.30), stoneL = lt(stone, 0.18)
+    const cap = '#7a4d2a', capL = lt('#7a4d2a', 0.20)
+    const stroke = '#3a2613'
+    // Shadow
+    rect(ctx, 14, 116, 52, 3, 'rgba(40,25,15,0.35)')
+    // Round body (tapering tower)
+    for (let y = 116; y > 32; y--) {
+      const t = (116 - y) / (116 - 32)
+      const wHalf = 24 - t * 8
+      const cx = 40
+      // Stone color with shading on right side
+      for (let x = -wHalf; x <= wHalf; x++) {
+        const xx = cx + x
+        const isEdge = Math.abs(x) >= wHalf - 1
+        const onShadeSide = x > wHalf - 8
+        const col = isEdge ? stroke : (onShadeSide ? stoneD : stone)
+        px(ctx, xx, y, col)
+      }
+    }
+    // Stone block lines
+    for (let y = 50; y < 110; y += 8) {
+      for (let x = 22; x < 58; x += 6) {
+        const yy = y + (x % 12 ? 0 : 3)
+        px(ctx, x, yy, stoneD)
+      }
+    }
+    // Door (small at bottom)
+    rect(ctx, 34, 92, 12, 22, '#5a3018')
+    outline(ctx, 34, 92, 12, 22, stroke)
+    px(ctx, 44, 104, '#ffd86a')
+    // Single small window
+    rect(ctx, 36, 70, 8, 8, '#ffe9a8')
+    outline(ctx, 36, 70, 8, 8, stroke)
+    rect(ctx, 40, 70, 1, 8, stroke); rect(ctx, 36, 74, 8, 1, stroke)
+    // Conical cap (roof)
+    tri(ctx, 40, 12, 22, 36, cap)
+    for (let i = 0; i <= 24; i++) {
+      const w = Math.round(22 * i / 24)
+      px(ctx, 40 - w, 12 + i, stroke); px(ctx, 40 + w, 12 + i, stroke)
+    }
+    // Cap highlight
+    for (let i = 0; i < 24; i += 2) px(ctx, 40 - Math.round(22 * i / 24) + 1, 12 + i, capL)
+    // Hub for blades (front)
+    paintBlocks(ctx, [
+      [36, 36, 8, 8, stroke],
+      [38, 38, 4, 4, '#5a3018'],
+    ])
+    return c.c
+  }
+
+  // Well — pozo de piedra
+  function well() {
+    const c = mkc(40, 56)
+    const ctx = c.ctx
+    const stone = '#bdb1a3', stoneD = dk(stone, 0.30), stoneL = lt(stone, 0.18)
+    const wood = '#7a4d2a', woodL = lt('#7a4d2a', 0.20)
+    const stroke = '#3a2613', water = '#3a78a8'
+    rect(ctx, 6, 52, 28, 4, 'rgba(40,25,15,0.30)')
+    // Round stone base
+    for (let y = 32; y < 52; y++) {
+      for (let x = 8; x < 32; x++) {
+        const dx = x - 20, dy = y - 42
+        if (dx*dx + (dy*dy)*4 <= 144) {
+          const onEdge = dx*dx + (dy*dy)*4 >= 130
+          px(ctx, x, y, onEdge ? stroke : (x > 20 ? stoneD : stone))
+        }
+      }
+    }
+    // Stone blocks (radial lines)
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI + i * 0.6
+      const x = Math.round(20 + Math.cos(a) * 11)
+      const y = Math.round(42 + Math.sin(a) * 6)
+      px(ctx, x, y, stoneD)
+    }
+    // Water surface
+    paintBlocks(ctx, [
+      [10, 38, 20, 4, water],
+      [10, 38, 20, 1, lt(water, 0.30)],
+    ])
+    // Frame poles
+    rect(ctx, 12, 12, 3, 22, wood)
+    rect(ctx, 25, 12, 3, 22, wood)
+    rect(ctx, 12, 12, 3, 1, woodL); rect(ctx, 25, 12, 3, 1, woodL)
+    // Cross beam
+    rect(ctx, 10, 8, 20, 4, wood)
+    rect(ctx, 10, 8, 20, 1, woodL)
+    // Tiny roof (peaked)
+    tri(ctx, 20, 0, 12, 8, '#5a3018')
+    // Bucket hanging
+    paintBlocks(ctx, [
+      [18, 18, 4, 6, wood],
+      [18, 18, 4, 1, woodL],
+      [18, 23, 4, 1, '#3a2010'],
+    ])
+    rect(ctx, 19, 13, 2, 6, '#3a2010') // rope
+    return c.c
+  }
+
+  // Market stall — puesto colorido, varía por seed
+  function marketStall(seed) {
+    const r = rng(seed)
+    const c = mkc(56, 56)
+    const ctx = c.ctx
+    const tarpColors = ['#d04060', '#3a78a8', '#c89030', '#5a8830', '#a050b0']
+    const tarp = tarpColors[Math.floor(r() * tarpColors.length)]
+    const tarpD = dk(tarp, 0.25), tarpL = lt(tarp, 0.20)
+    const wood = '#7a4d2a', woodD = dk(wood, 0.30)
+    const stroke = '#3a2613'
+    rect(ctx, 4, 52, 48, 3, 'rgba(40,25,15,0.30)')
+    // Posts
+    rect(ctx, 8, 16, 3, 36, wood)
+    rect(ctx, 45, 16, 3, 36, wood)
+    rect(ctx, 8, 16, 3, 1, lt(wood, 0.25))
+    rect(ctx, 45, 16, 3, 1, lt(wood, 0.25))
+    // Striped tarp top (curved/scalloped edge)
+    for (let x = 6; x < 50; x++) {
+      const stripe = (Math.floor((x - 6) / 4) % 2 === 0)
+      const top = 6 + ((x % 8 < 4) ? 0 : 1)
+      for (let y = top; y < 18; y++) {
+        const col = stripe ? tarp : '#fff5e0'
+        px(ctx, x, y, col)
+        if (y === top) px(ctx, x, y, dk(col, 0.25))
+      }
+    }
+    // Scalloped fringe
+    for (let i = 0; i < 12; i++) {
+      const x = 6 + i * 4
+      px(ctx, x, 19, tarp); px(ctx, x + 1, 19, tarp)
+      px(ctx, x + 2, 20, tarpD); px(ctx, x + 3, 20, tarpD)
+    }
+    // Counter (table)
+    rect(ctx, 6, 32, 44, 5, wood)
+    rect(ctx, 6, 32, 44, 1, lt(wood, 0.20))
+    rect(ctx, 6, 36, 44, 1, woodD)
+    // Goods on counter (varied by seed)
+    const items = Math.floor(r() * 3) + 2
+    for (let i = 0; i < items; i++) {
+      const x = 10 + i * 10
+      const cx = ['#c44030', '#e8c060', '#5a8830', '#a050b0'][i]
+      paintBlocks(ctx, [
+        [x, 28, 6, 4, cx],
+        [x, 28, 6, 1, lt(cx, 0.25)],
+      ])
+    }
+    return c.c
+  }
+
+  // Stage — pequeño escenario con cortina
+  function stage() {
+    const c = mkc(80, 48)
+    const ctx = c.ctx
+    const wood = '#8a5a32', woodD = dk(wood, 0.30), woodL = lt(wood, 0.20)
+    const curtain = '#a82038', curtainD = dk(curtain, 0.30), curtainL = lt(curtain, 0.20)
+    const stroke = '#3a2010'
+    rect(ctx, 6, 44, 68, 3, 'rgba(40,25,15,0.30)')
+    // Platform (planks)
+    rect(ctx, 6, 32, 68, 12, wood)
+    rect(ctx, 6, 32, 68, 1, woodL)
+    rect(ctx, 6, 42, 68, 2, woodD)
+    for (let x = 14; x < 74; x += 8) rect(ctx, x, 33, 1, 9, woodD)
+    outline(ctx, 6, 32, 68, 12, stroke)
+    // Posts at sides
+    rect(ctx, 6, 8, 4, 24, wood)
+    rect(ctx, 70, 8, 4, 24, wood)
+    rect(ctx, 6, 8, 4, 1, woodL); rect(ctx, 70, 8, 4, 1, woodL)
+    // Top beam
+    rect(ctx, 6, 4, 68, 4, wood)
+    rect(ctx, 6, 4, 68, 1, woodL)
+    // Curtains (drawn open, framing the stage)
+    for (let y = 8; y < 30; y++) {
+      for (let x = 10; x < 22; x++) {
+        const stripe = (x - 10) % 2 === 0
+        px(ctx, x, y, stripe ? curtain : curtainD)
+      }
+      for (let x = 58; x < 70; x++) {
+        const stripe = (x - 58) % 2 === 0
+        px(ctx, x, y, stripe ? curtain : curtainD)
+      }
+    }
+    // Curtain top swag
+    for (let x = 22; x < 58; x += 4) {
+      rect(ctx, x, 8, 4, 3, curtain)
+      rect(ctx, x, 11, 4, 1, curtainD)
+    }
+    // Tassels
+    px(ctx, 22, 12, '#f0c020'); px(ctx, 30, 12, '#f0c020'); px(ctx, 38, 12, '#f0c020'); px(ctx, 46, 12, '#f0c020'); px(ctx, 54, 12, '#f0c020')
+    return c.c
+  }
+
   // ─── PUBLIC API ────────────────────────────────────────────────────────────
   window.MiauSprites = {
     house: paintHouse,
+    cottage, bakery, workshop, barn, mill, well, marketStall, stage,
     treePine, treeLush, treeSakura, bush, flowerPatch,
     fountain, lampPost, bench, fence,
     grassTile, cobbleTile, dirtPathTile, cloud,
