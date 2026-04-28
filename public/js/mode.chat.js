@@ -198,8 +198,14 @@ Object.assign(App, {
 
   // ─── Start chat from user list (click on avatar anywhere) ───
   startChatWith(userId, username, color) {
-    App.go('chat')
-    setTimeout(() => App.openChat(userId, username, color), 100)
+    // Open the chat sheet via the city map (which is now the menu).
+    if (window.City && City.openSheetForHabitat) {
+      App.go('city', { sheet: 'chat', _fromRoute: false })
+      setTimeout(() => App.openChat(userId, username, color), 250)
+    } else {
+      App.go('chat')
+      setTimeout(() => App.openChat(userId, username, color), 100)
+    }
   },
 
   // ─── Polling ───
@@ -211,8 +217,10 @@ Object.assign(App, {
   },
 
   async _pollChat() {
-    if (App.mode !== 'chat') {
-      // slow poll in background
+    // Fast-poll only when the chat sheet is currently open (or we're on the legacy
+    // standalone chat mode). Otherwise drop to slow background poll.
+    const chatActive = App.activeSheet === 'chat' || App.mode === 'chat'
+    if (!chatActive) {
       App._chatPollTimer = setTimeout(() => App._pollChat(), 60000)
       return
     }

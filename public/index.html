@@ -446,49 +446,15 @@
         </div>
       </div>
 
-      <div class="pet-menu-section">
-        <h3 class="pet-menu-section-title">el pueblo</h3>
-        <div class="pet-menu-grid">
-          <button class="pet-menu-place" data-route="/tweets" data-place="cafe">
-            <span class="pet-menu-place-icon">☕</span>
-            <span class="pet-menu-place-name">el café</span>
-            <span class="pet-menu-place-tag">miaus</span>
-          </button>
-          <button class="pet-menu-place" data-route="/posts" data-place="board">
-            <span class="pet-menu-place-icon">📌</span>
-            <span class="pet-menu-place-name">tablón</span>
-            <span class="pet-menu-place-tag">posts</span>
-          </button>
-          <button class="pet-menu-place" data-route="/stories" data-place="hilltop">
-            <span class="pet-menu-place-icon">🌙</span>
-            <span class="pet-menu-place-name">miradero</span>
-            <span class="pet-menu-place-tag">stories</span>
-          </button>
-          <button class="pet-menu-place" data-route="/chat" data-place="bench">
-            <span class="pet-menu-place-icon">🪑</span>
-            <span class="pet-menu-place-name">banquito</span>
-            <span class="pet-menu-place-tag">chat</span>
-            <span id="petMenuUnread" class="pet-menu-badge" hidden>0</span>
-          </button>
-          <button class="pet-menu-place" data-route="/bereal" data-place="polaroid">
-            <span class="pet-menu-place-icon">📷</span>
-            <span class="pet-menu-place-name">polaroid</span>
-            <span class="pet-menu-place-tag">real</span>
-          </button>
-          <button class="pet-menu-place" data-route="/city" data-place="city">
-            <span class="pet-menu-place-icon">🏘️</span>
-            <span class="pet-menu-place-name">la plaza</span>
-            <span class="pet-menu-place-tag">pueblo</span>
-          </button>
-        </div>
-      </div>
-
+      <!-- The 6 places of the village live in the city map (the city IS the menu).
+           This radial only carries actions that wouldn't otherwise fit in the map:
+           editing your cat, browsing events, admin stats, and signing out. -->
       <div class="pet-menu-section">
         <h3 class="pet-menu-section-title">acciones</h3>
         <div class="pet-menu-actions">
-          <button class="pet-menu-action" data-route="/profile">
-            <span class="pet-menu-action-icon">🏠</span>
-            <span class="pet-menu-action-name">tu casa</span>
+          <button class="pet-menu-action" data-action="back-to-city">
+            <span class="pet-menu-action-icon">🗺️</span>
+            <span class="pet-menu-action-name">volver al pueblo</span>
           </button>
           <button class="pet-menu-action" data-action="cat-editor">
             <span class="pet-menu-action-icon">✨</span>
@@ -498,9 +464,18 @@
             <span class="pet-menu-action-icon">📅</span>
             <span class="pet-menu-action-name">eventos</span>
           </button>
+          <button class="pet-menu-action" data-route="/profile">
+            <span class="pet-menu-action-icon">🏠</span>
+            <span class="pet-menu-action-name">tu casa</span>
+            <span id="petMenuUnread" class="pet-menu-badge" hidden>0</span>
+          </button>
           <button class="pet-menu-action" data-route="/admin" id="petMenuAdmin" hidden>
             <span class="pet-menu-action-icon">📊</span>
             <span class="pet-menu-action-name">stats</span>
+          </button>
+          <button class="pet-menu-action" data-action="logout">
+            <span class="pet-menu-action-icon">🌙</span>
+            <span class="pet-menu-action-name">salir</span>
           </button>
         </div>
       </div>

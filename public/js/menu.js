@@ -10,34 +10,32 @@
       if (!el || Menu.mounted) return
       Menu.mounted = true
 
-      // Wire place clicks (zone navigation)
-      el.querySelectorAll('.pet-menu-place').forEach(p => {
-        p.addEventListener('click', () => {
-          const route = p.dataset.route
-          Menu.close()
-          setTimeout(() => Routes.navigate(route), 90)
-        })
-      })
-
-      // Wire action clicks (cat editor, events placeholder, admin, profile)
+      // Wire action clicks. The 6 functional zones live in the city map (the city IS
+      // the menu) — this radial only handles meta-actions that don't fit on the map.
       el.querySelectorAll('.pet-menu-action').forEach(b => {
         b.addEventListener('click', () => {
           const action = b.dataset.action
           const route = b.dataset.route
+          Menu.close()
           if (action === 'cat-editor') {
-            Menu.close()
             if (typeof CatEditor !== 'undefined' && CatEditor.open) setTimeout(() => CatEditor.open(), 120)
             return
           }
           if (action === 'events') {
-            Menu.close()
             if (typeof Events !== 'undefined' && Events.openModal) setTimeout(() => Events.openModal(), 120)
             return
           }
-          if (route) {
-            Menu.close()
-            setTimeout(() => Routes.navigate(route), 90)
+          if (action === 'back-to-city') {
+            // If a sheet is open, close it; otherwise just navigate to /
+            if (window.City && City.closeSheet) City.closeSheet()
+            setTimeout(() => { if (window.Routes) Routes.navigate('/') }, 80)
+            return
           }
+          if (action === 'logout') {
+            if (App.logout) App.logout()
+            return
+          }
+          if (route) setTimeout(() => Routes.navigate(route), 90)
         })
       })
 

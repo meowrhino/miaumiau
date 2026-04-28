@@ -288,64 +288,63 @@
     return c
   }
 
-  // ─── HOUSE: el miradero 🌙 (observatory with dome + telescope) ────────────────
+  // ─── HOUSE: el miradero 🌙 (compact observatory: normal house + small dome on top) ──
+  // No taller than the other functional houses — just a regular gable with a tiny
+  // dome+telescope perched on the apex.
   function houseObservatory(roofColor) {
     const p = housePalette(roofColor, '#b890d8')
     const { c, ctx } = mkc(96, 96)
-    paintHouseBase(ctx, p, { bw: 56, bh: 50 })
+    paintHouseBase(ctx, p, { bw: 60, bh: 40 })
+    paintRoofGable(ctx, p, { apexY: 22, baseY: 50, halfBase: 36 })
 
-    // Tower body (taller, narrower)
-    paintBlocks(ctx, [
-      [38, 32, 20, 6, p.wall],
-      [38, 32, 20, 2, p.wallD],
-    ])
-    outline(ctx, 38, 32, 20, 6, p.stroke)
-
-    // Dome on top
-    const cx = 48, cy = 32
-    for (let dy = -14; dy <= 0; dy++) {
-      const r = Math.sqrt(196 - dy*dy)
-      const xL = Math.round(cx - r * 0.7)
-      const xR = Math.round(cx + r * 0.7)
-      rect(ctx, xL, cy + dy, xR - xL + 1, 1, dy < -8 ? p.roofL : p.roof)
+    // Small dome perched on the roof apex
+    const dcx = 48, dcy = 22
+    for (let dy = -7; dy <= 0; dy++) {
+      const r = Math.sqrt(49 - dy*dy)
+      const xL = Math.round(dcx - r * 0.85)
+      const xR = Math.round(dcx + r * 0.85)
+      rect(ctx, xL, dcy + dy, xR - xL + 1, 1, dy < -5 ? p.roofL : p.roof)
     }
-    // Dome outline (top half ellipse)
-    for (let a = 0; a < Math.PI; a += 0.05) {
-      const ex = Math.round(cx + Math.cos(a) * 14 * 0.7)
-      const ey = Math.round(cy + Math.sin(a-Math.PI) * 14)
+    // Dome outline
+    for (let a = 0; a < Math.PI; a += 0.08) {
+      const ex = Math.round(dcx + Math.cos(a) * 7 * 0.85)
+      const ey = Math.round(dcy + Math.sin(a - Math.PI) * 7)
       px(ctx, ex, ey, p.stroke)
     }
-    // Telescope slit (dark vertical)
-    rect(ctx, cx - 1, cy - 12, 2, 12, '#0a0814')
+    // Telescope slit (small)
+    rect(ctx, dcx - 1, dcy - 6, 2, 7, '#0a0814')
 
-    // Stars sprinkled around the upper body
+    // A few stars next to the dome
     paintBlocks(ctx, [
-      [12, 18, 1, 1, '#fff5d2'], [82, 12, 1, 1, '#fff5d2'], [16, 30, 1, 1, '#fff5d2'],
-      [78, 28, 1, 1, '#fff5d2'], [10, 8, 1, 1, '#fff5d2'],
+      [14, 14, 1, 1, '#fff5d2'], [82, 12, 1, 1, '#fff5d2'],
+      [22, 28, 1, 1, '#fff5d2'], [78, 28, 1, 1, '#fff5d2'],
     ])
 
-    // Round window (porthole) on the lower body
+    // Door (centered, normal)
     paintBlocks(ctx, [
-      [44, 60, 8, 8, p.win],
+      [42, 64, 12, 22, p.door],
+      [42, 64, 12, 2, p.doorL],
+      [50, 74, 1, 1, '#ffd86a'],
     ])
-    for (let yy = 60; yy < 68; yy++) for (let xx = 44; xx < 52; xx++) {
-      const dx = xx - 47.5, dy = yy - 63.5
-      if (dx*dx + dy*dy > 14) px(ctx, xx, yy, p.wall)
+    outline(ctx, 42, 64, 12, 22, p.stroke)
+
+    // Round porthole window (left)
+    paintBlocks(ctx, [
+      [22, 62, 12, 12, p.win],
+    ])
+    for (let yy = 62; yy < 74; yy++) for (let xx = 22; xx < 34; xx++) {
+      const dx = xx - 27.5, dy = yy - 67.5
+      if (dx*dx + dy*dy > 32) px(ctx, xx, yy, p.wall)
     }
-    outline(ctx, 44, 60, 8, 8, p.winFrame)
+    outline(ctx, 22, 62, 12, 12, p.winFrame)
 
-    // Door
+    // Square window (right)
     paintBlocks(ctx, [
-      [30, 70, 12, 16, p.door],
-      [30, 70, 12, 2, p.doorL],
-      [38, 78, 1, 1, '#ffd86a'],
+      [60, 62, 10, 10, p.win],
     ])
-    outline(ctx, 30, 70, 12, 16, p.stroke)
+    outline(ctx, 60, 62, 10, 10, p.winFrame)
+    rect(ctx, 65, 62, 1, 10, p.winFrame); rect(ctx, 60, 67, 10, 1, p.winFrame)
 
-    // Spiral stair hint on the side
-    paintBlocks(ctx, [
-      [60, 72, 14, 2, p.trim], [62, 76, 12, 2, p.trim], [64, 80, 10, 2, p.trim],
-    ])
     return c
   }
 

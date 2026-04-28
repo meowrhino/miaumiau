@@ -2,6 +2,10 @@
 const App = {
   user: null,
   mode: null,
+  // Habitat id of the currently-open zone sheet ('tweets' / 'posts' / etc.) or null.
+  // City.openSheet/closeSheet keep this in sync; sections use it instead of
+  // checking App.mode (which is now always 'city' for the 6 functional zones).
+  activeSheet: null,
 
   init() {
     // Apply saved theme (light/dark)
@@ -62,10 +66,23 @@ const App = {
     localStorage.setItem('miau_user', JSON.stringify(App.user))
   },
 
+  // Clear local session and reload back to the registration screen.
+  logout() {
+    try { localStorage.removeItem('miau_user') } catch (_) {}
+    App.user = null
+    if (window.City && City.leave) City.leave()
+    if (window.Pet && Pet.hide) Pet.hide()
+    location.assign('/')
+  },
+
   // ─── Navigation ───
+  // The city is the menu. Routes for the 6 functional sections (tweets, posts, stories,
+  // chat, bereal, profile) resolve to mode='city' with params.sheet = <id>; this method
+  // shows the city and then opens the requested sheet on top.
   go(mode, params = {}) {
     const fromRoute = params._fromRoute
     const fromBoot  = params._fromBoot
+    const wantsSheet = (mode === 'city' && params.sheet) ? params.sheet : null
     // Leave hooks for previous mode (e.g. city stops its render loop)
     if (App.mode && App.mode !== mode && App['leave_' + App.mode]) App['leave_' + App.mode]()
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
@@ -79,25 +96,26 @@ const App = {
       // Update URL via Routes (idempotent — Routes won't push if same path)
       if (window.Routes && !fromRoute && !fromBoot) {
         const path = Routes.pathFor(mode, params)
-        if (location.pathname !== path) history.pushState({ mode }, '', path)
+        if (location.pathname !== path) history.pushState({ mode, sheet: params.sheet }, '', path)
       }
-      document.title = mode === 'city' ? 'miaumiau' : `${mode} · miaumiau`
-      // World atmosphere swap
-      if (window.World) World.applyHabitat(mode)
+      const titleSection = wantsSheet || (mode === 'city' ? null : mode)
+      document.title = titleSection ? `${titleSection} · miaumiau` : 'miaumiau'
+      // World atmosphere swap (sheet zones use city's habitat; switch only for standalone modes)
+      if (window.World) World.applyHabitat(wantsSheet || mode)
       // Pet walks across when section changes
       if (window.Pet && previousMode && previousMode !== mode) Pet.walk(mode)
     }
     if (window.Pet && App.user) Pet.show()
-    // Presence write (city.js handles its own; other modes write via the helper)
-    if (App.user && mode !== 'city' && window.City && City.writePresenceForMode) {
-      City.writePresenceForMode(mode)
+    // After city is mounted, open the requested sheet (deep links from /tweets, /posts, etc.)
+    if (wantsSheet && window.City && City.openSheetForHabitat) {
+      setTimeout(() => City.openSheetForHabitat(wantsSheet, params.chatWith), 60)
     }
     // Track section view (analytics — drives /admin/stats)
-    if (window.track) track('view:section', { section: mode })
-    // update pop color
+    if (window.track) track('view:section', { section: wantsSheet || mode })
+    // update pop color (sheet color takes precedence when a zone is open)
     const popMap = { stories: 'var(--pop-stories)', posts: 'var(--pop-posts)', tweets: 'var(--pop-tweets)', chat: 'var(--pop-chat)', bereal: 'var(--pop-bereal)', profile: 'var(--pop-profile)' }
-    document.documentElement.style.setProperty('--pop', popMap[mode] ?? 'var(--text)')
-    // scroll to top on mode change for clarity
+    const popKey = wantsSheet || mode
+    document.documentElement.style.setProperty('--pop', popMap[popKey] ?? 'var(--text)')
     window.scrollTo({ top: 0, behavior: 'instant' })
   },
 

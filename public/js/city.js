@@ -358,6 +358,22 @@
     // ─── Bottom Sheet (Phase 4) ───
     // Hosts a section's .mode element inside the sheet so users stay in /city visually.
     // The element is moved (not cloned) into #zoneSheetContent and restored on close.
+
+    // Open the sheet for a given habitat id ('tweets', 'posts', etc.). Used by
+    // the routing layer (deep links) and by the doormat-trigger / mascot click.
+    openSheetForHabitat(habitatId, chatWith) {
+      const z = ZONES.find(zz => zz.habitat === habitatId || zz.id === habitatId)
+      if (!z) return
+      // If the sheet for this same zone is already open, do nothing
+      const sheet = document.getElementById('zoneSheet')
+      if (sheet && !sheet.hidden && City._sheetReturn && City._sheetReturn.el && City._sheetReturn.el.id === 'mode-' + habitatId) return
+      City.openSheet(z)
+      // Optional secondary action — e.g. /chat/manu opens the conversation with manu
+      if (habitatId === 'chat' && chatWith && App.openChatWith) {
+        setTimeout(() => App.openChatWith(chatWith), 220)
+      }
+    },
+
     openSheet(zone) {
       if (!zone) return
       const sheet = document.getElementById('zoneSheet')
@@ -377,9 +393,14 @@
       sheet.hidden = false
       sheet.dataset.open = 'true'
       requestAnimationFrame(() => sheet.classList.add('open'))
-      // Update URL without leaving city (so refresh still lands on the city map)
-      if (window.history && history.replaceState) {
-        history.replaceState({ mode: 'city', sheet: zone.habitat }, '', '/city')
+      // Track which sheet is open so other modules (chat polling, etc.) can react.
+      if (window.App) App.activeSheet = zone.habitat
+      // Reflect the sheet in the URL so refresh / back / share keep the same view.
+      // /tweets, /posts, etc. map to mode='city' + sheet=<habitat>.
+      if (window.history && history.replaceState && window.Routes) {
+        const path = Routes.pathFor('city', { sheet: zone.habitat })
+        if (location.pathname !== path) history.replaceState({ mode: 'city', sheet: zone.habitat }, '', path)
+        document.title = `${zone.habitat} · miaumiau`
       }
     },
 
@@ -403,6 +424,12 @@
       City._matCooldownUntil = performance.now() + 1500
       City._matZoneId = null
       City._matEnterTime = 0
+      if (window.App) App.activeSheet = null
+      // Reset URL back to the city home so the back button + refresh behave naturally
+      if (window.history && history.replaceState && location.pathname !== '/') {
+        history.replaceState({ mode: 'city' }, '', '/')
+        document.title = 'miaumiau'
+      }
       // After the slide-down transition, restore the .mode element back to its original parent
       setTimeout(() => {
         sheet.hidden = true
@@ -429,14 +456,11 @@
       if (!cooldownActive && !sheetOpen) {
         const onMat = ZONES.find(z => Math.hypot(p.x - (z.x + z.w/2), p.y - (z.y + z.h - 30)) < 28)
         if (onMat) {
-          if (City._matZoneId !== onMat.id) {
-            City._matZoneId = onMat.id
-            City._matEnterTime = now
-          } else if (p.walking) {
-            City._matEnterTime = now   // walking through → keep resetting
-          } else if (now - (City._matEnterTime || now) > 420) {
-            City.openSheet(onMat)
-          }
+          City._matZoneId = onMat.id
+          // Enter the moment the player STOPS on the doormat (arrived by click-to-walk
+          // → target cleared / arrived by WASD → keys released). Walking through doesn't
+          // trigger because p.walking is still true mid-step.
+          if (!p.walking) City.openSheet(onMat)
         } else if (City._matZoneId) {
           City._matZoneId = null
           City._matEnterTime = 0

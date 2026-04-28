@@ -205,7 +205,9 @@ const StoryEditor = {
     try {
       await API.upload('/stories', fd)
       StoryEditor.close()
-      App.go('stories')
+      // Refresh the stories sheet (it lives inside the city map now)
+      if (window.App && App.activeSheet === 'stories' && App.enter_stories) App.enter_stories()
+      else App.go('city', { sheet: 'stories' })
       showToast('story publicada')
     } catch (e) { showToast(e.message) }
   }

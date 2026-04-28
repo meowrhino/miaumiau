@@ -18,11 +18,20 @@
       if (!Pet.el || !Pet.sprite) return
       Pet.refresh()
       Pet.el.hidden = !App.user
-      // Click on pet → open radial menu
+      // Click on pet:
+      //   - If we're not in the city (e.g. /admin, /u/...), the pet is the "go home"
+      //     button — it walks you back to the city map (which IS the menu).
+      //   - If we're already in the city, open the radial action menu (editar miau,
+      //     eventos, salir, etc.). The 6 places live in the map itself.
       Pet.el.addEventListener('click', (e) => {
         e.stopPropagation()
         Pet.pop()
         Pet.dismissHint()
+        const inCity = App.mode === 'city'
+        if (!inCity) {
+          if (window.Routes) Routes.navigate('/')
+          return
+        }
         if (window.Menu) Menu.toggle()
       })
       // First-visit discovery hint — show after a delay so the user notices the pet first
