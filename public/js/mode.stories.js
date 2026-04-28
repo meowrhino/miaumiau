@@ -52,6 +52,13 @@ Object.assign(App, {
     App._storyIdx = 0
     $('#storyViewer').hidden = false
     if (window.Pet) Pet.hide()
+    // Wire comment input typing pause-on-focus once
+    const input = $('#storyCommentInput')
+    if (input && !input._wired) {
+      input._wired = true
+      input.addEventListener('focus', () => { App._storyTypingComment = true; clearTimeout(App._storyTimer) })
+      input.addEventListener('blur',  () => { App._storyTypingComment = false })
+    }
     App._showStory()
   },
 
@@ -115,6 +122,10 @@ Object.assign(App, {
     // load like state for this story
     App._storyLikedMap = App._storyLikedMap || {}
     App._loadStoryReactions(story.id)
+    App._loadStoryComments(story.id)
+    // Reset comment input
+    const input = $('#storyCommentInput')
+    if (input) input.value = ''
     try {
       const seen = JSON.parse(localStorage.getItem('miau_story_seen') || '{}')
       seen[story.id] = Date.now()
@@ -124,9 +135,62 @@ Object.assign(App, {
     // auto advance
     clearTimeout(App._storyTimer)
     App._storyTimer = setTimeout(() => {
+      if (App._storyTypingComment) return
       App._storyIdx++
       App._showStory()
     }, 5000)
+  },
+
+  async _loadStoryComments(storyId) {
+    const list = $('#storyComments')
+    if (!list) return
+    list.innerHTML = ''
+    try {
+      const rows = await API.get('/stories/' + storyId + '/comments')
+      App._renderStoryComments(rows)
+    } catch (_) {}
+  },
+
+  _renderStoryComments(rows) {
+    const list = $('#storyComments')
+    if (!list) return
+    list.innerHTML = (rows || []).slice(-6).map(c => {
+      const hex = colorHex ? colorHex(c.color) : '#888'
+      return `<div class="story-comment">
+        <img class="story-comment-avatar" src="/api/users/${c.user_id}/avatar.svg" alt="" style="border-color:${hex}">
+        <span class="story-comment-name" style="color:${hex}">${esc(c.username)}</span>
+        <span class="story-comment-text">${esc(c.content)}</span>
+      </div>`
+    }).join('')
+    list.scrollTop = list.scrollHeight
+  },
+
+  async sendStoryComment() {
+    const input = $('#storyCommentInput')
+    if (!input) return
+    const content = input.value.trim()
+    if (!content) return
+    const story = App._currentStoryRef()
+    if (!story) return
+    input.value = ''
+    try {
+      const row = await API.post('/stories/' + story.id + '/comments', { content })
+      // Optimistic append (the row from server already has user info via RETURNING)
+      const list = $('#storyComments')
+      if (list) {
+        const existing = Array.from(list.querySelectorAll('.story-comment')).map(() => null)
+        // Just refetch to keep it simple
+        App._loadStoryComments(story.id)
+      }
+      if (window.track) track('story:comment', { story_id: story.id })
+    } catch (e) {
+      showToast(e.message || 'no se pudo comentar')
+    }
+  },
+
+  _currentStoryRef() {
+    const group = App._storyGroups?.[App._storyGroupIdx]
+    return group?.stories?.[App._storyIdx] || null
   },
 
   storyNext() {

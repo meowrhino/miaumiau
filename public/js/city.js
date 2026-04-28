@@ -36,6 +36,8 @@
     otherSprites: {},    // user_id → Image
     presenceTimer: 0,
     pollTimer: 0,
+    wavesTimer: 0,
+    _wavesSeen: new Set(),
     lastPresenceWrite: 0,
     lastPresenceState: null,
 
@@ -62,11 +64,14 @@
       cancelAnimationFrame(City.raf)
       City.raf = requestAnimationFrame(City.tick)
 
-      // Presence: write own + poll others
+      // Presence: write own + poll others + waves broadcast
       City.writePresence(true)
       clearInterval(City.pollTimer)
       City.pollTimer = setInterval(() => City.fetchOthers(), 5000)
       City.fetchOthers()
+      clearInterval(City.wavesTimer)
+      City.wavesTimer = setInterval(() => City.fetchWaves(), 3500)
+      City.fetchWaves()
     },
 
     leave() {
@@ -74,6 +79,7 @@
       City.unbind()
       window.removeEventListener('resize', City.fitCanvas)
       clearInterval(City.pollTimer)
+      clearInterval(City.wavesTimer)
       // Optional: clear presence on leave (best-effort)
       if (App.user && window.API) API.del('/city/presence').catch(() => {})
     },
@@ -324,7 +330,14 @@
       try {
         const list = await API.get('/city/presence')
         const meId = App.user?.id
-        City.others = list.filter(o => o.user_id !== meId)
+        const incoming = list.filter(o => o.user_id !== meId)
+        // Preserve transient client-only fields (heart bubble timer) across polls
+        const prevById = {}
+        for (const o of City.others) prevById[o.user_id] = o
+        City.others = incoming.map(o => {
+          const prev = prevById[o.user_id]
+          return prev ? Object.assign(o, { _heartUntil: prev._heartUntil }) : o
+        })
         // Lazy-load sprites for new others
         City.others.forEach(o => {
           if (City.otherSprites[o.user_id]) return
@@ -332,6 +345,26 @@
           img.src = `/api/users/${o.user_id}/avatar.svg`
           img.onload = () => { City.otherSprites[o.user_id] = img }
         })
+      } catch (_) {}
+    },
+
+    async fetchWaves() {
+      try {
+        const list = await API.get('/city/waves')
+        if (!Array.isArray(list)) return
+        for (const w of list) {
+          if (City._wavesSeen.has(w.id)) continue
+          City._wavesSeen.add(w.id)
+          // Find the recipient and trigger their heart bubble
+          const target = City.others.find(o => o.user_id === w.to_user_id)
+          if (target) target._heartUntil = performance.now() + 1500
+          // If I'm the one being saluted → soft toast
+          if (w.to_user_id === App.user?.id && w.from_user_id !== App.user?.id) {
+            if (typeof showToast === 'function') showToast(`${w.from_username} te saludó 💗`, 2000)
+          }
+        }
+        // Trim seen set so it doesn't grow forever
+        if (City._wavesSeen.size > 400) City._wavesSeen = new Set(Array.from(City._wavesSeen).slice(-200))
       } catch (_) {}
     },
 
@@ -910,9 +943,11 @@
       if (window.Routes) Routes.navigate('/chat/' + slug)
     }
     pop.querySelector('[data-act="hello"]').onclick = () => {
-      o._heartUntil = performance.now() + 1200
+      o._heartUntil = performance.now() + 1500
       if (typeof showToast === 'function') showToast(`saludaste a ${o.username} 💗`, 1500)
       if (window.track) track('city:hello', { to: o.user_id })
+      // Broadcast the wave so everyone else in the city sees the heart bubble too
+      if (window.API) API.post('/city/wave', { to_user_id: o.user_id }).catch(() => {})
       City.closeOtherPopover()
     }
     pop.querySelector('.city-popover-close').onclick = () => City.closeOtherPopover()

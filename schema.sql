@@ -80,6 +80,15 @@ CREATE TABLE IF NOT EXISTS story_views (
     PRIMARY KEY (story_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS story_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    story_id  INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    user_id   INTEGER NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    content   TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_story_comments_story ON story_comments(story_id, created_at);
+
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sender_id INTEGER NOT NULL REFERENCES users(id),
@@ -147,3 +156,21 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_kind_created ON events(kind, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS city_waves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    to_user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_city_waves_created ON city_waves(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS admin_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date  TEXT NOT NULL,
+    title TEXT NOT NULL,
+    descr TEXT DEFAULT '',
+    emoji TEXT DEFAULT '📅',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_admin_events_date ON admin_events(date);

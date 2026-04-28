@@ -57,6 +57,18 @@ const requireAuth = async (c: any) => {
   return user
 }
 
+// Whitelist of accounts that may use admin endpoints. Server-side gate.
+const ADMIN_ACCOUNTS = new Set(['manu'])
+
+// Returns the user if admin, otherwise a Response with 401/403 ready to return.
+const requireAdmin = async (c: any) => {
+  const user = await auth(c)
+  if (!user) return err('No autorizado', 401)
+  const isAdmin = ADMIN_ACCOUNTS.has(user.account_name ?? '') || ADMIN_ACCOUNTS.has(user.username ?? '')
+  if (!isAdmin) return err('Acceso restringido', 403)
+  return user
+}
+
 // ─── Auth (v2) ───
 
 app.post('/api/auth/register', async (c) => {
@@ -373,6 +385,79 @@ app.delete('/api/city/presence', async (c) => {
   return json({ ok: true })
 })
 
+// ─── City waves: ephemeral "decir hola" broadcast (sesión 10) ───
+
+app.post('/api/city/wave', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':wave', 20)) return err('demasiados saludos', 429)
+  const body = await c.req.json<{ to_user_id?: number }>()
+  const toId = Number(body.to_user_id)
+  if (!toId || toId === user.id) return err('destinatario inválido', 400)
+  await db.waveInsert(c.env.DB, user.id, toId)
+  // Best-effort cleanup so the table doesn't grow forever
+  c.executionCtx.waitUntil(db.waveCleanup(c.env.DB))
+  return json({ ok: true })
+})
+
+app.get('/api/city/waves', async (c) => {
+  // Public — anyone in the city sees the heart bubbles
+  const rows = await db.waveListRecent(c.env.DB, 8)
+  return json(rows.results)
+})
+
+// ─── Calendar events (sesión 12) ───
+// Public: returns all upcoming events. Admins manage the table via /api/admin/events.
+
+app.get('/api/events', async (c) => {
+  const rows = await db.adminEventList(c.env.DB)
+  return json(rows.results)
+})
+
+app.get('/api/admin/events', async (c) => {
+  const user = await requireAdmin(c)
+  if (user instanceof Response) return user
+  const rows = await db.adminEventList(c.env.DB)
+  return json(rows.results)
+})
+
+const isValidDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
+
+app.post('/api/admin/events', async (c) => {
+  const user = await requireAdmin(c)
+  if (user instanceof Response) return user
+  const body = await c.req.json<{ date: string; title: string; desc?: string; emoji?: string }>()
+  if (!isValidDate(body.date)) return err('fecha inválida (YYYY-MM-DD)')
+  const title = validateText(body.title, 1, 80)
+  if (!title) return err('título: 1-80 caracteres')
+  const desc  = (body.desc  ?? '').toString().slice(0, 240)
+  const emoji = (body.emoji ?? '📅').toString().slice(0, 8) || '📅'
+  const row = await db.adminEventCreate(c.env.DB, body.date, title, desc, emoji)
+  return json(row, 201)
+})
+
+app.put('/api/admin/events/:id', async (c) => {
+  const user = await requireAdmin(c)
+  if (user instanceof Response) return user
+  const body = await c.req.json<{ date: string; title: string; desc?: string; emoji?: string }>()
+  if (!isValidDate(body.date)) return err('fecha inválida (YYYY-MM-DD)')
+  const title = validateText(body.title, 1, 80)
+  if (!title) return err('título: 1-80 caracteres')
+  const desc  = (body.desc  ?? '').toString().slice(0, 240)
+  const emoji = (body.emoji ?? '📅').toString().slice(0, 8) || '📅'
+  const row = await db.adminEventUpdate(c.env.DB, Number(c.req.param('id')), body.date, title, desc, emoji)
+  if (!row) return err('no encontrado', 404)
+  return json(row)
+})
+
+app.delete('/api/admin/events/:id', async (c) => {
+  const user = await requireAdmin(c)
+  if (user instanceof Response) return user
+  await db.adminEventDelete(c.env.DB, Number(c.req.param('id')))
+  return json({ ok: true })
+})
+
 // ─── System status (maintenance flag) ───
 
 app.get('/api/system', async (c) => {
@@ -395,13 +480,9 @@ app.post('/api/track', async (c) => {
 })
 
 // ─── Admin Stats (owner-only) ───
-// Whitelist of accounts that may view /admin/stats. Add others here if needed.
-const ADMIN_ACCOUNTS = new Set(['manu'])
 app.get('/api/admin/stats', async (c) => {
-  const user = await requireAuth(c)
-  if (!user) return err('No autorizado', 401)
-  const isAdmin = ADMIN_ACCOUNTS.has(user.account_name ?? '') || ADMIN_ACCOUNTS.has(user.username ?? '')
-  if (!isAdmin) return err('Acceso restringido', 403)
+  const user = await requireAdmin(c)
+  if (user instanceof Response) return user
   const data = await db.stats(c.env.DB)
   return json(data)
 })
@@ -498,6 +579,24 @@ app.post('/api/stories/:id/view', async (c) => {
   if (!user) return err('No autorizado', 401)
   await db.storyView(c.env.DB, Number(c.req.param('id')), user.id)
   return json({ ok: true })
+})
+
+// Story comments (sesión 11) — short replies that decorate the viewer.
+app.get('/api/stories/:id/comments', async (c) => {
+  const rows = await db.storyCommentList(c.env.DB, Number(c.req.param('id')))
+  return json(rows.results)
+})
+
+app.post('/api/stories/:id/comments', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':storycmt', 30)) return err('Demasiados comentarios', 429)
+  const body = await c.req.json<{ content: string }>()
+  const content = validateText(body.content, 1, 200)
+  if (!content) return err('Contenido: 1-200 caracteres')
+  const row = await db.storyCommentCreate(c.env.DB, Number(c.req.param('id')), user.id, content)
+  return json(row, 201)
 })
 
 // ─── Chat ───
@@ -928,11 +1027,15 @@ app.get('*', async (c) => {
   return err('No encontrado', 404)
 })
 
-// ─── Story Cleanup (scheduled) ───
+// ─── Scheduled cleanup ───
+// Runs on the cron defined in wrangler.toml. Trims expired stories (and their R2
+// blobs), drops analytics events older than 90 days, and clears stale wave rows.
 
 export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext) {
     await db.storyCleanup(env.DB, env.STORAGE)
+    await env.DB.prepare("DELETE FROM events     WHERE created_at < datetime('now', '-90 days')").run()
+    await env.DB.prepare("DELETE FROM city_waves WHERE created_at < datetime('now', '-1 hour')").run()
   }
 }

@@ -149,6 +149,20 @@ export const storyCreate = (db: DB, userId: number, mediaKey: string, layersJson
 export const storyView = (db: DB, storyId: number, userId: number) =>
   db.prepare('INSERT OR IGNORE INTO story_views (story_id, user_id) VALUES (?, ?)').bind(storyId, userId).run()
 
+// Story comments (sesión 11) — replies attached to a single story.
+export const storyCommentList = (db: DB, storyId: number) =>
+  db.prepare(`
+    SELECT c.id, c.story_id, c.user_id, c.content, c.created_at,
+      ${NAME_ALIAS}, u.color, u.avatar_seed
+    FROM story_comments c JOIN users u ON c.user_id = u.id
+    WHERE c.story_id = ? ORDER BY c.created_at ASC
+    LIMIT 200
+  `).bind(storyId).all()
+
+export const storyCommentCreate = (db: DB, storyId: number, userId: number, content: string) =>
+  db.prepare('INSERT INTO story_comments (story_id, user_id, content) VALUES (?, ?, ?) RETURNING *')
+    .bind(storyId, userId, content).first()
+
 export async function storyCleanup(db: DB, storage: R2Bucket) {
   const expired = await db.prepare("SELECT media_key FROM stories WHERE expires_at <= datetime('now')").all<{ media_key: string }>()
   for (const { media_key } of expired.results) {
@@ -238,6 +252,56 @@ export const presenceList = (db: DB, secondsActive: number = 90) =>
 
 export const presenceClear = (db: DB, userId: number) =>
   db.prepare('DELETE FROM presence WHERE user_id = ?').bind(userId).run()
+
+// ─── City waves (sesión 10: "decir hola" multiplayer) ───
+
+export const waveInsert = (db: DB, fromUserId: number, toUserId: number) =>
+  db.prepare('INSERT INTO city_waves (from_user_id, to_user_id) VALUES (?, ?)')
+    .bind(fromUserId, toUserId).run()
+
+// Returns waves from the last N seconds (default 8) with usernames.
+export const waveListRecent = (db: DB, seconds: number = 8) =>
+  db.prepare(`
+    SELECT w.id, w.from_user_id, w.to_user_id, w.created_at,
+      COALESCE(uf.display_name, uf.username) AS from_username,
+      COALESCE(ut.display_name, ut.username) AS to_username
+    FROM city_waves w
+    JOIN users uf ON w.from_user_id = uf.id
+    JOIN users ut ON w.to_user_id   = ut.id
+    WHERE w.created_at > datetime('now', '-' || ? || ' seconds')
+    ORDER BY w.id DESC
+    LIMIT 100
+  `).bind(seconds).all()
+
+// Drop waves older than 5 minutes — called opportunistically on POST.
+export const waveCleanup = (db: DB) =>
+  db.prepare("DELETE FROM city_waves WHERE created_at < datetime('now', '-5 minutes')").run()
+
+// ─── Admin-managed calendar events (sesión 12) ───
+
+export const adminEventList = (db: DB) =>
+  db.prepare(`SELECT id, date, title, descr AS desc, emoji FROM admin_events ORDER BY date ASC`).all()
+
+export const adminEventUpcoming = (db: DB, days: number = 60) =>
+  db.prepare(`
+    SELECT id, date, title, descr AS desc, emoji FROM admin_events
+    WHERE date >= date('now') AND date <= date('now', '+' || ? || ' days')
+    ORDER BY date ASC
+  `).bind(days).all()
+
+export const adminEventCreate = (db: DB, date: string, title: string, desc: string, emoji: string) =>
+  db.prepare(`
+    INSERT INTO admin_events (date, title, descr, emoji) VALUES (?, ?, ?, ?) RETURNING id, date, title, descr AS desc, emoji
+  `).bind(date, title, desc, emoji).first()
+
+export const adminEventUpdate = (db: DB, id: number, date: string, title: string, desc: string, emoji: string) =>
+  db.prepare(`
+    UPDATE admin_events SET date = ?, title = ?, descr = ?, emoji = ? WHERE id = ?
+    RETURNING id, date, title, descr AS desc, emoji
+  `).bind(date, title, desc, emoji, id).first()
+
+export const adminEventDelete = (db: DB, id: number) =>
+  db.prepare(`DELETE FROM admin_events WHERE id = ?`).bind(id).run()
 
 // ─── Events (analytics: drives /admin/stats + city heatmap) ───
 

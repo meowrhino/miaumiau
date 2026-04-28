@@ -6,14 +6,21 @@
     list: [],
     loaded: false,
 
-    async load() {
-      if (Events.loaded) return Events.list
+    async load(force) {
+      if (Events.loaded && !force) return Events.list
+      // 1. DB-backed events (admins curate via /admin)
       try {
-        const r = await fetch('/data/events.json', { cache: 'no-cache' })
-        if (!r.ok) throw new Error('events.json missing')
-        Events.list = await r.json()
-      } catch (_) {
-        Events.list = []
+        const r = await fetch('/api/events', { cache: 'no-cache' })
+        if (r.ok) Events.list = await r.json()
+      } catch (_) {}
+      // 2. Fallback to the static JSON if DB is empty
+      if (!Array.isArray(Events.list) || Events.list.length === 0) {
+        try {
+          const r = await fetch('/data/events.json', { cache: 'no-cache' })
+          if (r.ok) Events.list = await r.json()
+        } catch (_) {
+          Events.list = []
+        }
       }
       Events.loaded = true
       return Events.list

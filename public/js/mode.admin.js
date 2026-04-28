@@ -19,8 +19,89 @@
         root.innerHTML = App._renderAdmin(data)
         // Draw the heatmap canvas overlaid on the city map
         App._drawHeatmap(data.zoneEntries || [])
+        // Wire the events admin section (CRUD for /api/admin/events)
+        App._wireAdminEvents()
       } catch (e) {
         root.innerHTML = `<div class="admin-block error">error: ${esc(e.message || 'fallo')}</div>`
+      }
+    },
+
+    // Sesión 12: events CRUD inside /admin
+    async _wireAdminEvents() {
+      const form = document.getElementById('adminEventForm')
+      if (!form) return
+      form.onsubmit = async (e) => {
+        e.preventDefault()
+        const id    = form.dataset.editing || ''
+        const date  = document.getElementById('adminEvDate').value
+        const title = document.getElementById('adminEvTitle').value.trim()
+        const desc  = document.getElementById('adminEvDesc').value.trim()
+        const emoji = document.getElementById('adminEvEmoji').value.trim() || '📅'
+        if (!date || !title) { showToast('faltan fecha o título'); return }
+        try {
+          if (id) await API.put('/admin/events/' + id, { date, title, desc, emoji })
+          else    await API.post('/admin/events', { date, title, desc, emoji })
+          form.reset()
+          form.dataset.editing = ''
+          document.getElementById('adminEvSubmit').textContent = 'añadir evento'
+          await App._reloadAdminEvents()
+          if (window.Events) Events.load(true)  // invalidate cached list
+        } catch (err) { showToast(err.message) }
+      }
+      document.getElementById('adminEvCancel').onclick = () => {
+        form.reset()
+        form.dataset.editing = ''
+        document.getElementById('adminEvSubmit').textContent = 'añadir evento'
+      }
+      App._reloadAdminEvents()
+    },
+
+    async _reloadAdminEvents() {
+      const list = document.getElementById('adminEventList')
+      if (!list) return
+      try {
+        const rows = await API.get('/admin/events')
+        if (!rows.length) {
+          list.innerHTML = `<p class="muted">no hay eventos en la base. añade uno arriba.</p>`
+          return
+        }
+        list.innerHTML = rows.map(r => `
+          <div class="admin-event-row">
+            <span class="admin-event-emoji">${esc(r.emoji || '📅')}</span>
+            <div class="admin-event-body">
+              <span class="admin-event-title">${esc(r.title)}</span>
+              <span class="admin-event-meta">${esc(r.date)}${r.desc ? ' · ' + esc(r.desc) : ''}</span>
+            </div>
+            <button class="btn small" data-edit="${r.id}">editar</button>
+            <button class="btn small danger" data-del="${r.id}">borrar</button>
+          </div>
+        `).join('')
+        list.querySelectorAll('[data-edit]').forEach(b => {
+          b.onclick = () => {
+            const r = rows.find(x => x.id === Number(b.dataset.edit))
+            if (!r) return
+            const f = document.getElementById('adminEventForm')
+            f.dataset.editing = String(r.id)
+            document.getElementById('adminEvDate').value  = r.date
+            document.getElementById('adminEvTitle').value = r.title
+            document.getElementById('adminEvDesc').value  = r.desc || ''
+            document.getElementById('adminEvEmoji').value = r.emoji || '📅'
+            document.getElementById('adminEvSubmit').textContent = 'guardar cambios'
+            f.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        })
+        list.querySelectorAll('[data-del]').forEach(b => {
+          b.onclick = async () => {
+            if (!confirm('¿borrar este evento?')) return
+            try {
+              await API.del('/admin/events/' + b.dataset.del)
+              await App._reloadAdminEvents()
+              if (window.Events) Events.load(true)
+            } catch (e) { showToast(e.message) }
+          }
+        })
+      } catch (e) {
+        list.innerHTML = `<p class="error">${esc(e.message)}</p>`
       }
     },
 
@@ -80,6 +161,26 @@
           <p class="muted" style="margin-bottom:8px">qué zonas se llenan más.</p>
           <div class="admin-heatmap-wrap">
             <canvas id="adminHeatmap" width="640" height="360"></canvas>
+          </div>
+        </div>
+
+        <div class="admin-block">
+          <h2>eventos del calendario</h2>
+          <p class="muted" style="margin-bottom:10px">añade, edita o borra eventos sin tocar el JSON.</p>
+          <form id="adminEventForm" class="admin-event-form" autocomplete="off">
+            <div class="admin-event-fields">
+              <input id="adminEvDate"  type="date" required>
+              <input id="adminEvEmoji" type="text" maxlength="4" placeholder="📅" value="📅" style="width:70px">
+              <input id="adminEvTitle" type="text" maxlength="80" placeholder="título" required>
+            </div>
+            <input id="adminEvDesc" type="text" maxlength="240" placeholder="descripción (opcional)">
+            <div class="admin-event-actions">
+              <button id="adminEvSubmit" type="submit" class="btn primary small">añadir evento</button>
+              <button id="adminEvCancel" type="button" class="btn small">cancelar</button>
+            </div>
+          </form>
+          <div id="adminEventList" class="admin-event-list">
+            <p class="muted">cargando…</p>
           </div>
         </div>
       `

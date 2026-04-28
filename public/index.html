@@ -361,6 +361,13 @@
         <span id="storyLikeCount" class="story-like-count">0</span>
       </button>
     </div>
+    <div id="storyComments" class="story-comments"></div>
+    <form id="storyCommentForm" class="story-comment-form" onsubmit="event.preventDefault(); App.sendStoryComment()">
+      <input id="storyCommentInput" type="text" maxlength="200" placeholder="responder..." autocomplete="off">
+      <button type="submit" class="story-comment-send" aria-label="enviar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </form>
   </div>
 
   <!-- Story Editor Modal -->
