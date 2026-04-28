@@ -129,13 +129,11 @@ body::before {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 0.95 0 0 0 0 0.85 0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   mix-blend-mode: screen;
 }
-/* App content sits above world + grain */
+/* App content sits above world + grain. Modals/viewers/editors are position:fixed
+   with their own high z-index — keep them out of this rule so they float on top. */
 body > .mode,
 body > #modeBanner,
-body > #toast,
-body > .modal,
-body > .story-viewer,
-body > .story-editor { position: relative; z-index: 10; }
+body > #toast { position: relative; z-index: 10; }
 
 @media (prefers-reduced-motion: reduce) {
   .world-particle, .world-cloud, .world-crosser { animation: none !important; }
@@ -519,16 +517,19 @@ small, .muted { color: var(--text-secondary); }
   position: fixed; inset: 0; z-index: 5;
   height: 100dvh; width: 100vw;
   display: block; padding: 0;
-  background: linear-gradient(180deg, #aed6e8 0%, #c8d8b6 55%, #c8a87a 100%);
+  /* Fallback only — the canvas paints extended grass beyond the world rect, so this
+     is just a flash-prevention color before fitCanvas runs. */
+  background: #a8d8a0;
 }
 .city-wrap {
   width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
+  display: block;
   padding: 0;
   position: relative;
 }
 .city-canvas {
   display: block;
+  width: 100%; height: 100%;
   cursor: grab;
 }
 .city-canvas:active { cursor: grabbing; }
@@ -628,7 +629,7 @@ body:has(#mode-city:not([hidden])) #poporingPet { z-index: 100; }
 
 /* ─── EVENTS MODAL (calendar — sesión 9) ─── */
 .events-modal {
-  position: fixed; inset: 0; z-index: 250;
+  position: fixed; inset: 0; z-index: 1050;
   background: rgba(20, 14, 8, 0.55);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
@@ -954,7 +955,7 @@ body:has(#mode-city:not([hidden])) #poporingPet { z-index: 100; }
 
 /* ─── PET MENU (radial overlay — opens on pet click; replaces HUD + map modal) ─── */
 .pet-menu {
-  position: fixed; inset: 0; z-index: 250;
+  position: fixed; inset: 0; z-index: 1050;
   background: rgba(20, 14, 8, 0.55);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
@@ -1673,7 +1674,7 @@ input:focus-visible, textarea:focus-visible {
 
 /* ─── Modal ─── */
 .modal {
-  position: fixed; inset: 0; z-index: 200;
+  position: fixed; inset: 0; z-index: 1000;
   background: rgba(42, 31, 21, 0.42); backdrop-filter: blur(14px) saturate(120%);
   -webkit-backdrop-filter: blur(14px) saturate(120%);
   display: flex;
@@ -1839,7 +1840,7 @@ input:focus-visible, textarea:focus-visible {
 
 /* Story Viewer */
 .story-viewer {
-  position: fixed; inset: 0; z-index: 300;
+  position: fixed; inset: 0; z-index: 1100;
   background: #000; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
@@ -1979,7 +1980,7 @@ input:focus-visible, textarea:focus-visible {
 
 /* ─── Story Editor ─── */
 .story-editor {
-  position: fixed; inset: 0; z-index: 300;
+  position: fixed; inset: 0; z-index: 1100;
   background: var(--bg); display: flex; flex-direction: column;
 }
 .story-editor-toolbar {

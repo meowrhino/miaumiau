@@ -1,6 +1,8 @@
 // City — Phase 1: solo player. Canvas with 6 zones. WASD/click-to-walk.
 // Zone detection emits enter:zone events. No networking yet.
 ;(function () {
+  // World units (game logic uses these — zones, paths, fountain are placed in this space).
+  // The canvas backing buffer is the actual viewport size; a scale+offset transform maps world → screen.
   const W = 1280, H = 720
   const PLAYER_SPEED = 200  // px/sec
   const PLAYER_SIZE = 56    // sprite render size
@@ -58,6 +60,8 @@
       }
       // Mascot poporings (one per zone)
       City.loadMascots()
+      // Pixel-art world sprites (houses, trees, fountain, lamp, ground tiles)
+      City.loadSprites()
       City.render(0)
       City.bind()
       City.last = performance.now()
@@ -88,19 +92,26 @@
       if (!City.canvas) return
       const wrap = City.canvas.parentElement
       if (!wrap) return
-      // Cover the wrapper, keep the world's 16:9 aspect — letterbox if needed.
-      const ratio = W / H
-      let cw = wrap.clientWidth
-      let ch = cw / ratio
-      if (ch > wrap.clientHeight) { ch = wrap.clientHeight; cw = ch * ratio }
-      // Hi-DPI: scale the backing buffer so canvas drawings stay crisp on retina.
+      // Full-bleed: the canvas covers the entire viewport (no letterbox / no degradient gap).
+      // Strategy: backing buffer = viewport_w × viewport_h × dpr; world is drawn at a scale
+      // that COVERS the viewport (so no empty letterbox), and ground/sky are painted beyond
+      // world bounds to fill any extra room when the viewport aspect differs from 16:9.
+      const vw = wrap.clientWidth
+      const vh = wrap.clientHeight
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      City.canvas.width  = Math.round(W * dpr)
-      City.canvas.height = Math.round(H * dpr)
-      City.canvas.style.width  = cw + 'px'
-      City.canvas.style.height = ch + 'px'
-      // Reset transform then apply DPR scale so all drawing code keeps using W × H units.
-      City.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      City.canvas.width  = Math.round(vw * dpr)
+      City.canvas.height = Math.round(vh * dpr)
+      City.canvas.style.width  = vw + 'px'
+      City.canvas.style.height = vh + 'px'
+      // contain-fit: smallest scale so the entire world is visible — the spillover beyond
+      // the world rect (top/bottom on tall viewports, sides on wide ones) is filled with
+      // extended grass by drawGround. No letterbox / no degradient gap.
+      const scale = Math.min(vw / W, vh / H)
+      const ox = (vw - W * scale) / 2
+      const oy = (vh - H * scale) / 2
+      City._view = { scale, ox, oy, vw, vh, dpr }
+      // Apply: dpr × scale, with offset (in CSS px times dpr → device pixels)
+      City.ctx.setTransform(dpr * scale, 0, 0, dpr * scale, ox * dpr, oy * dpr)
     },
 
     loadPlayerSprite() {
@@ -112,6 +123,38 @@
       const img = new Image()
       img.onload = () => { City.player.sprite = img; URL.revokeObjectURL(url) }
       img.src = url
+    },
+
+    loadSprites() {
+      if (typeof MiauSprites === 'undefined') return
+      const ownerHex = (App.user && typeof colorHex === 'function') ? colorHex(App.user.color) : '#FFB800'
+      const houses = {}
+      ZONES.forEach(z => {
+        houses[z.id] = MiauSprites.house(z.id, z.roof, z.id === 'profile' ? ownerHex : null)
+      })
+      // Mix tree variants for each TREES position so the city looks varied
+      const trees = TREES.map((_, i) => {
+        const seed = i * 31 + 7
+        const variant = i % 4
+        if (variant === 0) return MiauSprites.treeLush(seed)
+        if (variant === 1) return MiauSprites.treeSakura(seed)
+        if (variant === 2) return MiauSprites.treePine(seed)
+        return MiauSprites.treeLush(seed + 13)
+      })
+      City.sprites = {
+        house: houses,
+        trees,
+        bushes: [MiauSprites.bush(11), MiauSprites.bush(22), MiauSprites.bush(33), MiauSprites.bush(44)],
+        flowers: [MiauSprites.flowerPatch(55), MiauSprites.flowerPatch(66), MiauSprites.flowerPatch(77)],
+        fountain: MiauSprites.fountain(),
+        lamp: MiauSprites.lampPost(),
+        bench: MiauSprites.bench(),
+        fence: MiauSprites.fence(),
+        grass: MiauSprites.grassTile(123),
+        cobble: MiauSprites.cobbleTile(),
+        dirt: MiauSprites.dirtPathTile(),
+        clouds: [MiauSprites.cloud(11), MiauSprites.cloud(22), MiauSprites.cloud(33)],
+      }
     },
 
     loadMascots() {
@@ -164,8 +207,13 @@
 
     canvasCoords(e) {
       const r = City.canvas.getBoundingClientRect()
-      const x = (e.clientX - r.left) * (W / r.width)
-      const y = (e.clientY - r.top) * (H / r.height)
+      const v = City._view
+      // CSS pixels relative to canvas
+      const cx = e.clientX - r.left
+      const cy = e.clientY - r.top
+      // Inverse of fitCanvas transform: world = (css − offset) / scale
+      const x = (cx - (v ? v.ox : 0)) / (v ? v.scale : 1)
+      const y = (cy - (v ? v.oy : 0)) / (v ? v.scale : 1)
       return { x, y, rect: r }
     },
 
@@ -410,13 +458,36 @@
     render(now) {
       const ctx = City.ctx
       if (!ctx) return
-      ctx.clearRect(0, 0, W, H)
+      // Compute world-space visible bounds (may extend past 0..W / 0..H when the viewport
+      // aspect differs from the world aspect — drawGround paints the spillover with extended grass).
+      const v = City._view || { scale: 1, ox: 0, oy: 0, vw: W, vh: H }
+      const visL = -v.ox / v.scale
+      const visT = -v.oy / v.scale
+      const visR = (v.vw - v.ox) / v.scale
+      const visB = (v.vh - v.oy) / v.scale
+      ctx.clearRect(visL, visT, visR - visL, visB - visT)
 
-      // ── 1. ground (tiled grass + plaza dirt + paths) ──
-      City.drawGround(ctx, now)
+      // ── 0. drifting clouds (above the world, scroll horizontally) ──
+      if (City.sprites && City.sprites.clouds) {
+        const clouds = City.sprites.clouds
+        const totalW = (visR - visL) + 200
+        for (let i = 0; i < clouds.length; i++) {
+          const cl = clouds[i]
+          const speed = 0.012 + i * 0.005
+          const phase = (now * speed + i * 400) % totalW
+          const cx = visL - 60 + ((phase + i * 200) % totalW)
+          const cy = visT + 40 + i * 60
+          ctx.globalAlpha = 0.85
+          ctx.drawImage(cl, cx, cy)
+          ctx.globalAlpha = 1
+        }
+      }
+
+      // ── 1. ground (tiled grass + plaza cobble + paths + bushes/flowers) ──
+      City.drawGround(ctx, now, visL, visT, visR, visB)
 
       // ── 2. ambient back layer: trees behind buildings ──
-      TREES.forEach(t => { if (t.y < 400) City.drawTree(ctx, t.x, t.y, now) })
+      TREES.forEach((t, i) => { if (t.y < 400) City.drawTree(ctx, t.x, t.y, now, i) })
 
       // ── 3. buildings (depth-sorted: top rows first so bottom rows overlap) ──
       const sortedZones = ZONES.slice().sort((a, b) => a.y - b.y)
@@ -429,7 +500,7 @@
       LAMPS.forEach(l => City.drawLamp(ctx, l.x, l.y, now))
 
       // ── 6. front-layer trees (in front of plaza) ──
-      TREES.forEach(t => { if (t.y >= 400) City.drawTree(ctx, t.x, t.y, now) })
+      TREES.forEach((t, i) => { if (t.y >= 400) City.drawTree(ctx, t.x, t.y, now, i) })
 
       // ── 7. characters (others + me, sorted by y for fake parallax) ──
       const chars = City.others.map(o => ({ kind: 'other', y: o.y, data: o }))
@@ -446,130 +517,136 @@
 
     // ─── Render helpers (sesión 7: ciudad parece ciudad) ───
 
-    drawGround(ctx, now) {
-      // Big grass field (tile illusion via subtle dots)
-      ctx.fillStyle = '#a8d8a0'
-      ctx.fillRect(0, 0, W, H)
+    drawGround(ctx, now, visL, visT, visR, visB) {
+      visL = visL ?? 0; visT = visT ?? 0; visR = visR ?? W; visB = visB ?? H
+      const sp = City.sprites
+      ctx.imageSmoothingEnabled = false
 
-      // Tile dots — cheap pattern that reads as grass texture
-      ctx.save()
-      ctx.fillStyle = 'rgba(120,170,90,0.35)'
-      const tile = 24
-      for (let y = 0; y < H; y += tile) {
-        for (let x = (y / tile) % 2 ? tile/2 : 0; x < W; x += tile) {
-          ctx.fillRect(x, y, 2, 2)
+      // Pasto tileado pixel-art — llena toda el área visible (extiende fuera del world)
+      if (sp && sp.grass) {
+        const ts = 32
+        const sxStart = Math.floor(visL / ts) * ts
+        const syStart = Math.floor(visT / ts) * ts
+        for (let y = syStart; y < visB; y += ts) {
+          for (let x = sxStart; x < visR; x += ts) {
+            ctx.drawImage(sp.grass, x, y)
+          }
         }
+      } else {
+        ctx.fillStyle = '#a8d8a0'
+        ctx.fillRect(visL, visT, visR - visL, visB - visT)
       }
-      ctx.restore()
 
-      // Central plaza (round dirt patch with cobble border)
       const cx = W/2, cy = H/2 + 20
-      ctx.save()
-      ctx.fillStyle = '#e8c898'
-      ctx.beginPath(); ctx.ellipse(cx, cy, 280, 170, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = 'rgba(140,90,50,0.45)'
-      ctx.setLineDash([6, 4])
-      ctx.lineWidth = 2
-      ctx.stroke()
-      ctx.setLineDash([])
-      ctx.restore()
 
-      // Paths: from plaza center toward each building entrance
+      // Caminos de tierra (línea ancha) desde plaza a cada edificio. Borde más oscuro.
       ZONES.forEach(z => {
         const tx = z.x + z.w/2, ty = z.y + z.h - 30
         ctx.save()
+        ctx.strokeStyle = '#a08868'
+        ctx.lineWidth = 26
+        ctx.lineCap = 'round'
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(tx, ty); ctx.stroke()
         ctx.strokeStyle = '#d6b988'
         ctx.lineWidth = 22
-        ctx.lineCap = 'round'
-        ctx.beginPath()
-        ctx.moveTo(cx, cy)
-        ctx.lineTo(tx, ty)
-        ctx.stroke()
-        // dashed mid-line to suggest cobble seams
-        ctx.strokeStyle = 'rgba(180,140,90,0.45)'
-        ctx.lineWidth = 2
-        ctx.setLineDash([8, 10])
-        ctx.beginPath()
-        ctx.moveTo(cx, cy)
-        ctx.lineTo(tx, ty)
-        ctx.stroke()
-        ctx.setLineDash([])
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(tx, ty); ctx.stroke()
+        // Pebble specks scattered along the path
+        const dx = tx - cx, dy = ty - cy, len = Math.hypot(dx, dy)
+        const nx = -dy/len, ny = dx/len
+        for (let t = 0.15; t < 0.95; t += 0.12) {
+          const pxx = cx + dx*t + nx * (((t * 7919) % 7) - 3)
+          const pyy = cy + dy*t + ny * (((t * 7919) % 7) - 3)
+          ctx.fillStyle = '#a08868'
+          ctx.fillRect(pxx|0, pyy|0, 2, 2)
+        }
         ctx.restore()
       })
+
+      // Plaza central de adoquines pixel — clipped a una elipse para que las orillas queden suaves.
+      if (sp && sp.cobble) {
+        ctx.save()
+        ctx.beginPath(); ctx.ellipse(cx, cy, 240, 140, 0, 0, Math.PI * 2)
+        ctx.clip()
+        const ts = 16
+        for (let y = cy - 144; y < cy + 144; y += ts) {
+          for (let x = cx - 244; x < cx + 244; x += ts) {
+            ctx.drawImage(sp.cobble, x|0, y|0)
+          }
+        }
+        // Inner shading at rim
+        ctx.strokeStyle = 'rgba(140,100,60,0.35)'
+        ctx.lineWidth = 4
+        ctx.beginPath(); ctx.ellipse(cx, cy, 238, 138, 0, 0, Math.PI * 2); ctx.stroke()
+        ctx.restore()
+      } else {
+        ctx.fillStyle = '#e8c898'
+        ctx.beginPath(); ctx.ellipse(cx, cy, 240, 140, 0, 0, Math.PI * 2); ctx.fill()
+      }
+
+      // Static bushes & flower patches scattered around the world for ambient detail
+      if (sp) {
+        const decoSpots = [
+          { kind: 'bush',   x: 60,   y: 540, i: 0 },
+          { kind: 'bush',   x: 1220, y: 540, i: 1 },
+          { kind: 'bush',   x: 380,  y: 660, i: 2 },
+          { kind: 'bush',   x: 920,  y: 660, i: 3 },
+          { kind: 'flower', x: 220,  y: 690, i: 0 },
+          { kind: 'flower', x: 1080, y: 690, i: 1 },
+          { kind: 'flower', x: 640,  y: 700, i: 2 },
+        ]
+        for (const d of decoSpots) {
+          const img = d.kind === 'bush' ? sp.bushes[d.i % sp.bushes.length] : sp.flowers[d.i % sp.flowers.length]
+          if (img) ctx.drawImage(img, d.x - img.width/2, d.y - img.height)
+        }
+      }
     },
 
     drawBuilding(ctx, z, now) {
-      // Each zone is a building: small floor pad + roof silhouette + emoji sign +
-      // mascot poporing in front. Sign hangs over the entrance.
+      // Pixel-art house sprite + animated overlays (smoke, sign sway, mascot bob).
       const cx = z.x + z.w/2, cy = z.y + z.h/2
-      // Floor / shadow pad under the building
+      const sp = City.sprites
+      // Floor shadow under the building
       ctx.save()
-      ctx.fillStyle = 'rgba(0,0,0,0.10)'
-      ctx.beginPath(); ctx.ellipse(cx, z.y + z.h - 18, z.w * 0.36, 16, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'
+      ctx.beginPath(); ctx.ellipse(cx, z.y + z.h - 14, z.w * 0.34, 12, 0, 0, Math.PI * 2); ctx.fill()
       ctx.restore()
 
-      // Building silhouette: house shape with roof
-      const bw = 160, bh = 120
-      const bx = cx - bw/2, by = cy - bh/2 - 20
-      // Walls
-      ctx.save()
-      ctx.fillStyle = '#fff7e8'
-      ctx.strokeStyle = 'rgba(80,55,30,0.55)'
-      ctx.lineWidth = 2.5
-      ctx.beginPath(); ctx.roundRect(bx, by + 30, bw, bh - 30, 8); ctx.fill(); ctx.stroke()
-      // Roof (triangle with overhang)
-      ctx.fillStyle = z.roof
-      ctx.beginPath()
-      ctx.moveTo(bx - 12, by + 38)
-      ctx.lineTo(cx, by - 14)
-      ctx.lineTo(bx + bw + 12, by + 38)
-      ctx.closePath()
-      ctx.fill(); ctx.stroke()
-      // Roof shadow stripe (subtle depth)
-      ctx.fillStyle = 'rgba(0,0,0,0.12)'
-      ctx.beginPath()
-      ctx.moveTo(bx - 12, by + 38)
-      ctx.lineTo(bx + bw + 12, by + 38)
-      ctx.lineTo(bx + bw + 12, by + 44)
-      ctx.lineTo(bx - 12, by + 44)
-      ctx.closePath()
-      ctx.fill()
-      // Window (warm glow with shutter)
-      const winFlicker = (Math.sin(now/2200 + z.x*0.02) + 1) * 0.5
-      ctx.fillStyle = `rgba(255, 230 + ${Math.round(winFlicker*8)}, 168, 1)`
-      ctx.fillRect(bx + 18, by + 50, 26, 22)
-      ctx.strokeRect(bx + 18, by + 50, 26, 22)
-      ctx.beginPath(); ctx.moveTo(bx + 31, by + 50); ctx.lineTo(bx + 31, by + 72); ctx.stroke()
-      ctx.beginPath(); ctx.moveTo(bx + 18, by + 61); ctx.lineTo(bx + 44, by + 61); ctx.stroke()
-      // Door
-      ctx.fillStyle = '#8a5a32'
-      ctx.beginPath(); ctx.roundRect(bx + bw - 50, by + 60, 32, bh - 60, 4); ctx.fill(); ctx.stroke()
-      // Door step
-      ctx.fillStyle = 'rgba(80,55,30,0.35)'
-      ctx.fillRect(bx + bw - 54, by + bh - 4, 40, 4)
-      // Door knob
-      ctx.fillStyle = '#ffd86a'
-      ctx.beginPath(); ctx.arc(bx + bw - 24, by + bh - 6, 1.5, 0, Math.PI * 2); ctx.fill()
-      ctx.restore()
+      // Render the house sprite (96×96 logical, scaled to fit zone footprint)
+      const houseImg = sp && sp.house && sp.house[z.id]
+      const renderW = 180, renderH = 180
+      const bx = cx - renderW/2
+      const by = z.y + z.h - renderH + 4   // anchor base at zone bottom
+      ctx.imageSmoothingEnabled = false
+      if (houseImg) ctx.drawImage(houseImg, bx, by, renderW, renderH)
+      else { // fallback: simple block
+        ctx.fillStyle = z.roof
+        ctx.fillRect(cx - 60, z.y + 40, 120, 100)
+      }
 
-      // Per-zone roof detail: chimney with smoke, flag, antenna…
-      City.drawRoofDetail(ctx, z, bx, by, bw, now)
+      // Per-zone animated overlays (smoke, blink, glow) layered on top of the sprite
+      City.drawHouseOverlay(ctx, z, bx, by, renderW, renderH, now)
 
-      // Hanging sign with the emoji symbol — sways gently with the wind
-      const swayS = Math.sin(now/1500 + z.x*0.01) * 1.5
-      const sx = cx, sy = by - 24
+      // Hanging sign with the emoji symbol — floats above the rooftop, sways gently with the wind
+      const swayS = Math.sin(now/1500 + z.x*0.01) * 2
+      const sx = cx
+      const signTop = by - 22         // floats above the house roof apex
       ctx.save()
-      ctx.translate(sx, by - 14)
+      ctx.translate(sx, signTop)
       ctx.rotate(swayS * Math.PI / 180)
-      ctx.translate(-sx, -(by - 14))
+      ctx.translate(-sx, -signTop)
+      // Hang line
       ctx.strokeStyle = 'rgba(80,55,30,0.7)'
       ctx.lineWidth = 2
-      ctx.beginPath(); ctx.moveTo(sx, by - 14); ctx.lineTo(sx, sy); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(sx, signTop - 8); ctx.lineTo(sx, signTop); ctx.stroke()
+      // Plate
       ctx.fillStyle = '#fff7e8'
-      ctx.beginPath(); ctx.roundRect(sx - 22, sy - 16, 44, 26, 6); ctx.fill(); ctx.stroke()
+      ctx.strokeStyle = 'rgba(80,55,30,0.7)'
+      ctx.lineWidth = 2
+      ctx.beginPath(); ctx.roundRect(sx - 22, signTop, 44, 26, 6); ctx.fill(); ctx.stroke()
+      // Emoji icon
       ctx.font = '20px "Apple Color Emoji","Segoe UI Emoji",sans-serif'
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-      ctx.fillText(z.building, sx, sy - 2)
+      ctx.fillText(z.building, sx, signTop + 14)
       ctx.restore()
 
       // Mascot poporing in front of the door (clickable hotspot)
@@ -606,49 +683,47 @@
       ctx.restore()
     },
 
-    drawRoofDetail(ctx, z, bx, by, bw, now) {
+    drawHouseOverlay(ctx, z, bx, by, rw, rh, now) {
+      // Animated overlays on top of each zone's house sprite. The sprite already has
+      // baked detail (chimney, flag, telescope, camera) — these are the bits that move:
+      // smoke, glow, blink, swaying flag, etc.
       ctx.save()
-      const cx = bx + bw/2
+      const sx = bx + rw/2          // sprite center x
       if (z.id === 'tweets') {
-        // chimney with rising smoke
-        const ch = bx + bw - 38, cy0 = by + 6
-        ctx.fillStyle = '#a87859'
-        ctx.fillRect(ch, cy0, 14, 22)
-        ctx.strokeStyle = 'rgba(60,40,20,0.55)'; ctx.lineWidth = 1.5
-        ctx.strokeRect(ch, cy0, 14, 22)
-        for (let i = 0; i < 3; i++) {
-          const t = ((now/1100) + i * 0.33) % 1
-          const sx = ch + 7 + Math.sin(t * Math.PI * 2) * 6
-          const sy = cy0 - t * 28
-          ctx.fillStyle = `rgba(255,255,255,${0.55 - t*0.4})`
-          ctx.beginPath(); ctx.arc(sx, sy, 5 + t*4, 0, Math.PI * 2); ctx.fill()
+        // Smoke rising from chimney (chimney is at sprite local x ≈ 66, y ≈ 8)
+        const chimX = bx + (66/96) * rw
+        const chimY = by + (8/96) * rh
+        for (let i = 0; i < 4; i++) {
+          const t = ((now/1300) + i * 0.25) % 1
+          const px = chimX + Math.sin(t * Math.PI * 2 + i) * 8
+          const py = chimY - t * 38
+          ctx.fillStyle = `rgba(255,255,255,${0.55 - t*0.45})`
+          ctx.beginPath(); ctx.arc(px, py, 5 + t*5, 0, Math.PI * 2); ctx.fill()
         }
       } else if (z.id === 'posts') {
-        // pin flag with paper notes flapping
-        const fx = cx, fy = by - 14
-        ctx.strokeStyle = 'rgba(60,40,20,0.7)'; ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 26); ctx.stroke()
-        const flap = Math.sin(now/500) * 2
-        ctx.fillStyle = '#fff7e8'
-        ctx.beginPath()
-        ctx.moveTo(fx, fy - 26)
-        ctx.lineTo(fx + 18 + flap, fy - 22)
-        ctx.lineTo(fx + 18 + flap, fy - 12)
-        ctx.lineTo(fx, fy - 16)
-        ctx.closePath(); ctx.fill()
-        ctx.strokeStyle = 'rgba(60,40,20,0.5)'; ctx.stroke()
+        // Bandera ondeando — el sprite ya tiene una bandera roja, se le añade un ripple shading encima
+        const flagX = bx + (54/96) * rw
+        const flagY = by + (8/96) * rh
+        const flap = Math.sin(now/450) * 4
+        ctx.fillStyle = `rgba(255,255,255,${0.25 + (Math.sin(now/300) + 1) * 0.15})`
+        ctx.fillRect(flagX, flagY + flap, (10/96) * rw, 1)
       } else if (z.id === 'stories') {
-        // tiny moon hanging above the roof
-        const mx = cx, my = by - 18
-        const glow = (Math.sin(now/1400) + 1) * 0.5
-        ctx.fillStyle = `rgba(255,236,168,${0.45 + glow*0.25})`
-        ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI * 2); ctx.fill()
+        // Telescope slit glow + tiny moon orbiting
+        const slitX = bx + (48/96) * rw
+        const slitY = by + (24/96) * rh
+        const glow = (Math.sin(now/900) + 1) * 0.5
+        ctx.fillStyle = `rgba(180,210,255,${0.18 + glow*0.20})`
+        ctx.beginPath(); ctx.arc(slitX, slitY, 12, 0, Math.PI * 2); ctx.fill()
+        // Floating moon above
+        const mx = sx, my = by - 6
+        ctx.fillStyle = `rgba(255,236,168,${0.45 + glow*0.30})`
+        ctx.beginPath(); ctx.arc(mx, my, 10, 0, Math.PI * 2); ctx.fill()
         ctx.fillStyle = '#fff5d2'
-        ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2); ctx.fill()
       } else if (z.id === 'chat') {
-        // speech bubble floating off the roof
-        const bxb = cx - 6 + Math.sin(now/700) * 1.5
-        const byb = by - 18 + Math.sin(now/600) * 1.5
+        // Speech bubble bobbing above
+        const bxb = sx - 6 + Math.sin(now/700) * 1.5
+        const byb = by + 4 + Math.sin(now/600) * 1.5
         ctx.fillStyle = '#fff7e8'
         ctx.beginPath(); ctx.roundRect(bxb - 12, byb - 12, 24, 18, 6); ctx.fill()
         ctx.strokeStyle = 'rgba(60,40,20,0.55)'; ctx.lineWidth = 1.5; ctx.stroke()
@@ -657,101 +732,116 @@
           ctx.beginPath(); ctx.arc(dx, byb - 3, 1.3, 0, Math.PI * 2); ctx.fill()
         })
       } else if (z.id === 'bereal') {
-        // camera lens "blink" on top of the roof
-        const lx = cx, ly = by - 6
-        ctx.fillStyle = '#3a3530'
-        ctx.beginPath(); ctx.roundRect(lx - 14, ly - 10, 28, 16, 4); ctx.fill()
-        ctx.fillStyle = '#7fc6e8'
-        ctx.beginPath(); ctx.arc(lx, ly - 2, 6, 0, Math.PI * 2); ctx.fill()
+        // Red record-light blink on the rooftop camera
+        const lx = bx + (56/96) * rw
+        const ly = by + (20/96) * rh
         const blink = (Math.sin(now/520) + 1) * 0.5
-        ctx.fillStyle = `rgba(255,80,80,${0.4 + blink*0.5})`
-        ctx.beginPath(); ctx.arc(lx + 8, ly - 6, 2, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = `rgba(255,80,80,${0.5 + blink*0.5})`
+        ctx.beginPath(); ctx.arc(lx, ly, 2.5, 0, Math.PI * 2); ctx.fill()
+        if (blink > 0.85) {
+          ctx.fillStyle = 'rgba(255,255,255,0.35)'
+          ctx.beginPath(); ctx.arc(lx, ly, 8, 0, Math.PI * 2); ctx.fill()
+        }
       } else if (z.id === 'profile') {
-        // weather vane on top
-        const vx = cx, vy = by - 20
-        ctx.strokeStyle = 'rgba(60,40,20,0.7)'; ctx.lineWidth = 2
-        ctx.beginPath(); ctx.moveTo(vx, by - 14); ctx.lineTo(vx, vy - 4); ctx.stroke()
-        ctx.fillStyle = '#5a4730'
-        const ang = Math.sin(now/2400) * 0.5
-        ctx.translate(vx, vy - 4); ctx.rotate(ang)
-        ctx.beginPath()
-        ctx.moveTo(0, -6); ctx.lineTo(10, 0); ctx.lineTo(0, 6); ctx.lineTo(-3, 0)
-        ctx.closePath(); ctx.fill()
+        // Heart pulse over the door
+        const pulse = (Math.sin(now/700) + 1) * 0.5
+        const hx = bx + (47/96) * rw
+        const hy = by + (54/96) * rh
+        ctx.fillStyle = `rgba(208,64,96,${0.25 + pulse * 0.25})`
+        ctx.beginPath(); ctx.arc(hx, hy, 8 + pulse*2, 0, Math.PI * 2); ctx.fill()
       }
+      // Window flicker overlay (warm glow pulse on whichever window the sprite has near 25,66)
+      const flick = (Math.sin(now/2200 + z.x*0.02) + 1) * 0.5
+      ctx.fillStyle = `rgba(255,236,168,${0.10 + flick*0.10})`
+      const wx = bx + (29/96) * rw
+      const wy = by + (66/96) * rh
+      ctx.beginPath(); ctx.arc(wx, wy, 14, 0, Math.PI * 2); ctx.fill()
       ctx.restore()
     },
 
     drawFountain(ctx, x, y, now) {
-      // Stone basin with animated water
+      // Pixel-art fountain sprite + animated water shimmer/jet/droplets overlays.
+      const sp = City.sprites
       ctx.save()
-      // Base shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.18)'
-      ctx.beginPath(); ctx.ellipse(x, y + 14, 46, 10, 0, 0, Math.PI * 2); ctx.fill()
-      // Basin
-      ctx.fillStyle = '#bdb1a3'
-      ctx.beginPath(); ctx.ellipse(x, y + 4, 44, 14, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = 'rgba(80,60,40,0.5)'; ctx.lineWidth = 2; ctx.stroke()
-      // Water (rippling color shift)
-      const ripple = (Math.sin(now/700) + 1) * 6
-      ctx.fillStyle = '#7fc6e8'
-      ctx.beginPath(); ctx.ellipse(x, y, 32 + ripple*0.1, 9, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'
-      ctx.beginPath(); ctx.ellipse(x - 8, y - 1, 8, 2, 0, 0, Math.PI * 2); ctx.fill()
-      // Center spout + animated jet
-      ctx.fillStyle = '#a8a094'
-      ctx.fillRect(x - 4, y - 18, 8, 14)
-      const jet = 14 + Math.sin(now/180) * 3
-      ctx.fillStyle = 'rgba(180,220,240,0.85)'
-      ctx.beginPath(); ctx.ellipse(x, y - 18 - jet/2, 4, jet/2, 0, 0, Math.PI * 2); ctx.fill()
-      // Falling droplets
+      ctx.imageSmoothingEnabled = false
+      const fImg = sp && sp.fountain
+      const fw = 144, fh = 112
+      if (fImg) ctx.drawImage(fImg, x - fw/2, y - fh + 36, fw, fh)
+      else {
+        ctx.fillStyle = '#bdb1a3'
+        ctx.beginPath(); ctx.ellipse(x, y + 4, 44, 14, 0, 0, Math.PI * 2); ctx.fill()
+      }
+      // Animated water surface shimmer (white sparkles drifting)
+      for (let i = 0; i < 4; i++) {
+        const t = ((now/900) + i * 0.25) % 1
+        const sxx = x + Math.sin(t * Math.PI * 2 + i * 1.3) * 18
+        const syy = y - 4 + Math.cos(t * Math.PI * 2 + i) * 2
+        ctx.fillStyle = `rgba(255,255,255,${0.5 - t*0.3})`
+        ctx.fillRect(sxx|0, syy|0, 2, 2)
+      }
+      // Jet rising from the top bowl
+      const jet = 8 + (Math.sin(now/180) + 1) * 3
+      ctx.fillStyle = 'rgba(190,225,245,0.85)'
+      ctx.beginPath(); ctx.ellipse(x, y - 50 - jet/2, 3, jet/2, 0, 0, Math.PI * 2); ctx.fill()
+      // Falling droplets from the top bowl
       for (let i = 0; i < 3; i++) {
         const t = ((now/600) + i * 0.33) % 1
-        const dy = -18 + t * 22
-        const dx = (i - 1) * 6
-        ctx.fillStyle = 'rgba(180,220,240,0.7)'
+        const dy = -42 + t * 38
+        const dx = (i - 1) * 8
+        ctx.fillStyle = `rgba(190,225,245,${0.85 - t*0.3})`
         ctx.beginPath(); ctx.arc(x + dx, y + dy, 1.6, 0, Math.PI * 2); ctx.fill()
       }
       ctx.restore()
     },
 
-    drawTree(ctx, x, y, now) {
+    drawTree(ctx, x, y, now, idx) {
+      const sp = City.sprites
+      const img = sp && sp.trees && sp.trees[idx ?? 0]
       ctx.save()
       // Shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.18)'
-      ctx.beginPath(); ctx.ellipse(x, y + 32, 18, 5, 0, 0, Math.PI * 2); ctx.fill()
-      // Trunk
-      ctx.fillStyle = '#7a4d2a'
-      ctx.fillRect(x - 4, y, 8, 28)
-      ctx.strokeStyle = 'rgba(50,30,15,0.55)'; ctx.lineWidth = 1.5
-      ctx.strokeRect(x - 4, y, 8, 28)
-      // Foliage — three offset blobs with a subtle sway
-      const sway = Math.sin(now/900 + x*0.01) * 1.5
-      ctx.fillStyle = '#5fb070'
-      ctx.beginPath(); ctx.arc(x + sway, y - 4, 18, 0, Math.PI * 2); ctx.fill()
-      ctx.beginPath(); ctx.arc(x - 10 + sway, y - 12, 14, 0, Math.PI * 2); ctx.fill()
-      ctx.beginPath(); ctx.arc(x + 10 + sway, y - 12, 14, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = '#84cc92'
-      ctx.beginPath(); ctx.arc(x - 4 + sway, y - 14, 6, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = 'rgba(40,25,15,0.30)'
+      ctx.beginPath(); ctx.ellipse(x, y + 30, 20, 6, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.imageSmoothingEnabled = false
+      // Sway: tiny horizontal jitter (keeps the trunk aligned visually)
+      const sway = Math.sin(now/1500 + x*0.01) * 1.5
+      if (img) {
+        const renderW = img.width * 1.6, renderH = img.height * 1.6
+        ctx.drawImage(img, x - renderW/2 + sway, y - renderH + 36, renderW, renderH)
+      } else {
+        ctx.fillStyle = '#5fb070'
+        ctx.beginPath(); ctx.arc(x, y - 8, 18, 0, Math.PI * 2); ctx.fill()
+      }
       ctx.restore()
     },
 
     drawLamp(ctx, x, y, now) {
+      const sp = City.sprites
       ctx.save()
       // Shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.18)'
-      ctx.beginPath(); ctx.ellipse(x, y + 30, 8, 3, 0, 0, Math.PI * 2); ctx.fill()
-      // Post
-      ctx.fillStyle = '#3a3530'
-      ctx.fillRect(x - 2, y - 28, 4, 56)
-      // Lamp head
-      ctx.fillStyle = '#3a3530'
-      ctx.beginPath(); ctx.roundRect(x - 8, y - 38, 16, 14, 3); ctx.fill()
-      // Glow (warm)
+      ctx.fillStyle = 'rgba(40,25,15,0.30)'
+      ctx.beginPath(); ctx.ellipse(x, y + 30, 10, 4, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.imageSmoothingEnabled = false
+      const img = sp && sp.lamp
+      if (img) {
+        const renderW = img.width * 1.6, renderH = img.height * 1.6
+        ctx.drawImage(img, x - renderW/2, y - renderH + 32, renderW, renderH)
+      } else {
+        ctx.fillStyle = '#3a3530'
+        ctx.fillRect(x - 2, y - 28, 4, 56)
+      }
+      // Warm halo glow (animated)
       const glow = (Math.sin(now/1200) + 1) * 0.5
-      ctx.fillStyle = `rgba(255,210,120,${0.55 + glow*0.25})`
-      ctx.beginPath(); ctx.arc(x, y - 31, 22, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = '#ffe6a3'
-      ctx.beginPath(); ctx.arc(x, y - 31, 5, 0, Math.PI * 2); ctx.fill()
+      const lampHeadY = y - 60
+      ctx.fillStyle = `rgba(255,210,120,${0.30 + glow*0.20})`
+      ctx.beginPath(); ctx.arc(x, lampHeadY, 28, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = `rgba(255,236,168,${0.55 + glow*0.30})`
+      ctx.beginPath(); ctx.arc(x, lampHeadY, 14, 0, Math.PI * 2); ctx.fill()
+      // Tiny moth circling the lamp
+      const ma = (now / 800) + x * 0.01
+      const mx = x + Math.cos(ma) * 16
+      const my = lampHeadY + Math.sin(ma) * 8
+      ctx.fillStyle = `rgba(220,180,140,${0.75 + Math.sin(now/120) * 0.25})`
+      ctx.fillRect(mx|0, my|0, 2, 2)
       ctx.restore()
     },
 
