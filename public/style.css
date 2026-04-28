@@ -514,29 +514,28 @@ small, .muted { color: var(--text-secondary); }
   100% { transform: scale(1); }
 }
 
-/* ─── CITY (Phase 1: walkable canvas town) ─── */
+/* ─── CITY (walkable canvas town — full-bleed, no chrome) ─── */
 #mode-city {
-  height: 100dvh; display: flex; align-items: center; justify-content: center;
-  padding: 0;
+  position: fixed; inset: 0; z-index: 5;
+  height: 100dvh; width: 100vw;
+  display: block; padding: 0;
+  background: linear-gradient(180deg, #aed6e8 0%, #c8d8b6 55%, #c8a87a 100%);
 }
 .city-wrap {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
-  padding: 12px;
+  padding: 0;
   position: relative;
 }
 .city-canvas {
   display: block;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-float), inset 0 1px 0 rgba(255,255,255,0.30);
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 80%, rgba(180,120,80,0.25), transparent 70%),
-    linear-gradient(180deg, #aed6e8 0%, #f0c89a 70%, #c98564 100%);
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
   cursor: grab;
 }
 .city-canvas:active { cursor: grabbing; }
+/* While the city is open, hide the per-mode banner — the canvas IS the world.
+   The pet stays (it's the only entry to the radial menu) but sits on top. */
+body:has(#mode-city:not([hidden])) #modeBanner { display: none !important; }
+body:has(#mode-city:not([hidden])) #poporingPet { z-index: 100; }
 
 /* Hover tooltip floating next to a poporing */
 .city-tooltip {
@@ -552,7 +551,13 @@ small, .muted { color: var(--text-secondary); }
   font-family: var(--font-pixel);
   font-size: 0.72rem;
   white-space: nowrap;
-  transform: translateY(-100%);
+  transform: translate(0, calc(-100% - 8px));
+  animation: tooltipIn 160ms var(--ease-out);
+  transition: left 80ms linear, top 80ms linear;
+}
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translate(0, calc(-100% - 2px)); }
+  to   { opacity: 1; transform: translate(0, calc(-100% - 8px)); }
 }
 .city-tooltip-name { font-weight: 700; font-size: 0.82rem; }
 .city-tooltip-zone, .city-tooltip-ago { color: var(--text-secondary); font-size: 0.66rem; }

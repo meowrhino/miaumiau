@@ -46,8 +46,6 @@
       City.canvas = document.getElementById('cityCanvas')
       if (!City.canvas) return
       City.ctx = City.canvas.getContext('2d')
-      City.canvas.width = W
-      City.canvas.height = H
       City.fitCanvas()
       window.addEventListener('resize', City.fitCanvas)
 
@@ -84,12 +82,19 @@
       if (!City.canvas) return
       const wrap = City.canvas.parentElement
       if (!wrap) return
+      // Cover the wrapper, keep the world's 16:9 aspect — letterbox if needed.
       const ratio = W / H
       let cw = wrap.clientWidth
       let ch = cw / ratio
       if (ch > wrap.clientHeight) { ch = wrap.clientHeight; cw = ch * ratio }
-      City.canvas.style.width = cw + 'px'
+      // Hi-DPI: scale the backing buffer so canvas drawings stay crisp on retina.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      City.canvas.width  = Math.round(W * dpr)
+      City.canvas.height = Math.round(H * dpr)
+      City.canvas.style.width  = cw + 'px'
       City.canvas.style.height = ch + 'px'
+      // Reset transform then apply DPR scale so all drawing code keeps using W × H units.
+      City.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     },
 
     loadPlayerSprite() {
@@ -487,8 +492,18 @@
       ctx.lineTo(bx + bw + 12, by + 38)
       ctx.closePath()
       ctx.fill(); ctx.stroke()
-      // Window (warm glow)
-      ctx.fillStyle = '#ffe7a8'
+      // Roof shadow stripe (subtle depth)
+      ctx.fillStyle = 'rgba(0,0,0,0.12)'
+      ctx.beginPath()
+      ctx.moveTo(bx - 12, by + 38)
+      ctx.lineTo(bx + bw + 12, by + 38)
+      ctx.lineTo(bx + bw + 12, by + 44)
+      ctx.lineTo(bx - 12, by + 44)
+      ctx.closePath()
+      ctx.fill()
+      // Window (warm glow with shutter)
+      const winFlicker = (Math.sin(now/2200 + z.x*0.02) + 1) * 0.5
+      ctx.fillStyle = `rgba(255, 230 + ${Math.round(winFlicker*8)}, 168, 1)`
       ctx.fillRect(bx + 18, by + 50, 26, 22)
       ctx.strokeRect(bx + 18, by + 50, 26, 22)
       ctx.beginPath(); ctx.moveTo(bx + 31, by + 50); ctx.lineTo(bx + 31, by + 72); ctx.stroke()
@@ -496,13 +511,24 @@
       // Door
       ctx.fillStyle = '#8a5a32'
       ctx.beginPath(); ctx.roundRect(bx + bw - 50, by + 60, 32, bh - 60, 4); ctx.fill(); ctx.stroke()
+      // Door step
+      ctx.fillStyle = 'rgba(80,55,30,0.35)'
+      ctx.fillRect(bx + bw - 54, by + bh - 4, 40, 4)
+      // Door knob
       ctx.fillStyle = '#ffd86a'
       ctx.beginPath(); ctx.arc(bx + bw - 24, by + bh - 6, 1.5, 0, Math.PI * 2); ctx.fill()
       ctx.restore()
 
-      // Hanging sign with the emoji symbol
+      // Per-zone roof detail: chimney with smoke, flag, antenna…
+      City.drawRoofDetail(ctx, z, bx, by, bw, now)
+
+      // Hanging sign with the emoji symbol — sways gently with the wind
+      const swayS = Math.sin(now/1500 + z.x*0.01) * 1.5
       const sx = cx, sy = by - 24
       ctx.save()
+      ctx.translate(sx, by - 14)
+      ctx.rotate(swayS * Math.PI / 180)
+      ctx.translate(-sx, -(by - 14))
       ctx.strokeStyle = 'rgba(80,55,30,0.7)'
       ctx.lineWidth = 2
       ctx.beginPath(); ctx.moveTo(sx, by - 14); ctx.lineTo(sx, sy); ctx.stroke()
@@ -544,6 +570,81 @@
       ctx.textAlign = 'center'
       ctx.strokeText(z.name, cx, my + 36)
       ctx.fillText(z.name, cx, my + 36)
+      ctx.restore()
+    },
+
+    drawRoofDetail(ctx, z, bx, by, bw, now) {
+      ctx.save()
+      const cx = bx + bw/2
+      if (z.id === 'tweets') {
+        // chimney with rising smoke
+        const ch = bx + bw - 38, cy0 = by + 6
+        ctx.fillStyle = '#a87859'
+        ctx.fillRect(ch, cy0, 14, 22)
+        ctx.strokeStyle = 'rgba(60,40,20,0.55)'; ctx.lineWidth = 1.5
+        ctx.strokeRect(ch, cy0, 14, 22)
+        for (let i = 0; i < 3; i++) {
+          const t = ((now/1100) + i * 0.33) % 1
+          const sx = ch + 7 + Math.sin(t * Math.PI * 2) * 6
+          const sy = cy0 - t * 28
+          ctx.fillStyle = `rgba(255,255,255,${0.55 - t*0.4})`
+          ctx.beginPath(); ctx.arc(sx, sy, 5 + t*4, 0, Math.PI * 2); ctx.fill()
+        }
+      } else if (z.id === 'posts') {
+        // pin flag with paper notes flapping
+        const fx = cx, fy = by - 14
+        ctx.strokeStyle = 'rgba(60,40,20,0.7)'; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 26); ctx.stroke()
+        const flap = Math.sin(now/500) * 2
+        ctx.fillStyle = '#fff7e8'
+        ctx.beginPath()
+        ctx.moveTo(fx, fy - 26)
+        ctx.lineTo(fx + 18 + flap, fy - 22)
+        ctx.lineTo(fx + 18 + flap, fy - 12)
+        ctx.lineTo(fx, fy - 16)
+        ctx.closePath(); ctx.fill()
+        ctx.strokeStyle = 'rgba(60,40,20,0.5)'; ctx.stroke()
+      } else if (z.id === 'stories') {
+        // tiny moon hanging above the roof
+        const mx = cx, my = by - 18
+        const glow = (Math.sin(now/1400) + 1) * 0.5
+        ctx.fillStyle = `rgba(255,236,168,${0.45 + glow*0.25})`
+        ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#fff5d2'
+        ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill()
+      } else if (z.id === 'chat') {
+        // speech bubble floating off the roof
+        const bxb = cx - 6 + Math.sin(now/700) * 1.5
+        const byb = by - 18 + Math.sin(now/600) * 1.5
+        ctx.fillStyle = '#fff7e8'
+        ctx.beginPath(); ctx.roundRect(bxb - 12, byb - 12, 24, 18, 6); ctx.fill()
+        ctx.strokeStyle = 'rgba(60,40,20,0.55)'; ctx.lineWidth = 1.5; ctx.stroke()
+        ctx.fillStyle = '#5a4730'
+        ;[bxb - 5, bxb, bxb + 5].forEach(dx => {
+          ctx.beginPath(); ctx.arc(dx, byb - 3, 1.3, 0, Math.PI * 2); ctx.fill()
+        })
+      } else if (z.id === 'bereal') {
+        // camera lens "blink" on top of the roof
+        const lx = cx, ly = by - 6
+        ctx.fillStyle = '#3a3530'
+        ctx.beginPath(); ctx.roundRect(lx - 14, ly - 10, 28, 16, 4); ctx.fill()
+        ctx.fillStyle = '#7fc6e8'
+        ctx.beginPath(); ctx.arc(lx, ly - 2, 6, 0, Math.PI * 2); ctx.fill()
+        const blink = (Math.sin(now/520) + 1) * 0.5
+        ctx.fillStyle = `rgba(255,80,80,${0.4 + blink*0.5})`
+        ctx.beginPath(); ctx.arc(lx + 8, ly - 6, 2, 0, Math.PI * 2); ctx.fill()
+      } else if (z.id === 'profile') {
+        // weather vane on top
+        const vx = cx, vy = by - 20
+        ctx.strokeStyle = 'rgba(60,40,20,0.7)'; ctx.lineWidth = 2
+        ctx.beginPath(); ctx.moveTo(vx, by - 14); ctx.lineTo(vx, vy - 4); ctx.stroke()
+        ctx.fillStyle = '#5a4730'
+        const ang = Math.sin(now/2400) * 0.5
+        ctx.translate(vx, vy - 4); ctx.rotate(ang)
+        ctx.beginPath()
+        ctx.moveTo(0, -6); ctx.lineTo(10, 0); ctx.lineTo(0, 6); ctx.lineTo(-3, 0)
+        ctx.closePath(); ctx.fill()
+      }
       ctx.restore()
     },
 

@@ -6,7 +6,7 @@
 
   // path → { mode, params }
   function parse(path) {
-    if (!path || path === '/') return { mode: 'tweets', params: {} }
+    if (!path || path === '/') return { mode: 'city', params: {} }
     const parts = path.replace(/^\/|\/$/g, '').split('/')
     const head = parts[0]
     if (SECTIONS.includes(head)) {
@@ -16,12 +16,12 @@
     }
     // Server-rendered public pages: leave them to App.enter_public()
     if (['u', 'p', 't'].includes(head)) return { mode: 'public', params: { kind: head, ref: parts[1] } }
-    // unknown → fallback
-    return { mode: 'tweets', params: {} }
+    // unknown → fallback to city (the new home)
+    return { mode: 'city', params: {} }
   }
 
   function pathFor(mode, params = {}) {
-    if (mode === 'tweets' && !params.with) return '/'
+    if (mode === 'city') return '/'
     if (mode === 'chat' && params.with) return '/chat/' + params.with
     return '/' + mode
   }
@@ -42,7 +42,7 @@
         history.pushState({ mode, params }, '', targetPath)
       }
     }
-    document.title = mode === 'tweets' ? 'miaumiau' : `${mode} · miaumiau`
+    document.title = mode === 'city' ? 'miaumiau' : `${mode} · miaumiau`
   }
 
   // Catch internal anchor clicks like <a href="/posts" data-route>

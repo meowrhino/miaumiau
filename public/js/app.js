@@ -34,8 +34,8 @@ const App = {
 
     if (App.user) {
       // Read URL → which section to open on cold load
-      const initial = window.Routes ? Routes.parse(location.pathname) : { mode: 'tweets', params: {} }
-      App.go(initial.mode || 'tweets', { ...initial.params, _fromBoot: true })
+      const initial = window.Routes ? Routes.parse(location.pathname) : { mode: 'city', params: {} }
+      App.go(initial.mode || 'city', { ...initial.params, _fromBoot: true })
       // Today's event nudge (toast + speech bubble) — sesión 9
       if (window.Events && Events.announceTodayIfAny) Events.announceTodayIfAny()
     } else {
@@ -81,7 +81,7 @@ const App = {
         const path = Routes.pathFor(mode, params)
         if (location.pathname !== path) history.pushState({ mode }, '', path)
       }
-      document.title = mode === 'tweets' ? 'miaumiau' : `${mode} · miaumiau`
+      document.title = mode === 'city' ? 'miaumiau' : `${mode} · miaumiau`
       // World atmosphere swap
       if (window.World) World.applyHabitat(mode)
       // Pet walks across when section changes
@@ -253,7 +253,7 @@ const App = {
       App.save()
       App.updateHeader()
       if (window.track) track('auth:register', { color: App._regColor })
-      App.go('tweets')
+      App.go('city')
       showToast('¡bienvenido al mundo miau!', 4000)
     } catch (e) {
       errEl.textContent = e.message
@@ -284,7 +284,7 @@ const App = {
       App.save()
       App.updateHeader()
       if (window.track) track('auth:login')
-      App.go('tweets')
+      App.go('city')
     } catch (e) {
       App.user = null
       errEl.textContent = e.message
@@ -346,7 +346,7 @@ const App = {
       App.save()
       document.getElementById('migrateModal').hidden = true
       App.updateHeader()
-      App.go('tweets')
+      App.go('city')
       showToast('¡cuenta actualizada!', 4000)
     } catch (e) {
       errEl.textContent = e.message
