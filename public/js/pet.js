@@ -1,24 +1,34 @@
 // Poporing pet: always-visible avatar at bottom-left.
 // Idles, walks across when section changes, peeks at composer when typing.
+// Click on pet → opens the radial Pet Menu (the only menu).
 ;(function () {
+  const HINT_KEY = 'miau_pet_hint_seen'
+
   const Pet = {
     el: null,
     sprite: null,
     bubble: null,
+    hint: null,
 
     mount() {
       Pet.el     = document.getElementById('poporingPet')
       Pet.sprite = document.getElementById('poporingPetSprite')
       Pet.bubble = document.getElementById('poporingPetBubble')
+      Pet.hint   = document.getElementById('poporingPetHint')
       if (!Pet.el || !Pet.sprite) return
       Pet.refresh()
       Pet.el.hidden = !App.user
-      // Click on pet → toggle HUD menu collapse/expand
+      // Click on pet → open radial menu
       Pet.el.addEventListener('click', (e) => {
         e.stopPropagation()
         Pet.pop()
-        if (window.HUD) HUD.toggle()
+        Pet.dismissHint()
+        if (window.Menu) Menu.toggle()
       })
+      // First-visit discovery hint — show after a delay so the user notices the pet first
+      if (App.user && !localStorage.getItem(HINT_KEY)) {
+        setTimeout(() => { if (!localStorage.getItem(HINT_KEY)) Pet.showHint() }, 1800)
+      }
     },
 
     refresh() {
@@ -55,6 +65,17 @@
       void Pet.el.offsetWidth
       Pet.el.classList.add('pet-pop')
     },
+
+    showHint() {
+      if (!Pet.hint) return
+      Pet.hint.hidden = false
+    },
+
+    dismissHint() {
+      if (!Pet.hint) return
+      Pet.hint.hidden = true
+      localStorage.setItem(HINT_KEY, '1')
+    },
   }
 
   const WALK_LINES = {
@@ -65,6 +86,8 @@
     bereal:  'una foto',
     profile: '¡a casa!',
     map:     'a ver el pueblo',
+    city:    '¡a la plaza!',
+    admin:   'a las stats',
   }
 
   window.Pet = Pet

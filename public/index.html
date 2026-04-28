@@ -405,119 +405,97 @@
     </div>
   </div>
 
+  <!-- Events Modal (calendar from /data/events.json — sesión 9) -->
+  <div id="eventsModal" class="events-modal" hidden>
+    <div class="events-canvas">
+      <button class="events-close" onclick="Events.closeModal()" aria-label="cerrar">×</button>
+      <h2 class="events-title">eventos del pueblo</h2>
+      <p class="events-sub">próximos 30 días</p>
+      <div id="eventsList" class="events-list"></div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
-  <!-- ─── HUD CLUSTER (bottom-right RPG dock) ─── -->
-  <nav id="hud" hidden>
-    <button class="hud-btn hud-map" data-route="/" title="mapa" aria-label="mapa">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M3 6.5l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/>
-        <path d="M9 4.5v13M15 6.5v13"/>
-      </svg>
-      <span class="hud-label">mapa</span>
-    </button>
-    <button class="hud-btn hud-city" data-route="/city" title="el pueblo" aria-label="el pueblo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M3 21h18M5 21V11l4-3v13M9 21V11M14 21V7l5-3v17M14 21V7"/>
-        <path d="M7 14h.5M7 17h.5M16 11h.5M16 14h.5M16 17h.5"/>
-      </svg>
-      <span class="hud-label">pueblo</span>
-    </button>
-    <button class="hud-btn" data-route="/tweets" title="miau" aria-label="miau">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M5 6c0-1.5 1.2-2.5 2.5-2.5h9C17.8 3.5 19 4.5 19 6v8c0 1.5-1.2 2.5-2.5 2.5H10l-4 3.5v-3.5H7.5C6.2 16.5 5 15.5 5 14V6z"/>
-        <circle cx="9.5" cy="10" r="1" fill="currentColor"/><circle cx="14.5" cy="10" r="1" fill="currentColor"/>
-      </svg>
-      <span class="hud-label">miau</span>
-    </button>
-    <button class="hud-btn" data-route="/posts" title="posts" aria-label="posts">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <rect x="3" y="4" width="18" height="16" rx="3.5"/>
-        <circle cx="8.5" cy="9.5" r="1.6" fill="currentColor"/>
-        <path d="M21 16l-4.5-4.5L7 21"/>
-      </svg>
-      <span class="hud-label">posts</span>
-    </button>
-    <button class="hud-btn" data-route="/stories" title="stories" aria-label="stories">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M12 2.5l2.6 5.5 6 .9-4.4 4.2 1 6-5.2-2.8-5.2 2.8 1-6L3.4 8.9l6-.9z"/>
-      </svg>
-      <span class="hud-label">stories</span>
-    </button>
-    <button class="hud-btn" data-route="/chat" title="chat" aria-label="chat">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M3 9c0-2 1.5-3.5 3.5-3.5h8c2 0 3.5 1.5 3.5 3.5v3c0 2-1.5 3.5-3.5 3.5H10l-4 3v-3.2C4 15.4 3 14.3 3 13V9z"/>
-        <path d="M9 15v.5c0 1.5 1.2 2.5 2.5 2.5h6l3 2.5V17c1-.5 1.5-1.4 1.5-2.5v-2.8c0-1.6-1.2-2.7-2.5-2.7"/>
-      </svg>
-      <span class="hud-label">chat</span>
-      <span id="hudUnreadBadge" class="hud-badge" hidden>0</span>
-    </button>
-    <button class="hud-btn" data-route="/bereal" title="real" aria-label="real">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <rect x="3" y="6" width="18" height="14" rx="3"/>
-        <circle cx="12" cy="13" r="4"/><circle cx="12" cy="13" r="1.6" fill="currentColor"/>
-        <path d="M8 6l1.4-2.2h5.2L16 6"/>
-      </svg>
-      <span class="hud-label">real</span>
-    </button>
-    <button class="hud-btn" data-action="cat-editor" title="editar gato" aria-label="editar gato">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M12 4l1.5 4 4 .5-3 3 .8 4-3.3-2-3.3 2 .8-4-3-3 4-.5z"/>
-        <circle cx="9" cy="11" r="0.8" fill="currentColor"/>
-        <circle cx="15" cy="11" r="0.8" fill="currentColor"/>
-      </svg>
-      <span class="hud-label">editar</span>
-    </button>
-    <button class="hud-btn hud-profile" data-route="/profile" title="tu gato" aria-label="tu gato">
-      <span id="hudProfileAvatar" class="hud-profile-avatar"></span>
-    </button>
-  </nav>
-
-  <!-- ─── POPORING PET (always-visible inhabitant) ─── -->
+  <!-- ─── POPORING PET (always-visible inhabitant — click opens menu) ─── -->
   <div id="poporingPet" hidden>
     <span class="poporing-pet-shadow"></span>
     <span class="poporing-pet-bubble" id="poporingPetBubble" hidden></span>
     <span class="poporing-pet-sprite" id="poporingPetSprite"></span>
+    <span class="poporing-pet-hint" id="poporingPetHint" hidden>click en tu miau</span>
   </div>
 
-  <!-- ─── MAP MODAL (pixel town overlay) ─── -->
-  <div id="mapModal" class="map-modal" hidden>
-    <div class="map-canvas">
-      <button class="map-close" onclick="HUD.closeMap()" aria-label="cerrar">×</button>
-      <h2 class="map-title">tu pueblo</h2>
-      <p class="map-subtitle">elige un sitio para visitar</p>
-      <div class="map-grid">
-        <button class="map-place" data-route="/profile" data-place="house">
-          <span class="map-place-icon">🏠</span>
-          <span class="map-place-name">tu casa</span>
-          <span class="map-place-tag">perfil</span>
-        </button>
-        <button class="map-place" data-route="/tweets" data-place="cafe">
-          <span class="map-place-icon">☕</span>
-          <span class="map-place-name">el café</span>
-          <span class="map-place-tag">miaus</span>
-        </button>
-        <button class="map-place" data-route="/posts" data-place="board">
-          <span class="map-place-icon">📌</span>
-          <span class="map-place-name">tablón</span>
-          <span class="map-place-tag">posts</span>
-        </button>
-        <button class="map-place" data-route="/stories" data-place="hilltop">
-          <span class="map-place-icon">🌙</span>
-          <span class="map-place-name">miradero</span>
-          <span class="map-place-tag">stories</span>
-        </button>
-        <button class="map-place" data-route="/chat" data-place="bench">
-          <span class="map-place-icon">🪑</span>
-          <span class="map-place-name">banquito</span>
-          <span class="map-place-tag">chat</span>
-        </button>
-        <button class="map-place" data-route="/bereal" data-place="polaroid">
-          <span class="map-place-icon">📷</span>
-          <span class="map-place-name">polaroid</span>
-          <span class="map-place-tag">real</span>
-        </button>
+  <!-- ─── PET MENU (radial — opens on pet click) ─── -->
+  <div id="petMenu" class="pet-menu" hidden>
+    <div class="pet-menu-canvas">
+      <button class="pet-menu-close" onclick="Menu.close()" aria-label="cerrar">×</button>
+      <div class="pet-menu-header">
+        <span id="petMenuAvatar" class="pet-menu-avatar"></span>
+        <div class="pet-menu-greeting">
+          <span class="pet-menu-hi">¡hola</span>
+          <span id="petMenuName" class="pet-menu-name"></span>
+          <span class="pet-menu-hi">!</span>
+        </div>
+      </div>
+
+      <div class="pet-menu-section">
+        <h3 class="pet-menu-section-title">el pueblo</h3>
+        <div class="pet-menu-grid">
+          <button class="pet-menu-place" data-route="/tweets" data-place="cafe">
+            <span class="pet-menu-place-icon">☕</span>
+            <span class="pet-menu-place-name">el café</span>
+            <span class="pet-menu-place-tag">miaus</span>
+          </button>
+          <button class="pet-menu-place" data-route="/posts" data-place="board">
+            <span class="pet-menu-place-icon">📌</span>
+            <span class="pet-menu-place-name">tablón</span>
+            <span class="pet-menu-place-tag">posts</span>
+          </button>
+          <button class="pet-menu-place" data-route="/stories" data-place="hilltop">
+            <span class="pet-menu-place-icon">🌙</span>
+            <span class="pet-menu-place-name">miradero</span>
+            <span class="pet-menu-place-tag">stories</span>
+          </button>
+          <button class="pet-menu-place" data-route="/chat" data-place="bench">
+            <span class="pet-menu-place-icon">🪑</span>
+            <span class="pet-menu-place-name">banquito</span>
+            <span class="pet-menu-place-tag">chat</span>
+            <span id="petMenuUnread" class="pet-menu-badge" hidden>0</span>
+          </button>
+          <button class="pet-menu-place" data-route="/bereal" data-place="polaroid">
+            <span class="pet-menu-place-icon">📷</span>
+            <span class="pet-menu-place-name">polaroid</span>
+            <span class="pet-menu-place-tag">real</span>
+          </button>
+          <button class="pet-menu-place" data-route="/city" data-place="city">
+            <span class="pet-menu-place-icon">🏘️</span>
+            <span class="pet-menu-place-name">la plaza</span>
+            <span class="pet-menu-place-tag">pueblo</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="pet-menu-section">
+        <h3 class="pet-menu-section-title">acciones</h3>
+        <div class="pet-menu-actions">
+          <button class="pet-menu-action" data-route="/profile">
+            <span class="pet-menu-action-icon">🏠</span>
+            <span class="pet-menu-action-name">tu casa</span>
+          </button>
+          <button class="pet-menu-action" data-action="cat-editor">
+            <span class="pet-menu-action-icon">✨</span>
+            <span class="pet-menu-action-name">editar miau</span>
+          </button>
+          <button class="pet-menu-action" data-action="events">
+            <span class="pet-menu-action-icon">📅</span>
+            <span class="pet-menu-action-name">eventos</span>
+          </button>
+          <button class="pet-menu-action" data-route="/admin" id="petMenuAdmin" hidden>
+            <span class="pet-menu-action-icon">📊</span>
+            <span class="pet-menu-action-name">stats</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -531,8 +509,9 @@
   <script src="/js/api.js"></script>
   <script src="/js/track.js"></script>
   <script src="/js/world.js"></script>
+  <script src="/js/menu.js"></script>
   <script src="/js/pet.js"></script>
-  <script src="/js/hud.js"></script>
+  <script src="/js/events.js"></script>
   <script src="/js/routes.js"></script>
   <script src="/js/city.js"></script>
   <script src="/js/app.js"></script>

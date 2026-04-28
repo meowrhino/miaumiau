@@ -235,10 +235,11 @@ Object.assign(App, {
       } else {
         App._chatPollInterval = Math.min(App._chatPollInterval * 1.5, 30000)
       }
-      // update unread badge
+      // update unread badges (floating header + menu chat tile)
       const badge = $('#headerUnread')
       badge.textContent = data.unread
       badge.hidden = data.unread === 0
+      if (window.Menu) Menu.setUnread(data.unread)
     } catch (_) {
       App._chatPollInterval = 30000
     }

@@ -13,7 +13,6 @@ const StoryEditor = {
 
   open() {
     $('#storyEditor').hidden = false
-    if (window.HUD) HUD.hide()
     if (window.Pet) Pet.hide()
     StoryEditor.texts = []
     StoryEditor.links = []
@@ -39,7 +38,6 @@ const StoryEditor = {
 
   close() {
     $('#storyEditor').hidden = true
-    if (window.HUD) HUD.show()
     if (window.Pet && App.user) Pet.show()
   },
 

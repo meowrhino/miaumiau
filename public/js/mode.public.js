@@ -5,8 +5,7 @@ Object.assign(App, {
     const root = $('#publicContent')
     if (!ctx) { root.innerHTML = empty('sin contexto') ; return }
 
-    // Hide HUD/Pet on public read-only pages
-    if (window.HUD) HUD.hide()
+    // Hide pet on public read-only pages (no menu either)
     if (window.Pet) Pet.hide()
     document.documentElement.style.setProperty('--pop', 'var(--text)')
 

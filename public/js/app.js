@@ -15,10 +15,10 @@ const App = {
       App.updateHeader()
     }
 
-    // Boot world + pet + hud + routes modules
+    // Boot world + menu + pet + routes modules
     if (window.World) World.init()
+    if (window.Menu)  Menu.mount()
     if (window.Pet)   Pet.mount()
-    if (window.HUD)   HUD.mount()
     if (window.Routes) Routes.init()
 
     // Public page (/u/:username, /p/:id, /t/:id) — render read-only, no login required
@@ -27,7 +27,6 @@ const App = {
       document.getElementById('mode-public').hidden = false
       const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
       App.mode = 'public'
-      if (window.HUD) HUD.hide()
       if (window.Pet) Pet.hide()
       App.enter_public()
       return
@@ -37,6 +36,8 @@ const App = {
       // Read URL → which section to open on cold load
       const initial = window.Routes ? Routes.parse(location.pathname) : { mode: 'tweets', params: {} }
       App.go(initial.mode || 'tweets', { ...initial.params, _fromBoot: true })
+      // Today's event nudge (toast + speech bubble) — sesión 9
+      if (window.Events && Events.announceTodayIfAny) Events.announceTodayIfAny()
     } else {
       App.showRegistration()
     }
@@ -86,9 +87,6 @@ const App = {
       // Pet walks across when section changes
       if (window.Pet && previousMode && previousMode !== mode) Pet.walk(mode)
     }
-    // HUD active state
-    if (window.HUD) HUD.setActive(mode)
-    if (window.HUD) HUD.show()
     if (window.Pet && App.user) Pet.show()
     // Presence write (city.js handles its own; other modes write via the helper)
     if (App.user && mode !== 'city' && window.City && City.writePresenceForMode) {
@@ -185,16 +183,15 @@ const App = {
     // Update composer avatar
     const composerAvatar = document.getElementById('composerAvatar')
     if (composerAvatar) composerAvatar.src = App.avatarUrl(App.user.id)
-    // HUD profile button + Pet sprite
-    if (window.HUD) HUD.refreshProfileAvatar()
+    // Sync pet sprite + menu header avatar
     if (window.Pet) Pet.refresh()
+    if (window.Menu) Menu.refreshHeader()
   },
 
   // ─── Registration ───
   showRegistration() {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('registration').hidden = false
-    if (window.HUD) HUD.hide()
     if (window.Pet) Pet.hide()
     const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
 
@@ -267,7 +264,6 @@ const App = {
   showLogin() {
     document.querySelectorAll('.mode').forEach(s => s.hidden = true)
     document.getElementById('login').hidden = false
-    if (window.HUD) HUD.hide()
     if (window.Pet) Pet.hide()
     const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true
   },

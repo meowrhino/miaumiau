@@ -51,7 +51,6 @@ Object.assign(App, {
     App._storyGroupIdx = groupIdx
     App._storyIdx = 0
     $('#storyViewer').hidden = false
-    if (window.HUD) HUD.hide()
     if (window.Pet) Pet.hide()
     App._showStory()
   },
@@ -145,7 +144,6 @@ Object.assign(App, {
   closeStoryViewer() {
     clearTimeout(App._storyTimer)
     $('#storyViewer').hidden = true
-    if (window.HUD) HUD.show()
     if (window.Pet && App.user) Pet.show()
   },
 

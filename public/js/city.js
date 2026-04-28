@@ -5,16 +5,22 @@
   const PLAYER_SPEED = 200  // px/sec
   const PLAYER_SIZE = 56    // sprite render size
 
-  // 6 zones laid out 3x2 with a central plaza area
+  // 6 zones laid out 3x2 with a central plaza area.
+  // building: emoji sprite + roof color define the silhouette.
   const ZONES = [
-    { id: 'tweets',  name: 'el café',     x: 110,  y: 120, w: 320, h: 200, color: '#f0a85a', mascotColor: '#FFB800', habitat: 'tweets' },
-    { id: 'posts',   name: 'el tablón',   x: 480,  y: 60,  w: 320, h: 200, color: '#5fa3d8', mascotColor: '#007AFF', habitat: 'posts' },
-    { id: 'stories', name: 'el miradero', x: 850,  y: 120, w: 320, h: 200, color: '#7a3a8e', mascotColor: '#BF7BD9', habitat: 'stories' },
-    { id: 'chat',    name: 'el banquito', x: 110,  y: 420, w: 320, h: 200, color: '#4abd76', mascotColor: '#34C759', habitat: 'chat' },
-    { id: 'bereal',  name: 'la polaroid', x: 480,  y: 460, w: 320, h: 200, color: '#ff8a3c', mascotColor: '#FF9500', habitat: 'bereal' },
-    { id: 'profile', name: 'tu casa',     x: 850,  y: 420, w: 320, h: 200, color: '#a87dd8', mascotColor: '#BF7BD9', habitat: 'profile' },
+    { id: 'tweets',  name: 'el café',     x: 110,  y: 120, w: 320, h: 200, color: '#f0a85a', mascotColor: '#FFB800', habitat: 'tweets',  building: '☕', roof: '#c97a3a' },
+    { id: 'posts',   name: 'el tablón',   x: 480,  y: 60,  w: 320, h: 200, color: '#5fa3d8', mascotColor: '#007AFF', habitat: 'posts',   building: '📌', roof: '#3877a6' },
+    { id: 'stories', name: 'el miradero', x: 850,  y: 120, w: 320, h: 200, color: '#7a3a8e', mascotColor: '#BF7BD9', habitat: 'stories', building: '🌙', roof: '#552366' },
+    { id: 'chat',    name: 'el banquito', x: 110,  y: 420, w: 320, h: 200, color: '#4abd76', mascotColor: '#34C759', habitat: 'chat',    building: '🪑', roof: '#2f8f56' },
+    { id: 'bereal',  name: 'la polaroid', x: 480,  y: 460, w: 320, h: 200, color: '#ff8a3c', mascotColor: '#FF9500', habitat: 'bereal',  building: '📷', roof: '#cc6320' },
+    { id: 'profile', name: 'tu casa',     x: 850,  y: 420, w: 320, h: 200, color: '#a87dd8', mascotColor: '#BF7BD9', habitat: 'profile', building: '🏠', roof: '#7e54a8' },
   ]
   const PLAZA = { x: 605, y: 340, w: 70, h: 70 }  // center
+
+  // Static decorations: trees, lamps, fountain. Hand-placed so the town feels lived-in.
+  const TREES   = [{ x: 70, y: 360 }, { x: 1210, y: 360 }, { x: 295, y: 380 }, { x: 985, y: 380 }]
+  const LAMPS   = [{ x: 460, y: 360 }, { x: 820, y: 360 }]
+  const FOUNTAIN = { x: 640, y: 380, r: 36 }
 
   const City = {
     canvas: null, ctx: null,
@@ -122,17 +128,72 @@
       window.addEventListener('keydown', City.onKey)
       window.addEventListener('keyup', City.onKey)
       City.canvas.addEventListener('pointerdown', City.onPointer)
+      City.canvas.addEventListener('pointermove', City.onMove)
+      City.canvas.addEventListener('pointerleave', City.onLeave)
       window.addEventListener('keydown', City.onEsc)
     },
     unbind() {
       window.removeEventListener('keydown', City.onKey)
       window.removeEventListener('keyup', City.onKey)
-      if (City.canvas) City.canvas.removeEventListener('pointerdown', City.onPointer)
+      if (City.canvas) {
+        City.canvas.removeEventListener('pointerdown', City.onPointer)
+        City.canvas.removeEventListener('pointermove', City.onMove)
+        City.canvas.removeEventListener('pointerleave', City.onLeave)
+      }
       window.removeEventListener('keydown', City.onEsc)
+      City.hideOtherTooltip()
+      City.closeOtherPopover()
     },
 
     onEsc(e) {
-      if (e.key === 'Escape') City.closeSheet()
+      if (e.key !== 'Escape') return
+      if (City.activeOtherId) { City.closeOtherPopover(); return }
+      City.closeSheet()
+    },
+
+    canvasCoords(e) {
+      const r = City.canvas.getBoundingClientRect()
+      const x = (e.clientX - r.left) * (W / r.width)
+      const y = (e.clientY - r.top) * (H / r.height)
+      return { x, y, rect: r }
+    },
+
+    findOtherAt(x, y) {
+      // Return the closest other within the click radius, if any.
+      let best = null, bestD = 999
+      for (const o of City.others) {
+        const d = Math.hypot(x - o.x, y - o.y)
+        if (d < 28 && d < bestD) { best = o; bestD = d }
+      }
+      return best
+    },
+
+    findZoneMascotAt(x, y) {
+      for (const z of ZONES) {
+        const my = z.y + z.h - 30
+        if (Math.hypot(x - (z.x + z.w/2), y - my) < 32) return z
+      }
+      return null
+    },
+
+    onMove(e) {
+      const { x, y } = City.canvasCoords(e)
+      const o = City.findOtherAt(x, y)
+      const z = !o ? City.findZoneMascotAt(x, y) : null
+      const newId = o ? o.user_id : null
+      if (newId !== City.hoveredOtherId) {
+        City.hoveredOtherId = newId
+        if (o) City.showOtherTooltip(o, e.clientX, e.clientY)
+        else   City.hideOtherTooltip()
+      } else if (o) {
+        City.moveOtherTooltip(e.clientX, e.clientY)
+      }
+      City.canvas.style.cursor = (o || z) ? 'pointer' : 'grab'
+    },
+
+    onLeave() {
+      City.hoveredOtherId = null
+      City.hideOtherTooltip()
     },
 
     onKey(e) {
@@ -147,19 +208,19 @@
     },
 
     onPointer(e) {
-      const r = City.canvas.getBoundingClientRect()
-      const x = (e.clientX - r.left) * (W / r.width)
-      const y = (e.clientY - r.top) * (H / r.height)
-      // If click is on a zone's mascot, teleport there + open zone
-      for (const z of ZONES) {
-        const mx = z.x + z.w/2, my = z.y + z.h/2
-        const d = Math.hypot(x - mx, y - my)
-        if (d < 50) {
-          City.teleportToZone(z.id)
-          return
-        }
+      const { x, y } = City.canvasCoords(e)
+      // 1. Other player → open interaction popover (sesión 8)
+      const other = City.findOtherAt(x, y)
+      if (other) {
+        City.openOtherPopover(other, e.clientX, e.clientY)
+        return
       }
+      // 2. Zone mascot → teleport + open sheet
+      const zone = City.findZoneMascotAt(x, y)
+      if (zone) { City.teleportToZone(zone.id); return }
+      // 3. Empty ground → click-to-walk
       City.target = { x, y }
+      City.closeOtherPopover()
     },
 
     teleportToZone(zoneId) {
@@ -313,101 +374,309 @@
       if (!ctx) return
       ctx.clearRect(0, 0, W, H)
 
-      // Plaza ground
-      ctx.fillStyle = 'rgba(255,255,255,0.10)'
-      ctx.beginPath(); ctx.ellipse(W/2, H/2, 360, 220, 0, 0, Math.PI * 2); ctx.fill()
+      // ── 1. ground (tiled grass + plaza dirt + paths) ──
+      City.drawGround(ctx, now)
 
-      // Zones
+      // ── 2. ambient back layer: trees behind buildings ──
+      TREES.forEach(t => { if (t.y < 400) City.drawTree(ctx, t.x, t.y, now) })
+
+      // ── 3. buildings (depth-sorted: top rows first so bottom rows overlap) ──
+      const sortedZones = ZONES.slice().sort((a, b) => a.y - b.y)
+      sortedZones.forEach(z => City.drawBuilding(ctx, z, now))
+
+      // ── 4. fountain in plaza ──
+      City.drawFountain(ctx, FOUNTAIN.x, FOUNTAIN.y, now)
+
+      // ── 5. lamps (light on at night via World tint, but the post is always there) ──
+      LAMPS.forEach(l => City.drawLamp(ctx, l.x, l.y, now))
+
+      // ── 6. front-layer trees (in front of plaza) ──
+      TREES.forEach(t => { if (t.y >= 400) City.drawTree(ctx, t.x, t.y, now) })
+
+      // ── 7. characters (others + me, sorted by y for fake parallax) ──
+      const chars = City.others.map(o => ({ kind: 'other', y: o.y, data: o }))
+      chars.push({ kind: 'me', y: City.player.y, data: City.player })
+      chars.sort((a, b) => a.y - b.y)
+      chars.forEach(c => {
+        if (c.kind === 'other') City.drawOther(ctx, c.data, now)
+        else                    City.drawPlayer(ctx, c.data, now)
+      })
+
+      // ── 8. HUD overlay (counter + tooltip) ──
+      City.drawHud(ctx, now)
+    },
+
+    // ─── Render helpers (sesión 7: ciudad parece ciudad) ───
+
+    drawGround(ctx, now) {
+      // Big grass field (tile illusion via subtle dots)
+      ctx.fillStyle = '#a8d8a0'
+      ctx.fillRect(0, 0, W, H)
+
+      // Tile dots — cheap pattern that reads as grass texture
+      ctx.save()
+      ctx.fillStyle = 'rgba(120,170,90,0.35)'
+      const tile = 24
+      for (let y = 0; y < H; y += tile) {
+        for (let x = (y / tile) % 2 ? tile/2 : 0; x < W; x += tile) {
+          ctx.fillRect(x, y, 2, 2)
+        }
+      }
+      ctx.restore()
+
+      // Central plaza (round dirt patch with cobble border)
+      const cx = W/2, cy = H/2 + 20
+      ctx.save()
+      ctx.fillStyle = '#e8c898'
+      ctx.beginPath(); ctx.ellipse(cx, cy, 280, 170, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = 'rgba(140,90,50,0.45)'
+      ctx.setLineDash([6, 4])
+      ctx.lineWidth = 2
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.restore()
+
+      // Paths: from plaza center toward each building entrance
       ZONES.forEach(z => {
-        // Floor pad
+        const tx = z.x + z.w/2, ty = z.y + z.h - 30
         ctx.save()
-        ctx.fillStyle = `${z.color}33`
-        ctx.beginPath(); ctx.roundRect(z.x, z.y, z.w, z.h, 22); ctx.fill()
-        ctx.strokeStyle = `${z.color}77`
-        ctx.lineWidth = 2
+        ctx.strokeStyle = '#d6b988'
+        ctx.lineWidth = 22
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(cx, cy)
+        ctx.lineTo(tx, ty)
         ctx.stroke()
-        ctx.restore()
-
-        // Zone mascot poporing in center
-        const cx = z.x + z.w/2, cy = z.y + z.h/2
-        const bob = Math.sin(now/600 + z.x*0.01) * 4
-        const mascot = City.mascots[z.id]
-        if (mascot) {
-          const size = 64
-          ctx.save()
-          ctx.shadowColor = z.color
-          ctx.shadowBlur = 18
-          ctx.imageSmoothingEnabled = false
-          ctx.drawImage(mascot, cx - size/2, cy - size/2 + bob, size, size)
-          ctx.restore()
-        } else {
-          ctx.fillStyle = z.color
-          ctx.beginPath(); ctx.arc(cx, cy + bob, 22, 0, Math.PI * 2); ctx.fill()
-        }
-
-        // Zone name pixel-style label
-        ctx.save()
-        ctx.font = '700 14px "Pixelify Sans", monospace'
-        ctx.fillStyle = '#fff'
-        ctx.strokeStyle = 'rgba(0,0,0,0.55)'
-        ctx.lineWidth = 4
-        ctx.lineJoin = 'round'
-        ctx.textAlign = 'center'
-        ctx.strokeText(z.name, cx, z.y + z.h - 14)
-        ctx.fillText(z.name, cx, z.y + z.h - 14)
+        // dashed mid-line to suggest cobble seams
+        ctx.strokeStyle = 'rgba(180,140,90,0.45)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([8, 10])
+        ctx.beginPath()
+        ctx.moveTo(cx, cy)
+        ctx.lineTo(tx, ty)
+        ctx.stroke()
+        ctx.setLineDash([])
         ctx.restore()
       })
+    },
 
-      // Plaza marker
-      ctx.fillStyle = 'rgba(255,255,255,0.20)'
-      ctx.beginPath(); ctx.roundRect(PLAZA.x, PLAZA.y, PLAZA.w, PLAZA.h, 16); ctx.fill()
-      ctx.font = '600 11px "Pixelify Sans", monospace'
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'
+    drawBuilding(ctx, z, now) {
+      // Each zone is a building: small floor pad + roof silhouette + emoji sign +
+      // mascot poporing in front. Sign hangs over the entrance.
+      const cx = z.x + z.w/2, cy = z.y + z.h/2
+      // Floor / shadow pad under the building
+      ctx.save()
+      ctx.fillStyle = 'rgba(0,0,0,0.10)'
+      ctx.beginPath(); ctx.ellipse(cx, z.y + z.h - 18, z.w * 0.36, 16, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
+
+      // Building silhouette: house shape with roof
+      const bw = 160, bh = 120
+      const bx = cx - bw/2, by = cy - bh/2 - 20
+      // Walls
+      ctx.save()
+      ctx.fillStyle = '#fff7e8'
+      ctx.strokeStyle = 'rgba(80,55,30,0.55)'
+      ctx.lineWidth = 2.5
+      ctx.beginPath(); ctx.roundRect(bx, by + 30, bw, bh - 30, 8); ctx.fill(); ctx.stroke()
+      // Roof (triangle with overhang)
+      ctx.fillStyle = z.roof
+      ctx.beginPath()
+      ctx.moveTo(bx - 12, by + 38)
+      ctx.lineTo(cx, by - 14)
+      ctx.lineTo(bx + bw + 12, by + 38)
+      ctx.closePath()
+      ctx.fill(); ctx.stroke()
+      // Window (warm glow)
+      ctx.fillStyle = '#ffe7a8'
+      ctx.fillRect(bx + 18, by + 50, 26, 22)
+      ctx.strokeRect(bx + 18, by + 50, 26, 22)
+      ctx.beginPath(); ctx.moveTo(bx + 31, by + 50); ctx.lineTo(bx + 31, by + 72); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(bx + 18, by + 61); ctx.lineTo(bx + 44, by + 61); ctx.stroke()
+      // Door
+      ctx.fillStyle = '#8a5a32'
+      ctx.beginPath(); ctx.roundRect(bx + bw - 50, by + 60, 32, bh - 60, 4); ctx.fill(); ctx.stroke()
+      ctx.fillStyle = '#ffd86a'
+      ctx.beginPath(); ctx.arc(bx + bw - 24, by + bh - 6, 1.5, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
+
+      // Hanging sign with the emoji symbol
+      const sx = cx, sy = by - 24
+      ctx.save()
+      ctx.strokeStyle = 'rgba(80,55,30,0.7)'
+      ctx.lineWidth = 2
+      ctx.beginPath(); ctx.moveTo(sx, by - 14); ctx.lineTo(sx, sy); ctx.stroke()
+      ctx.fillStyle = '#fff7e8'
+      ctx.beginPath(); ctx.roundRect(sx - 22, sy - 16, 44, 26, 6); ctx.fill(); ctx.stroke()
+      ctx.font = '20px "Apple Color Emoji","Segoe UI Emoji",sans-serif'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText(z.building, sx, sy - 2)
+      ctx.restore()
+
+      // Mascot poporing in front of the door (clickable hotspot)
+      const mascot = City.mascots[z.id]
+      const my = z.y + z.h - 30
+      const bob = Math.sin(now/600 + z.x*0.01) * 4
+      ctx.save()
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'
+      ctx.beginPath(); ctx.ellipse(cx, my + 22, 18, 5, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
+      if (mascot) {
+        const size = 56
+        ctx.save()
+        ctx.shadowColor = z.color
+        ctx.shadowBlur = 14
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(mascot, cx - size/2, my - size/2 + bob, size, size)
+        ctx.restore()
+      } else {
+        ctx.fillStyle = z.color
+        ctx.beginPath(); ctx.arc(cx, my + bob, 20, 0, Math.PI * 2); ctx.fill()
+      }
+
+      // Pixel-style nameplate under the mascot
+      ctx.save()
+      ctx.font = '700 13px "Pixelify Sans", monospace'
+      ctx.fillStyle = '#fff'
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)'
+      ctx.lineWidth = 4
+      ctx.lineJoin = 'round'
       ctx.textAlign = 'center'
-      ctx.fillText('plaza', PLAZA.x + PLAZA.w/2, PLAZA.y + PLAZA.h/2 + 4)
+      ctx.strokeText(z.name, cx, my + 36)
+      ctx.fillText(z.name, cx, my + 36)
+      ctx.restore()
+    },
 
-      // Other players (render before me so I'm on top)
-      City.others.forEach(o => {
-        const sprite = City.otherSprites[o.user_id]
-        const bob = Math.sin(now/600 + o.user_id) * 2
-        const ox = o.x, oy = o.y
-        // shadow
-        ctx.save()
-        ctx.fillStyle = 'rgba(0,0,0,0.25)'
-        ctx.beginPath(); ctx.ellipse(ox, oy + PLAYER_SIZE/2 - 6, 14, 4, 0, 0, Math.PI * 2); ctx.fill()
-        ctx.restore()
-        if (sprite) {
-          ctx.save()
-          ctx.imageSmoothingEnabled = false
-          ctx.globalAlpha = 0.96
-          ctx.drawImage(sprite, ox - PLAYER_SIZE/2 + 4, oy - PLAYER_SIZE/2 + bob + 4, PLAYER_SIZE - 8, PLAYER_SIZE - 8)
-          ctx.restore()
-        } else {
-          ctx.fillStyle = colorHex ? colorHex(o.color) : '#888'
-          ctx.beginPath(); ctx.arc(ox, oy + bob, 14, 0, Math.PI * 2); ctx.fill()
-        }
-        // username label
-        ctx.save()
-        ctx.font = '600 11px "Pixelify Sans", monospace'
-        ctx.textAlign = 'center'
-        ctx.lineWidth = 3
-        ctx.lineJoin = 'round'
-        ctx.strokeStyle = 'rgba(0,0,0,0.55)'
-        ctx.fillStyle = colorHex ? colorHex(o.color) : '#fff'
-        ctx.strokeText(o.username, ox, oy - PLAYER_SIZE/2 - 2)
-        ctx.fillText(o.username, ox, oy - PLAYER_SIZE/2 - 2)
-        ctx.restore()
-      })
+    drawFountain(ctx, x, y, now) {
+      // Stone basin with animated water
+      ctx.save()
+      // Base shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'
+      ctx.beginPath(); ctx.ellipse(x, y + 14, 46, 10, 0, 0, Math.PI * 2); ctx.fill()
+      // Basin
+      ctx.fillStyle = '#bdb1a3'
+      ctx.beginPath(); ctx.ellipse(x, y + 4, 44, 14, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = 'rgba(80,60,40,0.5)'; ctx.lineWidth = 2; ctx.stroke()
+      // Water (rippling color shift)
+      const ripple = (Math.sin(now/700) + 1) * 6
+      ctx.fillStyle = '#7fc6e8'
+      ctx.beginPath(); ctx.ellipse(x, y, 32 + ripple*0.1, 9, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'
+      ctx.beginPath(); ctx.ellipse(x - 8, y - 1, 8, 2, 0, 0, Math.PI * 2); ctx.fill()
+      // Center spout + animated jet
+      ctx.fillStyle = '#a8a094'
+      ctx.fillRect(x - 4, y - 18, 8, 14)
+      const jet = 14 + Math.sin(now/180) * 3
+      ctx.fillStyle = 'rgba(180,220,240,0.85)'
+      ctx.beginPath(); ctx.ellipse(x, y - 18 - jet/2, 4, jet/2, 0, 0, Math.PI * 2); ctx.fill()
+      // Falling droplets
+      for (let i = 0; i < 3; i++) {
+        const t = ((now/600) + i * 0.33) % 1
+        const dy = -18 + t * 22
+        const dx = (i - 1) * 6
+        ctx.fillStyle = 'rgba(180,220,240,0.7)'
+        ctx.beginPath(); ctx.arc(x + dx, y + dy, 1.6, 0, Math.PI * 2); ctx.fill()
+      }
+      ctx.restore()
+    },
 
-      // Player
-      const p = City.player
-      const bobP = p.walking ? Math.sin(now/100) * 2 : Math.sin(now/600) * 1
+    drawTree(ctx, x, y, now) {
+      ctx.save()
       // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'
+      ctx.beginPath(); ctx.ellipse(x, y + 32, 18, 5, 0, 0, Math.PI * 2); ctx.fill()
+      // Trunk
+      ctx.fillStyle = '#7a4d2a'
+      ctx.fillRect(x - 4, y, 8, 28)
+      ctx.strokeStyle = 'rgba(50,30,15,0.55)'; ctx.lineWidth = 1.5
+      ctx.strokeRect(x - 4, y, 8, 28)
+      // Foliage — three offset blobs with a subtle sway
+      const sway = Math.sin(now/900 + x*0.01) * 1.5
+      ctx.fillStyle = '#5fb070'
+      ctx.beginPath(); ctx.arc(x + sway, y - 4, 18, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x - 10 + sway, y - 12, 14, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x + 10 + sway, y - 12, 14, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = '#84cc92'
+      ctx.beginPath(); ctx.arc(x - 4 + sway, y - 14, 6, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
+    },
+
+    drawLamp(ctx, x, y, now) {
+      ctx.save()
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'
+      ctx.beginPath(); ctx.ellipse(x, y + 30, 8, 3, 0, 0, Math.PI * 2); ctx.fill()
+      // Post
+      ctx.fillStyle = '#3a3530'
+      ctx.fillRect(x - 2, y - 28, 4, 56)
+      // Lamp head
+      ctx.fillStyle = '#3a3530'
+      ctx.beginPath(); ctx.roundRect(x - 8, y - 38, 16, 14, 3); ctx.fill()
+      // Glow (warm)
+      const glow = (Math.sin(now/1200) + 1) * 0.5
+      ctx.fillStyle = `rgba(255,210,120,${0.55 + glow*0.25})`
+      ctx.beginPath(); ctx.arc(x, y - 31, 22, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = '#ffe6a3'
+      ctx.beginPath(); ctx.arc(x, y - 31, 5, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
+    },
+
+    drawOther(ctx, o, now) {
+      const sprite = City.otherSprites[o.user_id]
+      const bob = Math.sin(now/600 + o.user_id) * 2
+      const ox = o.x, oy = o.y
+      ctx.save()
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'
+      ctx.beginPath(); ctx.ellipse(ox, oy + PLAYER_SIZE/2 - 6, 14, 4, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
+      // Hover halo
+      if (City.hoveredOtherId === o.user_id) {
+        ctx.save()
+        ctx.strokeStyle = colorHex ? colorHex(o.color) : '#fff'
+        ctx.lineWidth = 3
+        ctx.globalAlpha = 0.7
+        ctx.beginPath(); ctx.arc(ox, oy + bob, PLAYER_SIZE/2 - 2, 0, Math.PI * 2); ctx.stroke()
+        ctx.restore()
+      }
+      if (sprite) {
+        ctx.save()
+        ctx.imageSmoothingEnabled = false
+        ctx.globalAlpha = 0.96
+        ctx.drawImage(sprite, ox - PLAYER_SIZE/2 + 4, oy - PLAYER_SIZE/2 + bob + 4, PLAYER_SIZE - 8, PLAYER_SIZE - 8)
+        ctx.restore()
+      } else {
+        ctx.fillStyle = colorHex ? colorHex(o.color) : '#888'
+        ctx.beginPath(); ctx.arc(ox, oy + bob, 14, 0, Math.PI * 2); ctx.fill()
+      }
+      // Heart bubble (decir-hola action) — sesión 8
+      if (o._heartUntil && o._heartUntil > now) {
+        const heartT = (o._heartUntil - now) / 1200
+        ctx.save()
+        ctx.globalAlpha = heartT
+        ctx.font = '20px "Apple Color Emoji",sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('💗', ox + 14, oy - PLAYER_SIZE/2 - 10 - (1 - heartT) * 20)
+        ctx.restore()
+      }
+      // Username label
+      ctx.save()
+      ctx.font = '600 11px "Pixelify Sans", monospace'
+      ctx.textAlign = 'center'
+      ctx.lineWidth = 3
+      ctx.lineJoin = 'round'
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)'
+      ctx.fillStyle = colorHex ? colorHex(o.color) : '#fff'
+      ctx.strokeText(o.username, ox, oy - PLAYER_SIZE/2 - 2)
+      ctx.fillText(o.username, ox, oy - PLAYER_SIZE/2 - 2)
+      ctx.restore()
+    },
+
+    drawPlayer(ctx, p, now) {
+      const bobP = p.walking ? Math.sin(now/100) * 2 : Math.sin(now/600) * 1
       ctx.save()
       ctx.fillStyle = 'rgba(0,0,0,0.30)'
       ctx.beginPath(); ctx.ellipse(p.x, p.y + PLAYER_SIZE/2 - 4, 18, 5, 0, 0, Math.PI * 2); ctx.fill()
       ctx.restore()
-      // Sprite
       if (p.sprite) {
         ctx.save()
         ctx.imageSmoothingEnabled = false
@@ -423,17 +692,138 @@
         ctx.fillStyle = '#FFB800'
         ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, Math.PI * 2); ctx.fill()
       }
+    },
 
-      // Tooltip "click on a poporing to enter that place"
+    drawHud(ctx, now) {
+      // Bottom-center hint
       if (!City.currentZone) {
         ctx.save()
         ctx.font = '500 13px "Pixelify Sans", monospace'
-        ctx.fillStyle = 'rgba(255,255,255,0.65)'
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)'
+        ctx.lineWidth = 3
+        ctx.lineJoin = 'round'
         ctx.textAlign = 'center'
-        ctx.fillText('camina con WASD o click · click un poporing para entrar', W/2, H - 14)
+        const msg = 'WASD o click · click un poporing para entrar'
+        ctx.strokeText(msg, W/2, H - 14)
+        ctx.fillText(msg, W/2, H - 14)
+        ctx.restore()
+      }
+      // Online counter (sesión 8) when there are people around
+      const total = City.others.length + 1
+      if (total >= 2) {
+        ctx.save()
+        ctx.font = '700 14px "Pixelify Sans", monospace'
+        const text = `${total} cats en el pueblo`
+        const m = ctx.measureText(text)
+        const pad = 10
+        const bw = m.width + pad * 2, bh = 26
+        const bx = 18, by = 18
+        ctx.fillStyle = 'rgba(20,14,8,0.55)'
+        ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.fill()
+        ctx.fillStyle = '#fff'
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+        ctx.fillText(text, bx + pad, by + bh/2 + 1)
         ctx.restore()
       }
     },
+  }
+
+  // ─── Other-poporing interaction (sesión 8) ───
+  function fmtAgo(updatedAt) {
+    if (!updatedAt) return 'aquí'
+    const diff = (Date.now() - new Date(updatedAt + 'Z').getTime()) / 1000
+    if (diff < 30)    return 'ahora mismo'
+    if (diff < 90)    return 'hace 1 min'
+    if (diff < 3600)  return `hace ${Math.floor(diff/60)} min`
+    return 'hace un rato'
+  }
+  function zoneLabel(zoneId) {
+    const z = ZONES.find(zz => zz.id === zoneId)
+    return z ? z.name : 'la plaza'
+  }
+
+  City.showOtherTooltip = function (o, clientX, clientY) {
+    let tip = document.getElementById('cityTooltip')
+    if (!tip) {
+      tip = document.createElement('div')
+      tip.id = 'cityTooltip'
+      tip.className = 'city-tooltip'
+      document.body.appendChild(tip)
+    }
+    const c = (typeof colorHex === 'function') ? colorHex(o.color) : '#888'
+    tip.innerHTML = `
+      <span class="city-tooltip-name" style="color:${c}">${escText(o.username)}</span>
+      <span class="city-tooltip-zone">en ${escText(zoneLabel(o.zone))}</span>
+      <span class="city-tooltip-ago">${fmtAgo(o.updated_at)}</span>
+    `
+    tip.hidden = false
+    City.moveOtherTooltip(clientX, clientY)
+  }
+  City.moveOtherTooltip = function (clientX, clientY) {
+    const tip = document.getElementById('cityTooltip')
+    if (!tip || tip.hidden) return
+    tip.style.left = (clientX + 14) + 'px'
+    tip.style.top  = (clientY - 14) + 'px'
+  }
+  City.hideOtherTooltip = function () {
+    const tip = document.getElementById('cityTooltip')
+    if (tip) tip.hidden = true
+  }
+
+  City.openOtherPopover = function (o, clientX, clientY) {
+    City.activeOtherId = o.user_id
+    City.hideOtherTooltip()
+    let pop = document.getElementById('cityPopover')
+    if (!pop) {
+      pop = document.createElement('div')
+      pop.id = 'cityPopover'
+      pop.className = 'city-popover'
+      document.body.appendChild(pop)
+    }
+    const c = (typeof colorHex === 'function') ? colorHex(o.color) : '#888'
+    pop.innerHTML = `
+      <div class="city-popover-head">
+        <span class="city-popover-name" style="color:${c}">${escText(o.username)}</span>
+        <span class="city-popover-where">en ${escText(zoneLabel(o.zone))} · ${fmtAgo(o.updated_at)}</span>
+      </div>
+      <div class="city-popover-actions">
+        <button class="city-popover-btn" data-act="profile">ver perfil</button>
+        <button class="city-popover-btn" data-act="chat">miau privado</button>
+        <button class="city-popover-btn" data-act="hello">decir hola 💗</button>
+      </div>
+      <button class="city-popover-close" aria-label="cerrar">×</button>
+    `
+    pop.hidden = false
+    pop.style.left = Math.min(window.innerWidth - 220, clientX + 10) + 'px'
+    pop.style.top  = Math.min(window.innerHeight - 140, clientY + 10) + 'px'
+
+    pop.querySelector('[data-act="profile"]').onclick = () => {
+      City.closeOtherPopover()
+      const slug = (o.username || '').toLowerCase().replace(/[^a-z0-9_-]/g, '')
+      window.location.assign('/u/' + slug)
+    }
+    pop.querySelector('[data-act="chat"]').onclick = () => {
+      City.closeOtherPopover()
+      const slug = (o.username || '').toLowerCase().replace(/[^a-z0-9_-]/g, '')
+      if (window.Routes) Routes.navigate('/chat/' + slug)
+    }
+    pop.querySelector('[data-act="hello"]').onclick = () => {
+      o._heartUntil = performance.now() + 1200
+      if (typeof showToast === 'function') showToast(`saludaste a ${o.username} 💗`, 1500)
+      if (window.track) track('city:hello', { to: o.user_id })
+      City.closeOtherPopover()
+    }
+    pop.querySelector('.city-popover-close').onclick = () => City.closeOtherPopover()
+  }
+  City.closeOtherPopover = function () {
+    const pop = document.getElementById('cityPopover')
+    if (pop) pop.hidden = true
+    City.activeOtherId = null
+  }
+
+  function escText(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]))
   }
 
   // Mascot center coords per zone — used by app.js to write presence from outside the city
