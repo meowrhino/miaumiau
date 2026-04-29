@@ -1,27 +1,11 @@
-// CityConfig — world constants, zone/deco/decoration data, iso projection helpers.
+// CityConfig — world constants, zone/deco/decoration data.
 // Loaded BEFORE city.js so the latter can destructure these locals at the top of its IIFE.
 ;(function () {
-  // World units (game logic uses these — zones, paths, fountain are placed in this space).
-  // Game logic stays in flat top-down (x/y on the ground plane). The renderer
-  // projects every position through an isometric camera before painting.
+  // Top-down 3/4 perspective (Stardew / Pokémon style). World units == screen
+  // units (1:1) before camera scale; the camera handles centering and zoom.
   const W = 1280, H = 720
   const PLAYER_SPEED = 200  // px/sec
   const PLAYER_SIZE = 56    // sprite render size
-
-  // ─── Isometric camera (Habbo / Club Penguin style) ──────────────────────────
-  // 2:1 dimétrica: 1 world tile is 2 screen units wide and 1 tall.
-  //   screenX = (worldX − worldY)
-  //   screenY = (worldX + worldY) * 0.5
-  // The world bbox in screen units is therefore (W+H) wide × (W+H)/2 tall;
-  // a horizontal offset of H * scale shifts negative screenX into the viewport.
-  const ISO_BBOX_W = W + H        // 2000 with W=1280, H=720
-  const ISO_BBOX_H = (W + H) / 2  // 1000
-  function w2s(wx, wy) {
-    return { sx: (wx - wy), sy: (wx + wy) * 0.5 }
-  }
-  function s2w(sx, sy) {
-    return { wx: sy + sx * 0.5, wy: sy - sx * 0.5 }
-  }
 
   // 6 zones placed asymmetrically across an organic village (no hex/circle pattern).
   // Plaza sits SW (descentrada). Functional houses are spread out and mixed with
@@ -74,9 +58,12 @@
   ]
 
   // Image asset manifest. Keys are namespaced ('building:<zoneId>',
-  // 'deco:<kind>:<variant>', etc). Files live under /img/. Missing files
-  // automatically fall back to the procedural sprites in sprites.js.
+  // 'deco:<kind>:<variant>', 'tile:<name>'). Files live under /img/. Missing
+  // files automatically fall back to the procedural sprites in sprites.js.
+  // Source: Sprout Lands by Cup Nooble (see ASSETS_LICENSES.md).
   const ASSET_MANIFEST = {
+    'tile:grass_sheet':  '/img/tiles/grass_sheet.png',
+    'tile:house_sheet':  '/img/buildings/house_sheet.png',
     'building:tweets':  '/img/buildings/tweets-cafe.png',
     'building:posts':   '/img/buildings/posts-board.png',
     'building:stories': '/img/buildings/stories-observatory.png',
@@ -97,6 +84,25 @@
     'deco:stall:2':     '/img/deco/stall-2.png',
   }
 
+  // Sprout Lands grass sheet — tile coords (x,y,w,h) of a clean grass tile.
+  // The sheet is 176×400 with 16-px tiles. Bottom rows hold full grass
+  // blocks; each block has scattered details. Offsets here pick the tile
+  // that paints best when tiled across the world without visible seams.
+  const GRASS_TILE_RECT = { sx: 96, sy: 224, sw: 16, sh: 16 }
+
+  // Sprout Lands house sheet (192×192, 3×3 grid of 64-px houses, 9 colors).
+  // Per-zone sub-rect picks the variant whose roof tone matches the zone's
+  // identity. Used by drawBuilding when 'tile:house_sheet' is loaded.
+  // Grid layout (col, row): blue, green, pink / yellow, orange, brown / red, purple, gray.
+  const HOUSE_RECTS = {
+    tweets:  { sx: 64,  sy: 64,  sw: 64, sh: 64 }, // orange — café
+    posts:   { sx: 0,   sy: 0,   sw: 64, sh: 64 }, // blue — tablón
+    stories: { sx: 64,  sy: 128, sw: 64, sh: 64 }, // purple — miradero
+    chat:    { sx: 64,  sy: 0,   sw: 64, sh: 64 }, // green — banquito
+    bereal:  { sx: 0,   sy: 64,  sw: 64, sh: 64 }, // yellow — polaroid
+    profile: { sx: 128, sy: 0,   sw: 64, sh: 64 }, // pink — tu casa
+  }
+
   // Per-zone anchors expressed as ratios of the rendered sprite (0..1).
   // Used by drawHouseOverlay so smoke/flag/glow can sit correctly on each PNG.
   // Tweak per-sprite when real assets land.
@@ -111,10 +117,8 @@
 
   window.CityConfig = {
     W, H, PLAYER_SPEED, PLAYER_SIZE,
-    ISO_BBOX_W, ISO_BBOX_H,
-    w2s, s2w,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
     DECO_BUILDINGS, TREES, LAMPS,
-    ASSET_MANIFEST, ZONE_ANCHORS,
+    ASSET_MANIFEST, ZONE_ANCHORS, GRASS_TILE_RECT, HOUSE_RECTS,
   }
 })()

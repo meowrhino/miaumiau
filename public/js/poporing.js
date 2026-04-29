@@ -69,8 +69,18 @@
     }
   }
 
-  function buildGrid(traits) {
-    const cx = 16, cy = 22, rx = 8, ry = 7, nT = 2, nB = 2.8
+  // Body size variants. Mascots use non-default sizes so they read as
+  // distinct creatures rather than copies of user poporings.
+  const SIZES = {
+    tiny:   { rx: 5,  ry: 5,  cy: 23 },  // chubby chibi
+    small:  { rx: 6,  ry: 6,  cy: 22 },
+    normal: { rx: 8,  ry: 7,  cy: 22 },  // default — matches user poporings
+    big:    { rx: 10, ry: 9,  cy: 21 },  // tall + round
+  }
+
+  function buildGrid(traits, sizeKey) {
+    const sz = SIZES[sizeKey] || SIZES.normal
+    const cx = 16, cy = sz.cy, rx = sz.rx, ry = sz.ry, nT = 2, nB = 2.8
     const raw = Array.from({ length: H }, () => Array(W).fill(0))
     const clip = Math.min(cy + ry, H - 4)
     for (let y = 0; y < H; y++) {
@@ -183,12 +193,13 @@
     const traits = pickTraits(seed)
     const base = (typeof colorHex === 'function' ? colorHex(colorName) : null) || '#a6c081'
     const p = pal(base)
-    const g = buildGrid(traits)
+    const g = buildGrid(traits, 'normal')
     return gridToSvg(g, p)
   }
 
-  // Build a poporing with explicit traits (for branded mascots per section)
-  window.generatePoporingFromTraits = function (traits, colorName) {
+  // Build a poporing with explicit traits (for branded mascots per section).
+  // Optional `size`: 'tiny' | 'small' | 'normal' | 'big'.
+  window.generatePoporingFromTraits = function (traits, colorName, size) {
     const filledTraits = {
       eyes:    traits.eyes    || 'classic',
       mouth:   traits.mouth   || 'smile',
@@ -197,9 +208,10 @@
     }
     const base = (typeof colorHex === 'function' ? colorHex(colorName) : null) || colorName || '#a6c081'
     const p = pal(base)
-    const g = buildGrid(filledTraits)
+    const g = buildGrid(filledTraits, size)
     return gridToSvg(g, p)
   }
+  window.POPORING_SIZES = Object.keys(SIZES)
 
   // trait metadata for a future poporing editor (replaces CAT_TRAITS)
   window.POPORING_TRAITS = {

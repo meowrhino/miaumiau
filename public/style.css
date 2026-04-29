@@ -1138,6 +1138,20 @@ body:has(#mode-city:not([hidden])) #poporingPet { z-index: 100; }
   font-size: 0.66rem; color: var(--text);
   letter-spacing: 0.02em; text-align: center;
 }
+.pet-menu-credits {
+  margin: 16px 0 0;
+  font-family: var(--font-pixel);
+  font-size: 0.58rem;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.pet-menu-credits a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--text) 30%, transparent);
+}
+.pet-menu-credits a:hover { color: var(--text); }
 
 @media (max-width: 480px) {
   .pet-menu-grid { grid-template-columns: repeat(2, 1fr); }

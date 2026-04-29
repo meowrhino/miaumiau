@@ -6,7 +6,7 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { W, H, ISO_BBOX_W, ISO_BBOX_H, w2s } = window.CityConfig
+  const { W, H } = window.CityConfig
 
   City.fitCanvas = function () {
     if (!City.canvas) return
@@ -22,14 +22,12 @@
       City.canvas.width = targetW; City.canvas.height = targetH
       City.canvas.style.width = vw + 'px'; City.canvas.style.height = vh + 'px'
     }
-    // Camera-aware composition: baseScale fits the full iso bbox to viewport;
-    // camera.zoom multiplies on top. Camera.x/y are top-down world coords;
-    // we project them to iso to find the screen point we want at viewport center.
-    const baseScale = Math.min(vw / ISO_BBOX_W, vh / ISO_BBOX_H)
+    // Camera-aware composition: baseScale fits the world rect to viewport;
+    // camera.zoom multiplies on top. Camera.x/y are world coords (top-down 1:1).
+    const baseScale = Math.min(vw / W, vh / H)
     const scale = baseScale * City.camera.zoom
-    const camIso = w2s(City.camera.x, City.camera.y)
-    const ox = vw / 2 - camIso.sx * scale
-    const oy = vh / 2 - camIso.sy * scale
+    const ox = vw / 2 - City.camera.x * scale
+    const oy = vh / 2 - City.camera.y * scale
     City._view = { scale, ox, oy, vw, vh, dpr, baseScale }
     City.ctx.setTransform(dpr * scale, 0, 0, dpr * scale, ox * dpr, oy * dpr)
   }
