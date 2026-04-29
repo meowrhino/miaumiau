@@ -96,6 +96,8 @@
     'tile:grass_sheet':  '/img/tiles/grass_sheet.png',
     'tile:house_sheet':  '/img/buildings/house_sheet.png',
     'tile:trees_sheet':  '/img/deco/trees_sheet.png',
+    'tile:hut_sheet':    '/img/deco/hut_sheet.png',
+    'tile:brick_sheet':  '/img/deco/brick_sheet.png',
     'building:tweets':  '/img/buildings/tweets-cafe.png',
     'building:posts':   '/img/buildings/posts-board.png',
     'building:stories': '/img/buildings/stories-observatory.png',
@@ -154,6 +156,17 @@
     { sx: 64,  sy: 64,  sw: 64, sh: 64 }, // orange (reuse — small village ok)
   ]
 
+  // Sprout Lands hut sheet (192×192, 3×3 grid of 64-px huts). Used for the
+  // 'barn' kind — rustic round-roof variants. Pick a brown one.
+  const HUT_RECT = { sx: 0, sy: 0, sw: 64, sh: 64 }
+
+  // Sprout Lands brick house sheet (288×80, 3×1 grid of 96×80 brick houses).
+  // Used for 'bakery' (orange-ish) and 'workshop' (the second variant).
+  const BRICK_RECTS = {
+    bakery:   { sx: 0,   sy: 0, sw: 96, sh: 80 },
+    workshop: { sx: 96,  sy: 0, sw: 96, sh: 80 },
+  }
+
   // Per-zone anchors expressed as ratios of the rendered sprite (0..1).
   // Used by drawHouseOverlay so smoke/flag/glow can sit correctly on each PNG.
   // Tweak per-sprite when real assets land.
@@ -172,6 +185,6 @@
     ISLANDS, ISLAND_R, BRIDGES,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
-    GRASS_TILE_RECT, HOUSE_RECTS, TREE_RECTS, COTTAGE_RECTS,
+    GRASS_TILE_RECT, HOUSE_RECTS, TREE_RECTS, COTTAGE_RECTS, HUT_RECT, BRICK_RECTS,
   }
 })()

@@ -5,7 +5,7 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { HOUSE_RECTS, COTTAGE_RECTS } = window.CityConfig
+  const { HOUSE_RECTS, COTTAGE_RECTS, HUT_RECT, BRICK_RECTS } = window.CityConfig
 
   City.drawBuilding = function (ctx, z, now) {
     // Top-down pixel-art house sprite + animated overlays (smoke, sign,
@@ -120,15 +120,22 @@
     const sp = City.sprites
     const useAssetForKind = City.useImageAssets &&
       (!City._assetWhitelist || City._assetWhitelist.has(d.kind))
-    // Cottages: prefer the Sprout Lands house sheet with a per-cottage
-    // sub-rect (COTTAGE_RECTS picks an unused slot of the 9-cell grid).
-    let cottageSheet = null, cottageRect = null
-    if (useAssetForKind && d.kind === 'cottage' && window.Assets && COTTAGE_RECTS) {
-      cottageSheet = Assets.get('tile:house_sheet')
-      cottageRect = cottageSheet ? COTTAGE_RECTS[(d.seed || 0) % COTTAGE_RECTS.length] : null
+    // Sheet+sub-rect lookups: cottage uses house_sheet; barn uses hut_sheet;
+    // bakery/workshop use brick_sheet. mill/well/stage/stalls stay procedural
+    // (they need bespoke art and are too distinctive for a generic house).
+    let sheet = null, rect = null
+    if (useAssetForKind && window.Assets) {
+      if (d.kind === 'cottage' && COTTAGE_RECTS) {
+        sheet = Assets.get('tile:house_sheet')
+        rect  = sheet ? COTTAGE_RECTS[(d.seed || 0) % COTTAGE_RECTS.length] : null
+      } else if (d.kind === 'barn' && HUT_RECT) {
+        sheet = Assets.get('tile:hut_sheet'); rect = sheet ? HUT_RECT : null
+      } else if ((d.kind === 'bakery' || d.kind === 'workshop') && BRICK_RECTS) {
+        sheet = Assets.get('tile:brick_sheet'); rect = sheet ? BRICK_RECTS[d.kind] : null
+      }
     }
-    // Other kinds: fall back to dedicated PNG (most are still procedural for now).
-    if (!cottageSheet && useAssetForKind && window.Assets) {
+    // Other kinds: fall back to dedicated PNG (most are still procedural).
+    if (!sheet && useAssetForKind && window.Assets) {
       const variant = (d.kind === 'cottage') ? (((d.seed || 0) % 4) + 1)
                     : (d.kind === 'stall')   ? (((d.seed || 0) % 2) + 1)
                     : null
@@ -141,10 +148,10 @@
     // Floor shadow
     ctx.fillStyle = 'rgba(0,0,0,0.18)'
     ctx.beginPath(); ctx.ellipse(d.x, d.y - 4, (d.h * 0.42), 8, 0, 0, Math.PI * 2); ctx.fill()
-    if (cottageSheet && cottageRect) {
-      const aspect = cottageRect.sw / cottageRect.sh
+    if (sheet && rect) {
+      const aspect = rect.sw / rect.sh
       const rh = d.h, rw = rh * aspect
-      ctx.drawImage(cottageSheet, cottageRect.sx, cottageRect.sy, cottageRect.sw, cottageRect.sh,
+      ctx.drawImage(sheet, rect.sx, rect.sy, rect.sw, rect.sh,
         d.x - rw/2, d.y - rh, rw, rh)
     } else if (img) {
       const aspect = img.width / img.height
