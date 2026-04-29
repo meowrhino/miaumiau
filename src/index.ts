@@ -331,12 +331,13 @@ app.post('/api/posts', async (c) => {
   const image = form.get('image') as File | null
   const caption = esc((form.get('caption') as string ?? '').slice(0, 500))
   if (!image) return err('Falta imagen')
-  if (!image.type.startsWith('image/')) return err('Solo imágenes')
+  if (image.type !== 'image/webp' && image.type !== 'image/jpeg') return err('Formato no soportado (webp o jpeg)')
   if (image.size > 500_000) return err('Imagen demasiado grande (max 500KB)')
 
-  const key = `p_${Date.now()}_${user.id}.webp`
+  const ext = image.type === 'image/jpeg' ? 'jpg' : 'webp'
+  const key = `p_${Date.now()}_${user.id}.${ext}`
   await c.env.STORAGE.put('media/posts/' + key, image.stream(), {
-    httpMetadata: { contentType: 'image/webp' }
+    httpMetadata: { contentType: image.type }
   })
   const post = await db.postCreate(c.env.DB, user.id, caption, key)
   notify(c.env, `📷 <b>${user.username}</b> nuevo post${caption ? ':\n' + caption.slice(0, 100) : ''}`)
@@ -516,11 +517,13 @@ app.post('/api/bereal', async (c) => {
   const image = form.get('image') as File | null
   const caption = esc((form.get('caption') as string ?? '').slice(0, 200))
   if (!image) return err('Falta imagen')
+  if (image.type !== 'image/webp' && image.type !== 'image/jpeg') return err('Formato no soportado (webp o jpeg)')
   if (image.size > 500_000) return err('Imagen demasiado grande (max 500KB)')
 
-  const key = `br_${Date.now()}_${user.id}.webp`
+  const ext = image.type === 'image/jpeg' ? 'jpg' : 'webp'
+  const key = `br_${Date.now()}_${user.id}.${ext}`
   await c.env.STORAGE.put('media/bereal/' + key, image.stream(), {
-    httpMetadata: { contentType: 'image/webp' }
+    httpMetadata: { contentType: image.type }
   })
   const bereal = await c.env.DB.prepare(
     'INSERT INTO bereals (user_id, media_key, caption) VALUES (?, ?, ?) RETURNING *'
@@ -563,11 +566,13 @@ app.post('/api/stories', async (c) => {
   const image = form.get('image') as File | null
   const layers = (form.get('layers') as string) ?? '{}'
   if (!image) return err('Falta imagen')
+  if (image.type !== 'image/webp' && image.type !== 'image/jpeg') return err('Formato no soportado (webp o jpeg)')
   if (image.size > 300_000) return err('Imagen demasiado grande (max 300KB)')
 
-  const key = `s_${Date.now()}_${user.id}.webp`
+  const ext = image.type === 'image/jpeg' ? 'jpg' : 'webp'
+  const key = `s_${Date.now()}_${user.id}.${ext}`
   await c.env.STORAGE.put('media/stories/' + key, image.stream(), {
-    httpMetadata: { contentType: 'image/webp' }
+    httpMetadata: { contentType: image.type }
   })
   const expiresAt = new Date(Date.now() + 86_400_000).toISOString()
   const story = await db.storyCreate(c.env.DB, user.id, key, layers, expiresAt)
