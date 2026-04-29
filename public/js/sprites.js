@@ -50,22 +50,24 @@
 
   // ─── HOUSE PALETTE ──────────────────────────────────────────────────────────
   // Each house shares a "cozy cabin" wall family but the roof, accents and decoration vary by zone.
-  function housePalette(roofColor, accentColor) {
-    const wall = '#f7ead0'                 // warm cream
+  // opts: { wall, stroke, trim, door, win } — any override defaults below.
+  function housePalette(roofColor, accentColor, opts) {
+    opts = opts || {}
+    const wall = opts.wall || '#f7ead0'    // warm cream (default)
     const wallS = dk(wall, 0.10)
     const wallD = dk(wall, 0.22)
-    const trim = '#7a4d2a'                 // wood trim
+    const trim = opts.trim || '#7a4d2a'    // wood trim
     const trimD = dk(trim, 0.30)
-    const door = '#8a5a32'
+    const door = opts.door || '#8a5a32'
     const doorD = dk(door, 0.30)
     const doorL = lt(door, 0.15)
-    const win = '#ffe9a8'                  // warm window glow
+    const win = opts.win || '#ffe9a8'      // warm window glow
     const winD = dk(win, 0.30)
     const winFrame = '#5a3a20'
     const roof = roofColor
     const roofS = dk(roofColor, 0.25)
     const roofL = lt(roofColor, 0.18)
-    const stroke = '#3a2613'
+    const stroke = opts.stroke || '#3a2613'
     const groundShadow = 'rgba(40,25,15,0.30)'
     const accent = accentColor || lt(roofColor, 0.4)
     return { wall, wallS, wallD, trim, trimD, door, doorD, doorL, win, winD, winFrame, roof, roofS, roofL, stroke, groundShadow, accent }
@@ -182,8 +184,8 @@
   }
 
   // ─── HOUSE: el café ☕ (mansard roof + chimney + chalkboard hint baked in fascia) ──
-  function houseCafe(roofColor) {
-    const p = housePalette(roofColor, '#c97a3a')
+  function houseCafe(roofColor, opts) {
+    const p = housePalette(roofColor, '#c97a3a', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 64, bh: 44 })
     paintRoofMansard(ctx, p)
@@ -238,8 +240,8 @@
   }
 
   // ─── HOUSE: el tablón 📌 (gable + flag + bulletin board on side) ─────────────
-  function houseBoard(roofColor) {
-    const p = housePalette(roofColor, '#d4a83c')
+  function houseBoard(roofColor, opts) {
+    const p = housePalette(roofColor, '#d4a83c', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 60, bh: 40 })
     paintRoofGable(ctx, p, { apexY: 14, baseY: 50, halfBase: 36 })
@@ -291,8 +293,8 @@
   // ─── HOUSE: el miradero 🌙 (compact observatory: normal house + small dome on top) ──
   // No taller than the other functional houses — just a regular gable with a tiny
   // dome+telescope perched on the apex.
-  function houseObservatory(roofColor) {
-    const p = housePalette(roofColor, '#b890d8')
+  function houseObservatory(roofColor, opts) {
+    const p = housePalette(roofColor, '#b890d8', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 60, bh: 40 })
     paintRoofGable(ctx, p, { apexY: 22, baseY: 50, halfBase: 36 })
@@ -349,8 +351,8 @@
   }
 
   // ─── HOUSE: el banquito 🪑 (low porch + hanging plants + sleeping cat) ────────
-  function houseBench(roofColor) {
-    const p = housePalette(roofColor, '#5fb070')
+  function houseBench(roofColor, opts) {
+    const p = housePalette(roofColor, '#5fb070', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 64, bh: 38 })
     paintRoofGable(ctx, p, { apexY: 18, baseY: 50, halfBase: 38 })
@@ -401,8 +403,8 @@
   }
 
   // ─── HOUSE: la polaroid 📷 (studio + huge camera on roof + photo wall) ────────
-  function housePolaroid(roofColor) {
-    const p = housePalette(roofColor, '#ff8a3c')
+  function housePolaroid(roofColor, opts) {
+    const p = housePalette(roofColor, '#ff8a3c', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 64, bh: 42 })
     paintRoofFlat(ctx, p)
@@ -455,8 +457,8 @@
   }
 
   // ─── HOUSE: tu casa 🏠 (cozy home + mailbox + cat in window) ─────────────────
-  function houseHome(roofColor, ownerColor) {
-    const p = housePalette(roofColor, '#a87dd8')
+  function houseHome(roofColor, ownerColor, opts) {
+    const p = housePalette(roofColor, '#a87dd8', opts)
     const cat = ownerColor || '#FFB800'
     const catL = lt(cat, 0.3)
     const catD = dk(cat, 0.25)
@@ -515,15 +517,277 @@
     return c
   }
 
+  // ─── EXPERIMENTAL — café "deluxe" pixel-art a mano (option 6 example) ─────────
+  // Misma silueta base pero MUCHO más detalle: tejas individuales, persianas,
+  // vidriera con muchos paneles, escalones, lámpara colgante, marquesina con
+  // flecos, plantas, cartel pintado a mano. ~300 ops vs ~40 del baseline.
+  function houseCafeDeluxe() {
+    const W = 96, H = 96
+    const { c, ctx } = mkc(W, H)
+    // Custom palette — wood-brown façade en lugar de cream cream
+    const wall = '#dcb98a', wallS = '#c69e6c', wallD = '#a07a48'
+    const woodBeam = '#7a4d2a', woodBeamD = '#5a341c'
+    const trim = '#7a4d2a', trimD = '#5a341c'
+    const roof = '#a45032', roofL = '#c47050', roofS = '#7a3d24', roofD = '#5e2c1a'
+    const tileLine = '#6f2e18'
+    const win = '#fff0b8', winL = '#fff7d8', winFrame = '#3a2010'
+    const door = '#4d2a14', doorL = '#7a4d2a', doorH = '#ffd86a'
+    const stroke = '#3a2010'
+    const gold = '#d4a83c', red = '#cf3a2a', redD = '#922a1c', cream = '#fff5e0'
+    const groundShadow = 'rgba(40,25,15,0.32)'
+
+    // Ground shadow (ellipse-ish via thin stripes)
+    rect(ctx, 16, H - 6, 64, 3, groundShadow)
+    rect(ctx, 14, H - 4, 68, 2, 'rgba(40,25,15,0.20)')
+
+    // Foundation (stone slabs, varied tones)
+    const stones = ['#8c7a5a', '#a0917a', '#7a6850', '#968360', '#a89878']
+    for (let i = 0; i < 60; i += 6) {
+      const s = stones[(i / 6) | 0 % stones.length] || stones[0]
+      rect(ctx, 18 + i, H - 9, 5, 5, s)
+      px(ctx, 18 + i + 4, H - 8, dk(s, 0.30))
+      px(ctx, 18 + i, H - 5, dk(s, 0.30))
+    }
+    rect(ctx, 18, H - 5, 60, 1, '#3a2010')
+
+    // Wall body
+    rect(ctx, 18, 50, 60, 36, wall)
+    // Wood corner beams (timber framing)
+    rect(ctx, 18, 50, 3, 36, woodBeam)
+    rect(ctx, 75, 50, 3, 36, woodBeam)
+    rect(ctx, 18, 50, 60, 2, woodBeamD)        // top beam
+    rect(ctx, 18, 84, 60, 2, woodBeamD)        // bottom beam
+    rect(ctx, 18, 67, 60, 2, woodBeam)         // mid beam (timber framing line)
+    // Vertical timbers (3 columns of decorative beams)
+    rect(ctx, 36, 52, 1, 33, woodBeam)
+    rect(ctx, 60, 52, 1, 33, woodBeam)
+    // Subtle wall texture stipple
+    for (let yy = 53; yy < 84; yy += 3) {
+      for (let xx = 22; xx < 75; xx += 5) {
+        if (((xx + yy) & 1) === 0) px(ctx, xx, yy, wallS)
+      }
+    }
+
+    // Mansard roof — lower flare with VISIBLE TILES
+    rect(ctx, 16, 38, 64, 10, roof)
+    rect(ctx, 16, 38, 64, 2, roofL)
+    rect(ctx, 16, 46, 64, 2, roofS)
+    rect(ctx, 16, 48, 64, 2, roofD)
+    // Individual tile lines (rounded shingles vibe)
+    for (let x = 18; x < 80; x += 4) {
+      px(ctx, x, 41, tileLine)
+      px(ctx, x, 41 + 1, tileLine)
+      px(ctx, x + 2, 44, tileLine)
+      px(ctx, x + 2, 45, tileLine)
+    }
+    // Eave shadow under roof
+    rect(ctx, 16, 50, 64, 1, '#3a2010')
+
+    // Upper roof (mini mansard / trim)
+    tri(ctx, 48, 18, 28, 38, roof)
+    for (let i = 0; i <= 20; i++) {
+      const w = Math.round(28 * i / 20)
+      px(ctx, 48 - w, 18 + i, stroke)
+      px(ctx, 48 + w, 18 + i, stroke)
+    }
+    // Tile rows on upper roof
+    for (let row = 22; row < 38; row += 3) {
+      const w = Math.round(28 * (row - 18) / 20)
+      for (let xx = 48 - w + 1; xx <= 48 + w - 1; xx += 3) px(ctx, xx, row, tileLine)
+    }
+    // Roof ridge highlight
+    for (let i = 0; i < 22; i += 1) px(ctx, 48, 17 + i, roofL)
+
+    // Chimney (brick pattern)
+    rect(ctx, 62, 8, 8, 22, '#a04020')
+    rect(ctx, 62, 8, 8, 2, '#c45838')
+    rect(ctx, 62, 28, 8, 2, '#7a2a18')
+    // Brick lines
+    for (let by = 11; by < 28; by += 4) {
+      rect(ctx, 62, by, 8, 1, '#6a1c10')
+      px(ctx, 65 + (by % 8 ? 0 : 2), by + 2, '#6a1c10')
+    }
+    rect(ctx, 60, 30, 12, 2, '#7a2a18')   // chimney cap
+    outline(ctx, 60, 30, 12, 2, '#3a1408')
+    outline(ctx, 62, 8, 8, 22, '#3a1408')
+
+    // Awning over the door (striped + scalloped fringe)
+    rect(ctx, 28, 56, 40, 5, red)
+    rect(ctx, 28, 56, 40, 1, lt(red, 0.30))
+    rect(ctx, 28, 60, 40, 1, redD)
+    for (let x = 30; x < 68; x += 4) rect(ctx, x, 57, 2, 3, cream)
+    // Scalloped fringe (dots)
+    for (let x = 28; x <= 68; x += 4) {
+      px(ctx, x, 62, redD)
+      px(ctx, x + 1, 62, redD)
+      px(ctx, x, 63, redD)
+    }
+    // Awning brackets
+    rect(ctx, 27, 56, 1, 4, woodBeamD)
+    rect(ctx, 68, 56, 1, 4, woodBeamD)
+
+    // Door (paneled, with knob, glass strip at top)
+    rect(ctx, 42, 64, 12, 22, door)
+    rect(ctx, 42, 64, 12, 2, doorL)
+    rect(ctx, 42, 84, 12, 2, '#1a0e08')
+    rect(ctx, 47, 64, 1, 22, doorL)               // central groove
+    // Glass insets at top of door
+    rect(ctx, 44, 66, 3, 4, win)
+    rect(ctx, 49, 66, 3, 4, win)
+    px(ctx, 44, 66, winFrame); px(ctx, 47, 66, winFrame); px(ctx, 49, 66, winFrame); px(ctx, 52, 66, winFrame)
+    rect(ctx, 44, 70, 8, 1, winFrame)
+    // Doorknob
+    px(ctx, 51, 75, gold); px(ctx, 51, 76, dk(gold, 0.3))
+    outline(ctx, 42, 64, 12, 22, stroke)
+    // Door step
+    rect(ctx, 38, 86, 20, 2, '#7a6a50')
+    rect(ctx, 38, 86, 20, 1, '#a09078')
+
+    // Big window (left) — 3×3 lattice with curtains
+    rect(ctx, 22, 64, 16, 16, win)
+    rect(ctx, 22, 64, 16, 2, winL)               // top highlight
+    // Lattice lines (creates 3x3 panes)
+    rect(ctx, 22, 69, 16, 1, winFrame)
+    rect(ctx, 22, 74, 16, 1, winFrame)
+    rect(ctx, 27, 64, 1, 16, winFrame)
+    rect(ctx, 32, 64, 1, 16, winFrame)
+    outline(ctx, 22, 64, 16, 16, winFrame)
+    // Curtains at sides (red + cream tied)
+    rect(ctx, 22, 64, 2, 8, red)
+    rect(ctx, 36, 64, 2, 8, red)
+    px(ctx, 23, 71, redD); px(ctx, 36, 71, redD)
+    // Window box with flowers
+    rect(ctx, 20, 80, 20, 4, woodBeamD)
+    rect(ctx, 20, 80, 20, 1, woodBeam)
+    paintBlocks(ctx, [
+      [22, 78, 2, 2, '#d04060'], [25, 78, 2, 2, '#f0c020'], [28, 78, 2, 2, '#d04060'],
+      [31, 78, 2, 2, '#a8d0a0'], [34, 78, 2, 2, '#f0c020'], [37, 78, 2, 2, '#d04060'],
+    ])
+    // Tiny leaves
+    px(ctx, 23, 79, '#5fa850'); px(ctx, 30, 79, '#5fa850'); px(ctx, 35, 79, '#5fa850')
+
+    // Hanging café sign (right of door)
+    rect(ctx, 60, 64, 14, 10, cream)
+    outline(ctx, 60, 64, 14, 10, stroke)
+    // Sign hanging chain
+    rect(ctx, 66, 60, 1, 4, woodBeamD)
+    rect(ctx, 67, 60, 1, 4, woodBeamD)
+    // Painted "café" hint (a stylized C-shape via two arcs of pixels)
+    paintBlocks(ctx, [
+      [62, 66, 4, 1, woodBeam], [62, 67, 1, 4, woodBeam], [62, 71, 4, 1, woodBeam],
+      [68, 66, 4, 1, woodBeam], [68, 70, 4, 1, woodBeam], [71, 67, 1, 3, woodBeam],
+    ])
+
+    // Hanging lantern (left of door)
+    rect(ctx, 16, 56, 1, 4, woodBeamD)
+    rect(ctx, 14, 60, 5, 6, '#3a2010')
+    rect(ctx, 15, 61, 3, 4, '#ffd86a')             // glow
+    px(ctx, 16, 62, '#fff5e0'); px(ctx, 17, 63, '#fff5e0')
+    rect(ctx, 14, 66, 5, 1, '#3a2010')
+    px(ctx, 16, 67, '#3a2010')
+
+    // Cobblestone path stub at the very bottom
+    paintBlocks(ctx, [
+      [40, 88, 4, 3, '#a89878'], [44, 88, 4, 3, '#9a8868'],
+      [48, 88, 4, 3, '#b09886'], [52, 88, 4, 3, '#a89878'],
+    ])
+    px(ctx, 41, 89, '#7a6a50'); px(ctx, 49, 90, '#7a6a50'); px(ctx, 54, 89, '#7a6a50')
+
+    return c
+  }
+
+  // ─── EXPERIMENTAL — café SVG vector (option 7 example) ────────────────────────
+  // Returns an SVG string (not a canvas). Render with new Image() + blob.
+  // Look más "ilustración" — limpio, stroke fino, sin pixel-art.
+  function houseCafeSvg() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" shape-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7e6c4"/><stop offset="1" stop-color="#dcc69a"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8704a"/><stop offset="1" stop-color="#a04030"/>
+    </linearGradient>
+    <linearGradient id="awning" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e74c3c"/><stop offset="1" stop-color="#a02818"/>
+    </linearGradient>
+    <pattern id="stripe" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="2" height="4" fill="#f4ede0"/>
+    </pattern>
+  </defs>
+
+  <!-- ground shadow -->
+  <ellipse cx="48" cy="89" rx="34" ry="3" fill="rgba(40,25,15,0.30)"/>
+
+  <!-- main wall -->
+  <rect x="18" y="50" width="60" height="36" rx="2" fill="url(#wall)" stroke="#5a3d20" stroke-width="0.8"/>
+
+  <!-- mansard lower roof (curved) -->
+  <path d="M 14 50 Q 14 38 28 38 L 68 38 Q 82 38 82 50 Z" fill="url(#roof)" stroke="#5a2818" stroke-width="0.8"/>
+  <!-- visible roof tile lines -->
+  <path d="M 16 44 H 80 M 18 47 H 78" stroke="#7a3018" stroke-width="0.4" fill="none" opacity="0.6"/>
+
+  <!-- upper roof triangle -->
+  <path d="M 28 38 L 48 18 L 68 38 Z" fill="url(#roof)" stroke="#5a2818" stroke-width="0.8" stroke-linejoin="round"/>
+  <!-- ridge highlight -->
+  <line x1="48" y1="18" x2="48" y2="38" stroke="#e88860" stroke-width="0.5"/>
+
+  <!-- chimney -->
+  <rect x="60" y="10" width="9" height="22" fill="#a85540" stroke="#5a2818" stroke-width="0.6" rx="0.5"/>
+  <rect x="58" y="30" width="13" height="3" fill="#7a3525" stroke="#5a2818" stroke-width="0.6" rx="0.5"/>
+
+  <!-- striped awning over door -->
+  <path d="M 28 56 L 28 62 Q 48 64 68 62 L 68 56 Z" fill="url(#awning)" stroke="#7a1c10" stroke-width="0.5"/>
+  <path d="M 34 62 Q 34 64 32 64 M 38 63 Q 38 65 36 65 M 42 63 Q 42 65 40 65 M 48 63 Q 48 65 46 65 M 54 63 Q 54 65 52 65 M 60 62 Q 60 64 58 64 M 64 62 Q 64 64 62 64" stroke="#7a1c10" stroke-width="0.4" fill="none"/>
+
+  <!-- door -->
+  <rect x="42" y="64" width="12" height="22" fill="#5a3320" stroke="#3a2010" stroke-width="0.6" rx="1"/>
+  <line x1="48" y1="66" x2="48" y2="84" stroke="#7a4d2a" stroke-width="0.5"/>
+  <rect x="44" y="66" width="3" height="4" fill="#fff0b8" stroke="#3a2010" stroke-width="0.4"/>
+  <rect x="49" y="66" width="3" height="4" fill="#fff0b8" stroke="#3a2010" stroke-width="0.4"/>
+  <circle cx="51" cy="76" r="0.6" fill="#d4a83c"/>
+
+  <!-- left window with lattice -->
+  <rect x="22" y="64" width="16" height="16" fill="#fff0b8" stroke="#3a2010" stroke-width="0.6" rx="1"/>
+  <line x1="22" y1="69" x2="38" y2="69" stroke="#3a2010" stroke-width="0.5"/>
+  <line x1="22" y1="74" x2="38" y2="74" stroke="#3a2010" stroke-width="0.5"/>
+  <line x1="27" y1="64" x2="27" y2="80" stroke="#3a2010" stroke-width="0.5"/>
+  <line x1="32" y1="64" x2="32" y2="80" stroke="#3a2010" stroke-width="0.5"/>
+  <!-- curtains -->
+  <path d="M 22 64 L 22 72 L 24 72 L 24 64 Z" fill="#cf3a2a"/>
+  <path d="M 38 64 L 38 72 L 36 72 L 36 64 Z" fill="#cf3a2a"/>
+  <!-- flowerbox -->
+  <rect x="20" y="80" width="20" height="4" fill="#5a341c" stroke="#3a2010" stroke-width="0.5" rx="1"/>
+  <circle cx="23" cy="79.5" r="1" fill="#d04060"/>
+  <circle cx="27" cy="79" r="1" fill="#f0c020"/>
+  <circle cx="31" cy="79.5" r="1" fill="#d04060"/>
+  <circle cx="35" cy="79" r="1" fill="#f0c020"/>
+
+  <!-- hanging sign -->
+  <line x1="66" y1="60" x2="66" y2="64" stroke="#3a2010" stroke-width="0.6"/>
+  <rect x="58" y="64" width="16" height="10" fill="#fff5e0" stroke="#3a2010" stroke-width="0.6" rx="1"/>
+  <text x="66" y="72" font-family="serif" font-size="6" text-anchor="middle" fill="#5a341c" font-weight="700">café</text>
+
+  <!-- foundation stones -->
+  <rect x="18" y="86" width="60" height="3" fill="#7a6a50" stroke="#3a2010" stroke-width="0.5"/>
+  <line x1="24" y1="86" x2="24" y2="89" stroke="#3a2010" stroke-width="0.4"/>
+  <line x1="34" y1="86" x2="34" y2="89" stroke="#3a2010" stroke-width="0.4"/>
+  <line x1="46" y1="86" x2="46" y2="89" stroke="#3a2010" stroke-width="0.4"/>
+  <line x1="58" y1="86" x2="58" y2="89" stroke="#3a2010" stroke-width="0.4"/>
+  <line x1="68" y1="86" x2="68" y2="89" stroke="#3a2010" stroke-width="0.4"/>
+</svg>`
+  }
+
   // ─── HOUSE DISPATCHER ──────────────────────────────────────────────────────
-  function paintHouse(zoneId, roofColor, ownerColor) {
-    if (zoneId === 'tweets')  return houseCafe(roofColor)
-    if (zoneId === 'posts')   return houseBoard(roofColor)
-    if (zoneId === 'stories') return houseObservatory(roofColor)
-    if (zoneId === 'chat')    return houseBench(roofColor)
-    if (zoneId === 'bereal')  return housePolaroid(roofColor)
-    if (zoneId === 'profile') return houseHome(roofColor, ownerColor)
-    return houseBench(roofColor)
+  // opts: { wall, stroke, trim, door, win } — palette overrides applied to housePalette.
+  function paintHouse(zoneId, roofColor, ownerColor, opts) {
+    if (zoneId === 'tweets')  return houseCafe(roofColor, opts)
+    if (zoneId === 'posts')   return houseBoard(roofColor, opts)
+    if (zoneId === 'stories') return houseObservatory(roofColor, opts)
+    if (zoneId === 'chat')    return houseBench(roofColor, opts)
+    if (zoneId === 'bereal')  return housePolaroid(roofColor, opts)
+    if (zoneId === 'profile') return houseHome(roofColor, ownerColor, opts)
+    return houseBench(roofColor, opts)
   }
 
   // ─── TREES (5 variants) ──────────────────────────────────────────────────────
@@ -1292,5 +1556,7 @@
     treePine, treeLush, treeSakura, bush, flowerPatch,
     fountain, lampPost, bench, fence,
     grassTile, cobbleTile, dirtPathTile, cloud,
+    // experimental — only used by /cafe-options.html
+    houseCafeDeluxe, houseCafeSvg,
   }
 })()

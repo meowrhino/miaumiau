@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>café — opciones técnicas — miaumiau</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    background: #f4ede0;
+    font-family: 'Pixelify Sans', monospace, sans-serif;
+    color: #2d1f10;
+  }
+  h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: 0.3px; }
+  .lede {
+    margin: 0 0 24px; font-size: 13px; color: #6c5535;
+    max-width: 920px; line-height: 1.5;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+  }
+  .card {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid #d8c8a0;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex; flex-direction: column;
+  }
+  .card h2 {
+    margin: 0 0 4px; font-size: 16px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .badge {
+    font-size: 10px; padding: 2px 6px;
+    border-radius: 3px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .badge.fast   { background: #b3dba8; color: #2c5a26; }
+  .badge.med    { background: #f4d68b; color: #6a4818; }
+  .badge.slow   { background: #f0a8a0; color: #6a1c10; }
+  .badge.ext    { background: #c8b8d8; color: #4a2a6a; }
+  .card .desc {
+    font-size: 12px; color: #6c5535;
+    margin: 6px 0 10px; line-height: 1.45; min-height: 56px;
+  }
+  .preview {
+    background: #b3dba8;
+    border-radius: 6px;
+    padding: 8px;
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 220px;
+    overflow: hidden;
+  }
+  .preview canvas, .preview img, .preview svg {
+    image-rendering: pixelated;
+    width: auto; height: auto;
+    max-width: 100%; max-height: 220px;
+  }
+  .preview canvas { width: 192px; height: 192px; }
+  .preview .vector { width: 192px; height: 192px; }
+  .preview .external-img { width: 100%; max-height: 220px; object-fit: contain; image-rendering: auto; border-radius: 4px; }
+  .preview .placeholder {
+    color: #4a3520; font-size: 12px; text-align: center;
+    padding: 20px; font-family: monospace;
+    line-height: 1.6; opacity: 0.85;
+  }
+  .placeholder code { background: #fff5e0; padding: 1px 5px; border-radius: 3px; }
+  .meta {
+    font-size: 11px; color: #6c5535;
+    margin-top: 10px; line-height: 1.4;
+    border-top: 1px dashed #d8c8a0;
+    padding-top: 8px;
+  }
+  .meta b { color: #2d1f10; }
+  .meta a { color: #7a4d2a; }
+</style>
+</head>
+<body>
+
+<h1>café — opciones técnicas</h1>
+<p class="lede">
+  El mismo edificio (el café) renderizado con 5 métodos distintos. Cada uno tiene tradeoff distinto en
+  calidad, consistencia, tiempo de implementación y dependencias externas. La columna 1 es lo que tienes
+  hoy en producción.
+</p>
+
+<div class="grid">
+
+  <!-- 1. Procedural simple (current) -->
+  <div class="card">
+    <h2>1. Procedural <span class="badge fast">Fast</span></h2>
+    <p class="desc">
+      Lo de hoy. Pixel-art dibujado con primitivas Canvas2D (<code>rect</code>, <code>tri</code>, <code>px</code>) en
+      <code>sprites.js</code>. ~40 ops por casita.
+    </p>
+    <div class="preview"><canvas id="c1" width="96" height="96"></canvas></div>
+    <p class="meta">
+      <b>Tiempo</b>: ya hecho.<br>
+      <b>Pros</b>: 0 deps, 100% propio, animable runtime.<br>
+      <b>Contras</b>: simple, repetitivo entre zonas.
+    </p>
+  </div>
+
+  <!-- 6. Procedural a mano detallado -->
+  <div class="card">
+    <h2>2. Procedural detallado <span class="badge med">~6h</span></h2>
+    <p class="desc">
+      Mismo método pero pintado con muchísimo más cariño: tejas individuales, vidriera con paneles, persianas,
+      lámpara colgante, marquesina con flecos, plantas. ~300 ops.
+    </p>
+    <div class="preview"><canvas id="c2" width="96" height="96"></canvas></div>
+    <p class="meta">
+      <b>Tiempo</b>: ~1h por casita = 6h las 6 zonas.<br>
+      <b>Pros</b>: 0 deps, máximo control, animable runtime.<br>
+      <b>Contras</b>: pixel-art a ciegas dentro de JS — lentito iterar visualmente.
+    </p>
+  </div>
+
+  <!-- 7. SVG vector -->
+  <div class="card">
+    <h2>3. SVG vectorial <span class="badge med">~4h</span></h2>
+    <p class="desc">
+      Path/rect SVG con gradients, sin pixelart. Look más "ilustración cozy", menos "8-bit". Escala
+      perfecta a cualquier resolución. Igual que ya se usa para los gatos.
+    </p>
+    <div class="preview"><div class="vector" id="c3"></div></div>
+    <p class="meta">
+      <b>Tiempo</b>: ~40min por casita = 4h.<br>
+      <b>Pros</b>: 0 deps, escala infinita, fácil editar, accesible.<br>
+      <b>Contras</b>: rompe estética pixel-art (¿o quizás encaje mejor con el gato SVG?).
+    </p>
+  </div>
+
+  <!-- 4. AI generation -->
+  <div class="card">
+    <h2>4. AI image-gen <span class="badge ext">Externo</span></h2>
+    <p class="desc">
+      Generar cada casita con DALL-E / Midjourney / SDXL. Prompt fijado para consistencia. Sale PNG
+      transparente directamente.
+    </p>
+    <div class="preview">
+      <div class="placeholder">
+        <b>placeholder — no puedo generar AI desde aquí</b><br><br>
+        Workflow esperado:<br>
+        <code>prompt → DALL-E 3</code><br>
+        <code>→ remove background</code><br>
+        <code>→ /img/buildings/</code><br><br>
+        <em>Prompt sugerido:</em><br>
+        "isometric 16-bit pixel art<br>
+        cozy cafe building, mansard roof,<br>
+        red awning, warm cream walls,<br>
+        flower box, transparent background,<br>
+        96×96, soft palette"
+      </div>
+    </div>
+    <p class="meta">
+      <b>Tiempo</b>: ~10min/casita pero iteración alta.<br>
+      <b>Pros</b>: rápido por sprite, mucha calidad posible.<br>
+      <b>Contras</b>: consistencia entre las 6 difícil; coste por imagen; cleanup manual (BG, anchor).
+    </p>
+  </div>
+
+  <!-- 5. Asset pack externo -->
+  <div class="card">
+    <h2>5. Asset pack <span class="badge ext">Externo</span></h2>
+    <p class="desc">
+      Pack pixel-art ya curado de itch.io. Estilo coherente garantizado. Ejemplo aquí: Cozy Farm de
+      shubibubi (16×16 top-down, $3.99 versión comercial).
+    </p>
+    <div class="preview">
+      <img class="external-img"
+           src="https://img.itch.zone/aW1hZ2UvMTAzMTQzMC83NDgxMDMxLmdpZg==/original/W3C7Kg.gif"
+           alt="Cozy Farm preview"
+           onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'placeholder',innerHTML:'preview no carga (CORS o offline).<br><br>ver online:<br><a href=\'https://shubibubi.itch.io/cozy-farm\' target=\'_blank\'>shubibubi.itch.io/cozy-farm</a>'}))">
+    </div>
+    <p class="meta">
+      <b>Tiempo</b>: ~1h descargar + integrar todo el pueblo.<br>
+      <b>Pros</b>: consistencia perfecta, look profesional.<br>
+      <b>Contras</b>: te casas con ese estilo; licencia (gratis = no comercial); top-down implica pivot iso→top.<br>
+      <b>Otros packs</b>: <a href="https://cupnooble.itch.io/sprout-lands-asset-pack" target="_blank">Sprout Lands</a>,
+      <a href="https://limezu.itch.io/serenevillagerevamped" target="_blank">Serene Village</a>.
+    </p>
+  </div>
+
+</div>
+
+<script src="/js/sprites.js"></script>
+<script>
+// 1. Procedural simple (current café)
+const c1 = document.getElementById('c1').getContext('2d')
+c1.imageSmoothingEnabled = false
+c1.drawImage(MiauSprites.house('tweets', '#c97a3a', '#FFB800'), 0, 0)
+
+// 2. Procedural detallado
+const c2 = document.getElementById('c2').getContext('2d')
+c2.imageSmoothingEnabled = false
+c2.drawImage(MiauSprites.houseCafeDeluxe(), 0, 0)
+
+// 3. SVG vector
+const c3 = document.getElementById('c3')
+c3.innerHTML = MiauSprites.houseCafeSvg()
+const svgEl = c3.querySelector('svg')
+if (svgEl) {
+  svgEl.style.width = '192px'
+  svgEl.style.height = '192px'
+}
+</script>
+</body>
+</html>

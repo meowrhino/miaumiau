@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>sprite gallery — miaumiau</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: #f4ede0;
+    font-family: 'Pixelify Sans', monospace, sans-serif;
+    color: #2d1f10;
+  }
+  h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: 0.5px; }
+  .legend {
+    margin: 0 0 24px; font-size: 13px; color: #6c5535;
+    max-width: 760px; line-height: 1.5;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 90px repeat(4, 1fr);
+    gap: 4px 12px;
+    background: rgba(255,255,255,0.4);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #d8c8a0;
+    width: fit-content;
+  }
+  .col-header {
+    text-align: center;
+    font-size: 13px; font-weight: 700;
+    padding: 8px 4px;
+    color: #4a3520;
+    border-bottom: 2px solid #c8a878;
+  }
+  .col-header .desc {
+    display: block;
+    font-size: 10px; font-weight: 400;
+    color: #8c7548; margin-top: 2px;
+  }
+  .row-label {
+    display: flex; align-items: center;
+    font-size: 12px; font-weight: 600;
+    color: #4a3520;
+    padding: 0 8px;
+    border-right: 2px solid #d8c8a0;
+  }
+  .row-label .emoji { font-size: 22px; margin-right: 6px; }
+  .sprite-cell {
+    display: flex;
+    align-items: center; justify-content: center;
+    background: #b3dba8;
+    border-radius: 6px;
+    padding: 4px;
+    min-height: 180px;
+  }
+  canvas {
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    width: 168px; height: 168px;
+  }
+  .palette-strip {
+    display: flex; gap: 2px;
+    margin-top: 4px;
+  }
+  .palette-strip span {
+    width: 14px; height: 8px; border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+</style>
+</head>
+<body>
+
+<h1>sprite gallery — opciones de casitas</h1>
+<p class="legend">
+  4 variantes para que elijas dirección. Si te gusta una columna, propago el estilo a todas las casitas y al resto del pueblo
+  (cottages, panadería, taller, etc.). El diseño actual está en la primera columna como referencia.
+</p>
+
+<div class="grid" id="grid"></div>
+
+<script src="/js/sprites.js"></script>
+<script>
+const ZONES = [
+  { id: 'tweets',  name: 'café',     emoji: '☕', roof: '#c97a3a' },
+  { id: 'posts',   name: 'tablón',   emoji: '📌', roof: '#3877a6' },
+  { id: 'stories', name: 'miradero', emoji: '🌙', roof: '#552366' },
+  { id: 'chat',    name: 'banquito', emoji: '🪑', roof: '#2f8f56' },
+  { id: 'bereal',  name: 'polaroid', emoji: '📷', roof: '#cc6320' },
+  { id: 'profile', name: 'tu casa',  emoji: '🏠', roof: '#7e54a8' },
+]
+
+// Per-zone palette overrides for each variant (column).
+// Each variant is an opts object passed to MiauSprites.house(zoneId, roofColor, ownerColor, opts).
+const VARIANTS = [
+  {
+    label: 'Actual',
+    desc: 'baseline (paredes cream)',
+    palettes: {}, // empty → defaults
+  },
+  {
+    label: 'Cálido',
+    desc: 'paredes tintadas por zona',
+    palettes: {
+      tweets:  { wall: '#e8c894' },              // warm cinnamon for the café
+      posts:   { wall: '#aac3c9' },              // muted teal for the bulletin
+      stories: { wall: '#9aa6c0' },              // dusty blue for stargazers
+      chat:    { wall: '#bfd9b0' },              // mint sage for the bench
+      bereal:  { wall: '#f3c7a4' },              // peach for the studio
+      profile: { wall: '#cdbcd9' },              // soft lavender for home
+    },
+  },
+  {
+    label: 'Pastel',
+    desc: 'lavados, outline suave',
+    palettes: {
+      tweets:  { wall: '#f7d9b3', stroke: '#7a4a25' },
+      posts:   { wall: '#cee2e3', stroke: '#3d5e63' },
+      stories: { wall: '#c4cee0', stroke: '#3a4565' },
+      chat:    { wall: '#d8eccb', stroke: '#365e3a' },
+      bereal:  { wall: '#fbe1c8', stroke: '#7a4a25' },
+      profile: { wall: '#e6dbeb', stroke: '#5a4070' },
+    },
+  },
+  {
+    label: 'Piedra',
+    desc: 'pueblo de montaña, paleta fría',
+    palettes: {
+      tweets:  { wall: '#c4b9a8', stroke: '#3a2d1a', door: '#5a3d20' },
+      posts:   { wall: '#b4b9c3', stroke: '#2d3845', door: '#5a3d20' },
+      stories: { wall: '#a0a4b4', stroke: '#2d3548', door: '#5a3d20' },
+      chat:    { wall: '#b8c0b6', stroke: '#324235', door: '#5a3d20' },
+      bereal:  { wall: '#c0b0a0', stroke: '#3a2618', door: '#5a3d20' },
+      profile: { wall: '#b0aab8', stroke: '#3a2d45', door: '#5a3d20' },
+    },
+  },
+]
+
+const grid = document.getElementById('grid')
+// Top row: empty corner + 4 column headers
+grid.appendChild(spacer())
+for (const v of VARIANTS) {
+  const h = document.createElement('div')
+  h.className = 'col-header'
+  h.innerHTML = `${v.label}<span class="desc">${v.desc}</span>`
+  grid.appendChild(h)
+}
+// One row per zone × 4 variants
+for (const z of ZONES) {
+  const lab = document.createElement('div')
+  lab.className = 'row-label'
+  lab.innerHTML = `<span class="emoji">${z.emoji}</span><span>${z.name}</span>`
+  grid.appendChild(lab)
+  for (const v of VARIANTS) {
+    const cell = document.createElement('div')
+    cell.className = 'sprite-cell'
+    const sprite = MiauSprites.house(z.id, z.roof, '#FFB800', v.palettes[z.id])
+    const dst = document.createElement('canvas')
+    dst.width = 96; dst.height = 96
+    const dctx = dst.getContext('2d')
+    dctx.imageSmoothingEnabled = false
+    dctx.drawImage(sprite, 0, 0)
+    cell.appendChild(dst)
+    grid.appendChild(cell)
+  }
+}
+
+function spacer() {
+  const s = document.createElement('div')
+  s.className = 'col-header'
+  s.style.borderBottom = 'none'
+  return s
+}
+</script>
+</body>
+</html>
