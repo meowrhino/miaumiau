@@ -7,9 +7,44 @@
   const {
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
+    ISLANDS, ISLAND_R, BRIDGES,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
   } = window.CityConfig
+
+  // Land collision: returns true if the world point (x,y) is on walkable
+  // ground (one of the 3 islands, the plaza ellipse, or a bridge).
+  // Rounded-rect islands: inside bbox AND outside the corner exclusion arcs.
+  function pointInLand(x, y) {
+    for (const isl of ISLANDS) {
+      const left = isl.x, top = isl.y
+      const right = isl.x + isl.w, bottom = isl.y + isl.h
+      if (x < left || x > right || y < top || y > bottom) continue
+      const r = isl.r || ISLAND_R
+      if (x < left + r && y < top + r)    { if (Math.hypot(x - (left+r),  y - (top+r))    > r) continue }
+      if (x > right - r && y < top + r)   { if (Math.hypot(x - (right-r), y - (top+r))    > r) continue }
+      if (x < left + r && y > bottom - r) { if (Math.hypot(x - (left+r),  y - (bottom-r)) > r) continue }
+      if (x > right - r && y > bottom - r){ if (Math.hypot(x - (right-r), y - (bottom-r)) > r) continue }
+      return true
+    }
+    // Plaza (ellipse)
+    const px = (x - PLAZA.x) / PLAZA.rx, py = (y - PLAZA.y) / PLAZA.ry
+    if (px*px + py*py <= 1) return true
+    // Bridges (rotated rect from ax,ay → bx,by, half-width br.w/2 perpendicular)
+    if (BRIDGES) {
+      for (const br of BRIDGES) {
+        const dx = br.bx - br.ax, dy = br.by - br.ay
+        const len = Math.hypot(dx, dy) || 1
+        const ux = dx / len, uy = dy / len
+        const nx = -uy, ny = ux
+        const rx = x - br.ax, ry = y - br.ay
+        const along = rx * ux + ry * uy
+        const across = rx * nx + ry * ny
+        if (along >= 0 && along <= len && Math.abs(across) <= br.w/2) return true
+      }
+    }
+    return false
+  }
 
   const City = {
     canvas: null, ctx: null,
@@ -234,15 +269,22 @@
 
       if (vx !== 0 || vy !== 0) {
         const len = Math.hypot(vx, vy) || 1
-        p.x += (vx / len) * PLAYER_SPEED * dt
-        p.y += (vy / len) * PLAYER_SPEED * dt
+        const stepX = (vx / len) * PLAYER_SPEED * dt
+        const stepY = (vy / len) * PLAYER_SPEED * dt
+        // Try X and Y independently so the player slides along land edges
+        // instead of getting stuck on diagonal moves toward the shoreline.
+        if (pointInLand(p.x + stepX, p.y)) p.x += stepX
+        if (pointInLand(p.x, p.y + stepY)) p.y += stepY
+        // If a click target is unreachable (point in water), drop it so we
+        // don't bounce against the shore forever.
+        if (City.target && !pointInLand(City.target.x, City.target.y)) City.target = null
         p.walking = true
         if (vx < -0.1) p.dir = 1
         else if (vx > 0.1) p.dir = 0
       } else {
         p.walking = false
       }
-      // Bounds
+      // Hard world bounds (in case islands are ever moved past the edge).
       p.x = Math.max(40, Math.min(W - 40, p.x))
       p.y = Math.max(40, Math.min(H - 40, p.y))
       City.checkZone()
