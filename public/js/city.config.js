@@ -7,54 +7,81 @@
   const PLAYER_SPEED = 200  // px/sec
   const PLAYER_SIZE = 56    // sprite render size
 
-  // 6 zones placed asymmetrically across an organic village (no hex/circle pattern).
-  // Plaza sits SW (descentrada). Functional houses are spread out and mixed with
-  // decorative buildings (cottages, bakery, workshop, barn, mill, well, stalls, stage)
-  // so the world feels like a real lived-in town, not a 3x2 grid.
+  // 6 zones grouped into 3 islands. Each island clusters 2 zones whose mood
+  // pairs naturally (relax/social NW, visual NE, intimate SE). Plaza sits in
+  // the middle and connects to all 3 islands via short bridges.
   const ZONES = [
-    { id: 'tweets',  name: 'el café',     x: 80,  y: 90,  w: 180, h: 140, color: '#f0a85a', mascotColor: '#FFB800', habitat: 'tweets',  building: '☕', roof: '#c97a3a' },
-    { id: 'posts',   name: 'el tablón',   x: 470, y: 320, w: 180, h: 140, color: '#5fa3d8', mascotColor: '#007AFF', habitat: 'posts',   building: '📌', roof: '#3877a6' },
-    { id: 'stories', name: 'el miradero', x: 920, y: 70,  w: 180, h: 140, color: '#7a3a8e', mascotColor: '#BF7BD9', habitat: 'stories', building: '🌙', roof: '#552366' },
-    { id: 'chat',    name: 'el banquito', x: 100, y: 450, w: 180, h: 140, color: '#4abd76', mascotColor: '#34C759', habitat: 'chat',    building: '🪑', roof: '#2f8f56' },
-    { id: 'bereal',  name: 'la polaroid', x: 600, y: 100, w: 180, h: 140, color: '#ff8a3c', mascotColor: '#FF9500', habitat: 'bereal',  building: '📷', roof: '#cc6320' },
-    { id: 'profile', name: 'tu casa',     x: 950, y: 420, w: 180, h: 140, color: '#a87dd8', mascotColor: '#BF7BD9', habitat: 'profile', building: '🏠', roof: '#7e54a8' },
+    // ─── ISLA NW (relax / social) ───
+    { id: 'tweets',  name: 'el café',     x: 80,  y: 100, w: 180, h: 140, color: '#f0a85a', mascotColor: '#FFB800', habitat: 'tweets',  building: '☕', roof: '#c97a3a' },
+    { id: 'posts',   name: 'el tablón',   x: 240, y: 180, w: 180, h: 140, color: '#5fa3d8', mascotColor: '#007AFF', habitat: 'posts',   building: '📌', roof: '#3877a6' },
+    // ─── ISLA NE (visual / alta) ───
+    { id: 'stories', name: 'el miradero', x: 850,  y: 80,  w: 180, h: 140, color: '#7a3a8e', mascotColor: '#BF7BD9', habitat: 'stories', building: '🌙', roof: '#552366' },
+    { id: 'bereal',  name: 'la polaroid', x: 1050, y: 180, w: 180, h: 140, color: '#ff8a3c', mascotColor: '#FF9500', habitat: 'bereal',  building: '📷', roof: '#cc6320' },
+    // ─── ISLA SE (íntima / cozy) ───
+    { id: 'chat',    name: 'el banquito', x: 800,  y: 480, w: 180, h: 140, color: '#4abd76', mascotColor: '#34C759', habitat: 'chat',    building: '🪑', roof: '#2f8f56' },
+    { id: 'profile', name: 'tu casa',     x: 1020, y: 540, w: 180, h: 140, color: '#a87dd8', mascotColor: '#BF7BD9', habitat: 'profile', building: '🏠', roof: '#7e54a8' },
   ]
 
-  // Plaza descentrada al SO — fountain + stage + market stalls + well live here.
-  const PLAZA = { x: 400, y: 510, rx: 200, ry: 110 }
-  const FOUNTAIN = { x: 380, y: 510, r: 36 }
+  // Plaza central — fountain + stage + market stalls + well live here.
+  const PLAZA = { x: 640, y: 490, rx: 170, ry: 110 }
+  const FOUNTAIN = { x: 640, y: 490, r: 36 }
 
-  // Spawning point — runa al norte del plaza, donde aparecen los recién
-  // llegados al pueblo. Visualmente se dibuja un círculo rúnico pulsante
-  // sobre el cobble; sirve de "te encuentras aquí" + ritual de bienvenida.
-  const SPAWN = { x: 400, y: 460 }
+  // Spawning point — runa en plaza norte (los recién llegados aparecen aquí).
+  const SPAWN = { x: 640, y: 420 }
 
-  // Decorative buildings — visual filler so the village reads as a pueblo, not a hexagon.
-  // None of these are interactive (no doormat trigger). They depth-sort with everything else.
+  // Three islands surround the plaza. ISLAND_R is the corner radius applied
+  // by drawShoreline + the grass clip so each island reads as land, not as
+  // a floating rectangle.
+  const ISLAND_R = 36
+  const ISLANDS = [
+    { id: 'nw', x: 40,  y: 60,  w: 400, h: 290, r: ISLAND_R },
+    { id: 'ne', x: 820, y: 40,  w: 420, h: 320, r: ISLAND_R },
+    { id: 'se', x: 760, y: 460, w: 480, h: 240, r: ISLAND_R },
+  ]
+
+  // Bridges connect plaza ↔ each island. Each bridge is a fat rectangle
+  // along the line (ax,ay)→(bx,by). drawn as wooden planks with a darker
+  // edge ring; depth-sorted with everything else.
+  const BRIDGES = [
+    { ax: 484, ay: 414, bx: 432, by: 340, w: 26 }, // plaza NW corner → island NW SE corner
+    { ax: 796, ay: 414, bx: 824, by: 340, w: 26 }, // plaza NE corner → island NE SW corner
+    { ax: 808, ay: 510, bx: 760, by: 532, w: 26 }, // plaza E         → island SE W edge
+  ]
+
+  // Decorative buildings — distributed so each island feels lived-in.
   const DECO_BUILDINGS = [
-    { kind: 'cottage', seed: 11, x: 330, y: 210, h: 100 },  // top: between cafe and polaroid
-    { kind: 'cottage', seed: 22, x: 800, y: 240, h: 100 },  // middle: behind polaroid/miradero
-    { kind: 'cottage', seed: 33, x: 1180, y: 210, h: 100 }, // NE corner, neighbour to miradero
-    { kind: 'cottage', seed: 44, x: 60,  y: 350, h: 100 },  // far W, between cafe & banquito
-    { kind: 'bakery',  x: 740,  y: 470, h: 110 },           // commercial near tablon
-    { kind: 'workshop', x: 1140, y: 580, h: 110 },          // SE near tu casa
-    { kind: 'barn',    x: 880,  y: 660, h: 100 },           // far S behind zones
-    { kind: 'mill',    x: 1200, y: 200, h: 200 },           // NE tall, decorative landmark
-    { kind: 'well',    x: 480,  y: 600, h: 70 },            // in plaza
-    { kind: 'stage',   x: 320,  y: 590, h: 60 },            // in plaza
-    { kind: 'stall',   seed: 7,  x: 540, y: 555, h: 64 },   // plaza market
-    { kind: 'stall',   seed: 13, x: 600, y: 595, h: 64 },
+    // ISLA NW
+    { kind: 'cottage', seed: 11, x: 130, y: 90,  h: 90 },
+    { kind: 'cottage', seed: 44, x: 400, y: 110, h: 90 },
+    // ISLA NE
+    { kind: 'cottage', seed: 22, x: 920, y: 320, h: 90 },
+    { kind: 'cottage', seed: 33, x: 1190, y: 60, h: 90 },
+    { kind: 'mill',    x: 1190, y: 230, h: 180 },
+    // ISLA SE
+    { kind: 'bakery',   x: 820,  y: 670, h: 100 },
+    { kind: 'workshop', x: 1180, y: 490, h: 100 },
+    { kind: 'barn',     x: 990,  y: 690, h: 90 },
+    // PLAZA
+    { kind: 'well',  x: 720, y: 540, h: 60 },
+    { kind: 'stage', x: 560, y: 540, h: 50 },
+    { kind: 'stall', seed: 7,  x: 580, y: 460, h: 56 },
+    { kind: 'stall', seed: 13, x: 700, y: 460, h: 56 },
   ]
 
-  // Static decorations: trees, lamps. Hand-placed for "lived-in" feel.
+  // Trees scattered across the islands.
   const TREES = [
-    { x: 30,  y: 280 }, { x: 270, y: 80 },  { x: 430, y: 70 },
-    { x: 720, y: 90 },  { x: 1080, y: 240 }, { x: 1240, y: 380 },
-    { x: 50,  y: 580 }, { x: 380, y: 280 }, { x: 820, y: 380 },
-    { x: 1200, y: 540 }, { x: 700, y: 660 },
+    // ISLA NW
+    { x: 60, y: 110 }, { x: 260, y: 80 }, { x: 90, y: 320 }, { x: 420, y: 300 },
+    // ISLA NE
+    { x: 830, y: 70 }, { x: 1090, y: 70 }, { x: 1240, y: 350 },
+    // ISLA SE
+    { x: 770, y: 480 }, { x: 1230, y: 560 }, { x: 1000, y: 690 },
   ]
+  // One lamp per bridge (cozy night vibe at the crossings).
   const LAMPS = [
-    { x: 260, y: 460 }, { x: 540, y: 460 }, { x: 280, y: 600 },
+    { x: 458, y: 377 }, // bridge NW
+    { x: 810, y: 377 }, // bridge NE
+    { x: 784, y: 521 }, // bridge SE
   ]
 
   // Image asset manifest. Keys are namespaced ('building:<zoneId>',
@@ -138,6 +165,7 @@
   window.CityConfig = {
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
+    ISLANDS, ISLAND_R, BRIDGES,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
     GRASS_TILE_RECT, HOUSE_RECTS, TREE_RECTS, COTTAGE_RECTS,
