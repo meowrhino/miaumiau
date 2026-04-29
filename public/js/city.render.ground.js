@@ -66,17 +66,35 @@
     const sp = City.sprites
     ctx.imageSmoothingEnabled = false
 
-    // ─── Grass tiles ────────────────────────────────────────────────────────
+    // ─── Water ocean (everything outside the world rect is sea) ─────────────
+    // Animated soft blue water + drifting sparkles. The land mask further
+    // down clips grass to the world rect; the band between sea and grass
+    // gets a sandy shoreline for that island vibe.
+    City.drawWater(ctx, now, visL, visT, visR, visB)
+    // Sandy shoreline ring just outside the world rect (the "beach edge")
+    City.drawShoreline(ctx)
+
+    // ─── Grass tiles (clipped to the world rect — this is the island) ──────
     // Prefer the Sprout Lands grass tile (16-px source rendered at 32-px world)
-    // when the asset has loaded. Fall back to two-tone procedural fillRect
-    // before the sheet arrives or if the asset failed to load.
+    // when the asset has loaded. Fall back to two-tone procedural fillRect.
+    ctx.save()
+    ctx.beginPath()
+    // Round the world corners slightly so the island reads as an island
+    // rather than a hard rectangle of grass floating on the sea.
+    const ISLAND_R = 36
+    if (ctx.roundRect) {
+      ctx.beginPath(); ctx.roundRect(0, 0, W, H, ISLAND_R)
+    } else {
+      ctx.rect(0, 0, W, H)
+    }
+    ctx.clip()
     const grassSheet = window.Assets && Assets.get('tile:grass_sheet')
     if (grassSheet && GRASS_TILE_RECT) {
       const TILE = 32  // 16px source × 2 zoom = 32px world per tile
-      const startWX = Math.floor(visL / TILE) * TILE - TILE
-      const endWX   = Math.ceil(visR / TILE) * TILE + TILE
-      const startWY = Math.floor(visT / TILE) * TILE - TILE
-      const endWY   = Math.ceil(visB / TILE) * TILE + TILE
+      const startWX = 0
+      const endWX   = Math.ceil(W / TILE) * TILE
+      const startWY = 0
+      const endWY   = Math.ceil(H / TILE) * TILE
       const { sx, sy, sw, sh } = GRASS_TILE_RECT
       for (let wy = startWY; wy < endWY; wy += TILE) {
         for (let wx = startWX; wx < endWX; wx += TILE) {
@@ -105,6 +123,7 @@
         ctx.fillRect(wx|0, wy|0, 2, 2)
       }
     }
+    ctx.restore() // end grass clip
 
     // ─── Paths (plaza → each zone) ──────────────────────────────────────────
     const cx = PLAZA.x, cy = PLAZA.y
@@ -152,6 +171,8 @@
     // ─── Spawn portal ────────────────────────────────────────────────────────
     City.drawSpawnPortal(ctx, now)
 
+    // ─── Land-only decorations from here on ─────────────────────────────────
+
     // Bushes / flower patches — sprite anchored at (d.x, d.y) base.
     if (sp) {
       const decoSpots = [
@@ -169,5 +190,60 @@
         if (img) ctx.drawImage(img, d.x - img.width/2, d.y - img.height)
       }
     }
+  }
+
+  // Animated ocean. Painted under everything else (called first by drawGround).
+  // Two-tone blue base + slow-drifting wave bands + occasional sparkle pixels.
+  City.drawWater = function (ctx, now, visL, visT, visR, visB) {
+    // Base sea fill
+    ctx.fillStyle = '#5fb1d8'
+    ctx.fillRect(visL, visT, visR - visL, visB - visT)
+    // Soft horizontal wave bands (slow vertical drift)
+    const drift = (now / 60) % 24
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'
+    for (let y = (Math.floor(visT / 24) * 24) - drift; y < visB; y += 24) {
+      ctx.fillRect(visL, y, visR - visL, 2)
+    }
+    // Sparkle pixels (deterministic positions, twinkle by time)
+    const cellW = visR - visL, cellH = visB - visT
+    const baseAlpha = 0.45
+    for (let i = 0; i < 60; i++) {
+      const sx = visL + ((i * 137) % Math.max(1, cellW))
+      const sy = visT + (((i * 191) + 47) % Math.max(1, cellH))
+      const tw = (Math.sin(now / 800 + i * 1.7) + 1) * 0.5
+      ctx.fillStyle = `rgba(255,255,255,${baseAlpha * tw})`
+      ctx.fillRect(sx | 0, sy | 0, 2, 2)
+    }
+  }
+
+  // Sandy shoreline ring just outside the world rect — sells the "this grass
+  // is an island" reading. Drawn AFTER water (so it sits between sea and
+  // grass) and BEFORE the grass clip (so the band shows on the sea side).
+  City.drawShoreline = function (ctx) {
+    const ISLAND_R = 36
+    const sandWidth = 18
+    ctx.save()
+    ctx.fillStyle = '#f0d8a0'
+    ctx.beginPath()
+    if (ctx.roundRect) {
+      ctx.roundRect(-sandWidth, -sandWidth, W + sandWidth * 2, H + sandWidth * 2, ISLAND_R + sandWidth)
+      ctx.roundRect(0, 0, W, H, ISLAND_R)
+    } else {
+      ctx.rect(-sandWidth, -sandWidth, W + sandWidth * 2, H + sandWidth * 2)
+      ctx.rect(0, 0, W, H)
+    }
+    ctx.fill('evenodd')
+    // Subtle wet-sand inner ring
+    ctx.fillStyle = '#dcc080'
+    ctx.beginPath()
+    if (ctx.roundRect) {
+      ctx.roundRect(-2, -2, W + 4, H + 4, ISLAND_R + 2)
+      ctx.roundRect(0, 0, W, H, ISLAND_R)
+    } else {
+      ctx.rect(-2, -2, W + 4, H + 4)
+      ctx.rect(0, 0, W, H)
+    }
+    ctx.fill('evenodd')
+    ctx.restore()
   }
 })()
