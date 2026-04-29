@@ -64,6 +64,7 @@
   const ASSET_MANIFEST = {
     'tile:grass_sheet':  '/img/tiles/grass_sheet.png',
     'tile:house_sheet':  '/img/buildings/house_sheet.png',
+    'tile:trees_sheet':  '/img/deco/trees_sheet.png',
     'building:tweets':  '/img/buildings/tweets-cafe.png',
     'building:posts':   '/img/buildings/posts-board.png',
     'building:stories': '/img/buildings/stories-observatory.png',
@@ -103,6 +104,25 @@
     profile: { sx: 128, sy: 0,   sw: 64, sh: 64 }, // pink — tu casa
   }
 
+  // Sprout Lands trees sheet (192×128). Tree variants cycle by index so the
+  // forest doesn't read as copy-paste. Top row holds mature trees in 32×48
+  // cells; we pick four with distinct silhouettes/colours.
+  const TREE_RECTS = [
+    { sx: 0,   sy: 0, sw: 32, sh: 48 }, // fluffy dark
+    { sx: 32,  sy: 0, sw: 32, sh: 48 }, // fluffy light
+    { sx: 96,  sy: 0, sw: 32, sh: 48 }, // alt canopy
+    { sx: 160, sy: 0, sw: 32, sh: 48 }, // pine-like
+  ]
+
+  // Decorative cottages cycle through unused slots of the house sheet so each
+  // cottage in the village gets a different roof colour. Index = seed % 4.
+  const COTTAGE_RECTS = [
+    { sx: 128, sy: 64,  sw: 64, sh: 64 }, // brown — slot (2,1) unused by zones
+    { sx: 0,   sy: 128, sw: 64, sh: 64 }, // red — slot (0,2)
+    { sx: 128, sy: 128, sw: 64, sh: 64 }, // gray — slot (2,2)
+    { sx: 64,  sy: 64,  sw: 64, sh: 64 }, // orange (reuse — small village ok)
+  ]
+
   // Per-zone anchors expressed as ratios of the rendered sprite (0..1).
   // Used by drawHouseOverlay so smoke/flag/glow can sit correctly on each PNG.
   // Tweak per-sprite when real assets land.
@@ -119,6 +139,7 @@
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
     DECO_BUILDINGS, TREES, LAMPS,
-    ASSET_MANIFEST, ZONE_ANCHORS, GRASS_TILE_RECT, HOUSE_RECTS,
+    ASSET_MANIFEST, ZONE_ANCHORS,
+    GRASS_TILE_RECT, HOUSE_RECTS, TREE_RECTS, COTTAGE_RECTS,
   }
 })()
