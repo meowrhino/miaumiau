@@ -13,7 +13,7 @@
   City.render = function (now) {
     const ctx = City.ctx
     if (!ctx) return
-    // Visible bounds in iso-screen-space. Used by drawGround to know how much
+    // Visible bounds in world coords. Used by drawGround to know how much
     // extra grass to paint outside the world rect so the viewport never has gaps.
     const v = City._view || { scale: 1, ox: 0, oy: 0, vw: W, vh: H }
     const visL = -v.ox / v.scale
@@ -41,9 +41,8 @@
     // ── 1. iso ground (rhombic tiles + plaza + paths + bushes/flowers) ──
     City.drawGround(ctx, now, visL, visT, visR, visB)
 
-    // ── 2-7. depth-sorted entities. With iso projection sy = (wx + wy)/2, so
-    //   sorting by (wx + wy) gives correct front-to-back order for everything:
-    //   trees, buildings, fountain, lamps, decorative buildings, characters.
+    // ── 2-7. depth-sorted entities. Top-down: things lower on screen (higher
+    //   wy) draw on top of things higher (lower wy). Sort by wy.
     const entities = []
     TREES.forEach((t, i) => entities.push({ kind: 'tree', wx: t.x, wy: t.y, idx: i }))
     ZONES.forEach(z => entities.push({ kind: 'zone', wx: z.x + z.w/2, wy: z.y + z.h - 30, ref: z }))
@@ -52,7 +51,7 @@
     entities.push({ kind: 'fountain', wx: FOUNTAIN.x, wy: FOUNTAIN.y })
     City.others.forEach(o => entities.push({ kind: 'other', wx: o.x, wy: o.y, ref: o }))
     entities.push({ kind: 'me', wx: City.player.x, wy: City.player.y, ref: City.player })
-    entities.sort((a, b) => (a.wx + a.wy) - (b.wx + b.wy))
+    entities.sort((a, b) => a.wy - b.wy)
     for (const e of entities) {
       if      (e.kind === 'tree')     City.drawTree(ctx, e.wx, e.wy, now, e.idx)
       else if (e.kind === 'zone')     City.drawBuilding(ctx, e.ref, now)

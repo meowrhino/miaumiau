@@ -2,14 +2,10 @@
 // Zone detection emits enter:zone events. No networking yet.
 //
 // World constants and zone/deco/decoration data live in city.config.js as
-// `window.CityConfig`. We destructure them locally here so the rest of this
-// file keeps using bare `W`, `H`, `ZONES`, `w2s`, etc. — same names, same
-// references, just one less inline block of declarations.
+// `window.CityConfig`. We destructure them locally here.
 ;(function () {
   const {
     W, H, PLAYER_SPEED, PLAYER_SIZE,
-    ISO_BBOX_W, ISO_BBOX_H,
-    w2s, s2w,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
@@ -182,18 +178,23 @@
     },
 
     loadMascots() {
-      // Each zone: pre-render a deterministic poporing matching its theme
-      const traitsByZone = {
-        tweets:  { eyes: 'classic', mouth: 'open',   cheeks: 'blush',    headTop: 'leaf' },
-        stories: { eyes: 'sleepy',  mouth: 'smile',  cheeks: 'blush',    headTop: 'spike' },
-        posts:   { eyes: 'sparkle', mouth: 'cat',    cheeks: 'blush',    headTop: 'droplet' },
-        chat:    { eyes: 'heart',   mouth: 'smile',  cheeks: 'blush',    headTop: 'none' },
-        bereal:  { eyes: 'round',   mouth: 'o',      cheeks: 'freckles', headTop: 'antenna' },
-        profile: { eyes: 'star',    mouth: 'smirk',  cheeks: 'blush',    headTop: 'antenna' },
+      // Each zone has a curated poporing that's *visually distinct* from a
+      // regular user poporing: a non-default body size + exotic trait combo
+      // that fits the zone's mood. Render size on screen also varies.
+      const MASCOT_SPEC = {
+        tweets:  { size: 'big',   render: 76, traits: { eyes: 'sleepy',  mouth: 'open',   cheeks: 'freckles', headTop: 'leaf' } },     // barista grandote dormido
+        posts:   { size: 'tiny',  render: 44, traits: { eyes: 'sparkle', mouth: 'cat',    cheeks: 'blush',    headTop: 'droplet' } }, // chiquitín alerta con bandera
+        stories: { size: 'big',   render: 78, traits: { eyes: 'star',    mouth: 'o',      cheeks: 'blush',    headTop: 'antenna' } }, // místico mirando lunas
+        chat:    { size: 'small', render: 56, traits: { eyes: 'heart',   mouth: 'smile',  cheeks: 'blush',    headTop: 'none' } },    // simpático del banquito
+        bereal:  { size: 'tiny',  render: 46, traits: { eyes: 'round',   mouth: 'tongue', cheeks: 'freckles', headTop: 'spike' } },   // travieso fotógrafo
+        profile: { size: 'big',   render: 74, traits: { eyes: 'heart',   mouth: 'smirk',  cheeks: 'blush',    headTop: 'antenna' } }, // anfitrión cariñoso
       }
+      City.mascotSizes = {}
       ZONES.forEach(z => {
         if (typeof generatePoporingFromTraits !== 'function') return
-        const svg = generatePoporingFromTraits(traitsByZone[z.id], z.mascotColor)
+        const spec = MASCOT_SPEC[z.id] || { size: 'normal', render: 56, traits: {} }
+        City.mascotSizes[z.id] = spec.render
+        const svg = generatePoporingFromTraits(spec.traits, z.mascotColor, spec.size)
         const blob = new Blob([svg], { type: 'image/svg+xml' })
         const url = URL.createObjectURL(blob)
         const img = new Image()

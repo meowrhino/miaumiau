@@ -10,7 +10,10 @@ const COLORS = {
   DarkOrange: '#FF8C00', LimeGreen: '#32CD32', DeepSkyBlue: '#00BFFF', Plum: '#DDA0DD'
 }
 
-const colorHex = name => COLORS[name] ?? '#808080'
+const colorHex = name => {
+  if (typeof name === 'string' && name[0] === '#') return name
+  return COLORS[name] ?? '#808080'
+}
 const COLOR_NAMES = Object.keys(COLORS)
 
 function renderColorGrid(container, selected, onSelect) {

@@ -5,43 +5,51 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { w2s } = window.CityConfig
+  const { HOUSE_RECTS } = window.CityConfig
 
   City.drawBuilding = function (ctx, z, now) {
-    // Iso-positioned pixel-art house sprite + animated overlays (smoke, sign,
-    // mascot bob). The sprite stays "billboarded" — drawn frontally — but
-    // its anchor (the doormat in front of the door) lives in iso screen-space.
+    // Top-down pixel-art house sprite + animated overlays (smoke, sign,
+    // mascot bob). Sprite is anchored at the doormat (in front of the door).
     const sp = City.sprites
     const cx = z.x + z.w/2
     const my = z.y + z.h - 30                    // doormat / mascot world pos
-    const anchor = w2s(cx, my)                   // iso screen anchor
     const renderW = 180, renderH = 180
-    const bx = anchor.sx - renderW/2
-    const by = anchor.sy - renderH + 8           // sprite base sits at iso anchor
+    const bx = cx - renderW/2
+    const by = my - renderH + 8                  // sprite base sits at anchor
 
-    // Iso ground shadow under the building
+    // Soft top-down ground shadow under the building
     ctx.save()
     ctx.fillStyle = 'rgba(0,0,0,0.22)'
-    ctx.beginPath(); ctx.ellipse(anchor.sx, anchor.sy + 4, 70, 18, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.ellipse(cx, my + 6, 44, 12, 0, 0, Math.PI * 2); ctx.fill()
     ctx.restore()
 
-    // House sprite (frontal, anchored at iso position).
-    // Prefer the loaded PNG asset when available; fall back to the procedural
-    // sprite from sprites.js, then to a colored rect as last resort.
+    // House sprite, in priority order:
+    //   1. Sprout Lands sheet (tile:house_sheet) with per-zone sub-rect
+    //   2. dedicated PNG asset (building:<zoneId>) — for future hand-made art
+    //   3. procedural sprite from sprites.js
+    //   4. colored rect as last resort
     const useAssetForZone = City.useImageAssets &&
       (!City._assetWhitelist || City._assetWhitelist.has(z.id))
-    const assetImg = useAssetForZone && window.Assets ? Assets.get('building:' + z.id) : null
-    const houseImg = assetImg || (sp && sp.house && sp.house[z.id])
     ctx.imageSmoothingEnabled = false
-    if (houseImg) ctx.drawImage(houseImg, bx, by, renderW, renderH)
-    else { ctx.fillStyle = z.roof; ctx.fillRect(bx + 30, by + 40, renderW - 60, renderH - 50) }
+    const sheet = useAssetForZone && window.Assets ? Assets.get('tile:house_sheet') : null
+    const rect  = HOUSE_RECTS && HOUSE_RECTS[z.id]
+    const assetImg = useAssetForZone && window.Assets ? Assets.get('building:' + z.id) : null
+    if (sheet && rect) {
+      ctx.drawImage(sheet, rect.sx, rect.sy, rect.sw, rect.sh, bx, by, renderW, renderH)
+    } else if (assetImg) {
+      ctx.drawImage(assetImg, bx, by, renderW, renderH)
+    } else if (sp && sp.house && sp.house[z.id]) {
+      ctx.drawImage(sp.house[z.id], bx, by, renderW, renderH)
+    } else {
+      ctx.fillStyle = z.roof; ctx.fillRect(bx + 30, by + 40, renderW - 60, renderH - 50)
+    }
 
-    // Per-zone animated overlays (smoke, blink, glow) — drawn in iso screen coords
+    // Per-zone animated overlays (smoke, blink, glow)
     City.drawHouseOverlay(ctx, z, bx, by, renderW, renderH, now)
 
     // Hanging sign over the rooftop
     const swayS = Math.sin(now/1500 + z.x*0.01) * 2
-    const sxSign = anchor.sx
+    const sxSign = cx
     const signTop = by - 22
     ctx.save()
     ctx.translate(sxSign, signTop)
@@ -59,7 +67,7 @@
     ctx.fillText(z.building, sxSign, signTop + 14)
     ctx.restore()
 
-    // Doormat aura + progress ring (in iso position)
+    // Doormat aura + progress ring (top-down)
     const distToMat = Math.hypot(City.player.x - cx, City.player.y - my)
     const isOnMat = City._matZoneId === z.id
     ctx.save()
@@ -67,30 +75,30 @@
       const t = Math.max(0, 1 - distToMat / 100)
       const pulse = (Math.sin(now/600) + 1) * 0.5
       ctx.fillStyle = `rgba(255,236,168,${(0.10 + pulse * 0.15) * t})`
-      ctx.beginPath(); ctx.ellipse(anchor.sx, anchor.sy + 4, 40, 18, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.ellipse(cx, my + 6, 32, 12, 0, 0, Math.PI * 2); ctx.fill()
     }
     if (isOnMat && City._matEnterTime) {
       const prog = Math.min(1, (performance.now() - City._matEnterTime) / 420)
       ctx.strokeStyle = z.color
       ctx.lineWidth = 3
-      ctx.beginPath(); ctx.ellipse(anchor.sx, anchor.sy + 4, 32, 14, 0, -Math.PI/2, -Math.PI/2 + prog * Math.PI * 2); ctx.stroke()
+      ctx.beginPath(); ctx.ellipse(cx, my + 6, 26, 10, 0, -Math.PI/2, -Math.PI/2 + prog * Math.PI * 2); ctx.stroke()
     }
     ctx.restore()
 
-    // Mascot poporing standing at the doormat (sprite billboarded, bobbing)
+    // Mascot poporing standing at the doormat (bobbing)
     const mascot = City.mascots[z.id]
+    const mascotSize = (City.mascotSizes && City.mascotSizes[z.id]) || 56
     const bob = Math.sin(now/600 + z.x*0.01) * 4
     if (mascot) {
-      const size = 56
       ctx.save()
       ctx.shadowColor = z.color
       ctx.shadowBlur = 14
       ctx.imageSmoothingEnabled = false
-      ctx.drawImage(mascot, anchor.sx - size/2, anchor.sy - size + bob, size, size)
+      ctx.drawImage(mascot, cx - mascotSize/2, my - mascotSize + bob, mascotSize, mascotSize)
       ctx.restore()
     } else {
       ctx.fillStyle = z.color
-      ctx.beginPath(); ctx.arc(anchor.sx, anchor.sy - 20 + bob, 20, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(cx, my - 20 + bob, 20, 0, Math.PI * 2); ctx.fill()
     }
 
     // Nameplate under the mascot
@@ -101,8 +109,8 @@
     ctx.lineWidth = 4
     ctx.lineJoin = 'round'
     ctx.textAlign = 'center'
-    ctx.strokeText(z.name, anchor.sx, anchor.sy + 24)
-    ctx.fillText(z.name, anchor.sx, anchor.sy + 24)
+    ctx.strokeText(z.name, cx, my + 24)
+    ctx.fillText(z.name, cx, my + 24)
     ctx.restore()
   }
 

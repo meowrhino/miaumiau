@@ -2,3 +2,6 @@ node_modules/
 .wrangler/
 .dev.vars
 .claude/
+# Source asset pack — license forbids redistributing the whole pack.
+# Only the specific files we use are copied into public/img/.
+Sprout Sorry pack/

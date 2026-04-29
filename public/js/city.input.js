@@ -6,7 +6,10 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { ZONES, s2w } = window.CityConfig
+  const { ZONES } = window.CityConfig
+  // Tap-vs-drag threshold (CSS px). Touch needs a wider window because finger
+  // jitter often nudges the pointer 8-12px even on a "still" tap.
+  const TAP_PX = { mouse: 6, pen: 6, touch: 12 }
 
   City.bind = function () {
     window.addEventListener('keydown', City.onKey)
@@ -51,6 +54,7 @@
       x: e.clientX, y: e.clientY,
       startX: e.clientX, startY: e.clientY,
       startTime: performance.now(),
+      tapPx: TAP_PX[e.pointerType] || TAP_PX.mouse,
     }
     City.input.pointers.set(e.pointerId, p)
     const n = City.input.pointers.size
@@ -92,7 +96,7 @@
 
     if (City.input.pointers.size === 1) {
       const dx = p.x - p.startX, dy = p.y - p.startY
-      if (!City.input.hasMoved && Math.hypot(dx, dy) > 6) City.input.hasMoved = true
+      if (!City.input.hasMoved && Math.hypot(dx, dy) > p.tapPx) City.input.hasMoved = true
       if (City.input.hasMoved) {
         City.input.isPanning = true
         if (City.camera.mode === 'mobile-follow') City.camera.mode = 'mobile-free'
@@ -155,15 +159,10 @@
   City.canvasCoords = function (e) {
     const r = City.canvas.getBoundingClientRect()
     const v = City._view || { scale: 1, ox: 0, oy: 0 }
-    // CSS pixels relative to canvas
-    const cx = e.clientX - r.left
-    const cy = e.clientY - r.top
-    // Reverse the base transform first to get iso screen coords (in world units),
-    // then reverse the iso projection to recover top-down world coords.
-    const isoX = (cx - v.ox) / v.scale
-    const isoY = (cy - v.oy) / v.scale
-    const { wx, wy } = s2w(isoX, isoY)
-    return { x: wx, y: wy, rect: r }
+    // CSS pixels relative to canvas → world coords (top-down 1:1).
+    const x = (e.clientX - r.left - v.ox) / v.scale
+    const y = (e.clientY - r.top  - v.oy) / v.scale
+    return { x, y, rect: r }
   }
 
   City.findOtherAt = function (x, y) {
