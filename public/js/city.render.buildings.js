@@ -5,7 +5,7 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { HOUSE_RECTS } = window.CityConfig
+  const { HOUSE_RECTS, COTTAGE_RECTS } = window.CityConfig
 
   City.drawBuilding = function (ctx, z, now) {
     // Top-down pixel-art house sprite + animated overlays (smoke, sign,
@@ -118,10 +118,17 @@
     // Decorative buildings render at d.x (center) with their footprint base at d.y.
     // d.h is the desired rendered height; width keeps the sprite's aspect ratio.
     const sp = City.sprites
-    // Prefer PNG asset (deco:<kind>:<seed%4+1> for cottage/stall, deco:<kind> otherwise)
     const useAssetForKind = City.useImageAssets &&
       (!City._assetWhitelist || City._assetWhitelist.has(d.kind))
-    if (useAssetForKind && window.Assets) {
+    // Cottages: prefer the Sprout Lands house sheet with a per-cottage
+    // sub-rect (COTTAGE_RECTS picks an unused slot of the 9-cell grid).
+    let cottageSheet = null, cottageRect = null
+    if (useAssetForKind && d.kind === 'cottage' && window.Assets && COTTAGE_RECTS) {
+      cottageSheet = Assets.get('tile:house_sheet')
+      cottageRect = cottageSheet ? COTTAGE_RECTS[(d.seed || 0) % COTTAGE_RECTS.length] : null
+    }
+    // Other kinds: fall back to dedicated PNG (most are still procedural for now).
+    if (!cottageSheet && useAssetForKind && window.Assets) {
       const variant = (d.kind === 'cottage') ? (((d.seed || 0) % 4) + 1)
                     : (d.kind === 'stall')   ? (((d.seed || 0) % 2) + 1)
                     : null
@@ -134,7 +141,12 @@
     // Floor shadow
     ctx.fillStyle = 'rgba(0,0,0,0.18)'
     ctx.beginPath(); ctx.ellipse(d.x, d.y - 4, (d.h * 0.42), 8, 0, 0, Math.PI * 2); ctx.fill()
-    if (img) {
+    if (cottageSheet && cottageRect) {
+      const aspect = cottageRect.sw / cottageRect.sh
+      const rh = d.h, rw = rh * aspect
+      ctx.drawImage(cottageSheet, cottageRect.sx, cottageRect.sy, cottageRect.sw, cottageRect.sh,
+        d.x - rw/2, d.y - rh, rw, rh)
+    } else if (img) {
       const aspect = img.width / img.height
       const rh = d.h, rw = rh * aspect
       ctx.drawImage(img, d.x - rw/2, d.y - rh, rw, rh)
