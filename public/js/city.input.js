@@ -244,8 +244,9 @@
     // 2. Zone mascot → teleport + open sheet
     const zone = City.findZoneMascotAt(x, y)
     if (zone) { City.teleportToZone(zone.id); return }
-    // 3. Empty ground → click-to-walk
-    City.target = { x, y }
+    // 3. Empty ground → click-to-walk (routes via plaza if cross-island)
+    if (City.setWalkTarget) City.setWalkTarget(x, y)
+    else City.target = { x, y }
     City.closeOtherPopover()
   }
 

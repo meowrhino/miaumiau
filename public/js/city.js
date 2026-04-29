@@ -12,6 +12,37 @@
     ASSET_MANIFEST, ZONE_ANCHORS,
   } = window.CityConfig
 
+  // Returns 'nw' | 'ne' | 'se' | 'plaza' | 'bridge' | null for a world point.
+  // Used by pathfinding to decide if click-to-walk needs to route via plaza.
+  function whichLand(x, y) {
+    for (const isl of ISLANDS) {
+      const left = isl.x, top = isl.y
+      const right = isl.x + isl.w, bottom = isl.y + isl.h
+      if (x < left || x > right || y < top || y > bottom) continue
+      const r = isl.r || ISLAND_R
+      if (x < left + r && y < top + r    && Math.hypot(x - (left+r),  y - (top+r))    > r) continue
+      if (x > right - r && y < top + r   && Math.hypot(x - (right-r), y - (top+r))    > r) continue
+      if (x < left + r && y > bottom - r && Math.hypot(x - (left+r),  y - (bottom-r)) > r) continue
+      if (x > right - r && y > bottom - r&& Math.hypot(x - (right-r), y - (bottom-r)) > r) continue
+      return isl.id
+    }
+    const px = (x - PLAZA.x) / PLAZA.rx, py = (y - PLAZA.y) / PLAZA.ry
+    if (px*px + py*py <= 1) return 'plaza'
+    if (BRIDGES) {
+      for (const br of BRIDGES) {
+        const dx = br.bx - br.ax, dy = br.by - br.ay
+        const len = Math.hypot(dx, dy) || 1
+        const ux = dx / len, uy = dy / len
+        const nx = -uy, ny = ux
+        const rx = x - br.ax, ry = y - br.ay
+        const along = rx * ux + ry * uy
+        const across = rx * nx + ry * ny
+        if (along >= 0 && along <= len && Math.abs(across) <= br.w/2) return 'bridge'
+      }
+    }
+    return null
+  }
+
   // Land collision: returns true if the world point (x,y) is on walkable
   // ground (one of the 3 islands, the plaza ellipse, or a bridge).
   // Rounded-rect islands: inside bbox AND outside the corner exclusion arcs.
@@ -51,7 +82,8 @@
     raf: 0,
     last: 0,
     keys: { up: false, down: false, left: false, right: false },
-    target: null,  // {x,y} click-to-walk
+    target: null,        // current waypoint {x,y}
+    targetQueue: null,   // remaining waypoints after `target` (for routing)
     player: { x: SPAWN.x, y: SPAWN.y, dir: 0, walking: false, color: 'Coral' },
     currentZone: null,
     mascots: {},  // zoneId → poporing img bitmap
@@ -277,12 +309,19 @@
         if (pointInLand(p.x, p.y + stepY)) p.y += stepY
         // If a click target is unreachable (point in water), drop it so we
         // don't bounce against the shore forever.
-        if (City.target && !pointInLand(City.target.x, City.target.y)) City.target = null
+        if (City.target && !pointInLand(City.target.x, City.target.y)) {
+          City.target = null
+          City.targetQueue = null
+        }
         p.walking = true
         if (vx < -0.1) p.dir = 1
         else if (vx > 0.1) p.dir = 0
       } else {
         p.walking = false
+        // Reached current target. If there are queued waypoints, advance.
+        if (!City.target && City.targetQueue && City.targetQueue.length) {
+          City.target = City.targetQueue.shift()
+        }
       }
       // Hard world bounds (in case islands are ever moved past the edge).
       p.x = Math.max(40, Math.min(W - 40, p.x))
@@ -316,6 +355,48 @@
 
   // ─── Other-poporing tooltip + popover live in city.tooltip.js (loaded after this file) ───
   // ─── Presence (MASCOT_COORDS, writePresenceForMode, etc) live in city.presence.js ───
+
+  // Bridge index by island id. Order in config matters: BRIDGES[0]=NW etc.
+  const BRIDGE_BY_ISLAND = { nw: BRIDGES[0], ne: BRIDGES[1], se: BRIDGES[2] }
+
+  // Pathfinding helper: build a waypoint queue so click-to-walk auto-routes
+  // through bridges instead of getting stuck on the shore. Each bridge has
+  // (ax,ay) on the plaza side and (bx,by) on the island side.
+  //
+  //   player on isla X, target on isla X     → direct
+  //   player in plaza,  target on isla X     → bridge X plaza-side, bridge X island-side, target
+  //   player on isla X, target in plaza      → bridge X island-side, bridge X plaza-side, target
+  //   player on isla X, target on isla Y     → bridge X (cross), plaza, bridge Y (cross), target
+  //   player on bridge → treat as "plaza" for this purpose (close enough)
+  City.setWalkTarget = function (x, y) {
+    if (!pointInLand(x, y)) { City.target = null; City.targetQueue = null; return }
+    const pLand = whichLand(City.player.x, City.player.y)
+    const tLand = whichLand(x, y)
+    const isIsland = (k) => k === 'nw' || k === 'ne' || k === 'se'
+    const wp = []  // waypoints to traverse before the final (x,y)
+    if (isIsland(pLand) && isIsland(tLand) && pLand !== tLand) {
+      const a = BRIDGE_BY_ISLAND[pLand], b = BRIDGE_BY_ISLAND[tLand]
+      wp.push({ x: a.bx, y: a.by }, { x: a.ax, y: a.ay })
+      wp.push({ x: b.ax, y: b.ay }, { x: b.bx, y: b.by })
+    } else if (isIsland(pLand) && (tLand === 'plaza' || tLand === 'bridge')) {
+      const a = BRIDGE_BY_ISLAND[pLand]
+      wp.push({ x: a.bx, y: a.by }, { x: a.ax, y: a.ay })
+    } else if ((pLand === 'plaza' || pLand === 'bridge') && isIsland(tLand)) {
+      const b = BRIDGE_BY_ISLAND[tLand]
+      wp.push({ x: b.ax, y: b.ay }, { x: b.bx, y: b.by })
+    }
+    // First waypoint becomes target; remainder + final go in the queue.
+    if (wp.length === 0) {
+      City.target = { x, y }
+      City.targetQueue = null
+    } else {
+      City.target = wp.shift()
+      City.targetQueue = wp.concat([{ x, y }])
+    }
+  }
+  // Expose collision predicates for debugging / future pathfinding work.
+  City._pointInLand = pointInLand
+  City._whichLand   = whichLand
 
   window.City = City
 

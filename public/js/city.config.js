@@ -23,7 +23,9 @@
   ]
 
   // Plaza central — fountain + stage + market stalls + well live here.
-  const PLAZA = { x: 640, y: 490, rx: 170, ry: 110 }
+  // Bridge endpoints sit *inside* the ellipse so the player can walk seamlessly
+  // from plaza onto a bridge without falling into the water gap.
+  const PLAZA = { x: 640, y: 490, rx: 180, ry: 120 }
   const FOUNTAIN = { x: 640, y: 490, r: 36 }
 
   // Spawning point — runa en plaza norte (los recién llegados aparecen aquí).
@@ -39,13 +41,14 @@
     { id: 'se', x: 760, y: 460, w: 480, h: 240, r: ISLAND_R },
   ]
 
-  // Bridges connect plaza ↔ each island. Each bridge is a fat rectangle
-  // along the line (ax,ay)→(bx,by). drawn as wooden planks with a darker
-  // edge ring; depth-sorted with everything else.
+  // Bridges connect plaza ↔ each island. (ax,ay) sits inside the plaza
+  // ellipse and (bx,by) inside the island rounded rect — the overlap on
+  // both ends is what lets the player walk through without the collision
+  // tripping on water gaps.
   const BRIDGES = [
-    { ax: 484, ay: 414, bx: 432, by: 340, w: 26 }, // plaza NW corner → island NW SE corner
-    { ax: 796, ay: 414, bx: 824, by: 340, w: 26 }, // plaza NE corner → island NE SW corner
-    { ax: 808, ay: 510, bx: 760, by: 532, w: 26 }, // plaza E         → island SE W edge
+    { ax: 510, ay: 410, bx: 415, by: 335, w: 26 }, // plaza → ISLA NW
+    { ax: 770, ay: 410, bx: 850, by: 345, w: 26 }, // plaza → ISLA NE
+    { ax: 810, ay: 510, bx: 770, by: 510, w: 26 }, // plaza → ISLA SE
   ]
 
   // Decorative buildings — distributed so each island feels lived-in.
@@ -78,10 +81,11 @@
     { x: 770, y: 480 }, { x: 1230, y: 560 }, { x: 1000, y: 690 },
   ]
   // One lamp per bridge (cozy night vibe at the crossings).
+  // Position = midpoint of the bridge.
   const LAMPS = [
-    { x: 458, y: 377 }, // bridge NW
+    { x: 462, y: 372 }, // bridge NW
     { x: 810, y: 377 }, // bridge NE
-    { x: 784, y: 521 }, // bridge SE
+    { x: 790, y: 510 }, // bridge SE
   ]
 
   // Image asset manifest. Keys are namespaced ('building:<zoneId>',
