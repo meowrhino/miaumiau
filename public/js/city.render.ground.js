@@ -3,7 +3,48 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { W, H, ZONES, PLAZA, SPAWN, GRASS_TILE_RECT } = window.CityConfig
+  const { W, H, ZONES, PLAZA, SPAWN, ISLANDS, ISLAND_R, BRIDGES, GRASS_TILE_RECT } = window.CityConfig
+
+  // Build the land mask path (3 islands + plaza ellipse + bridges).
+  // Used both as a clip for grass tiles and as the shape for the sandy
+  // shoreline ring. Centralised so render and shoreline stay in sync.
+  function tracePath(ctx, inflate) {
+    inflate = inflate || 0
+    ctx.beginPath()
+    for (const isl of ISLANDS) {
+      const r = (isl.r || ISLAND_R) + inflate
+      if (ctx.roundRect) {
+        ctx.roundRect(isl.x - inflate, isl.y - inflate, isl.w + inflate * 2, isl.h + inflate * 2, r)
+      } else {
+        ctx.rect(isl.x - inflate, isl.y - inflate, isl.w + inflate * 2, isl.h + inflate * 2)
+      }
+    }
+    // Plaza is an ellipse, inflated radially.
+    ctx.ellipse(PLAZA.x, PLAZA.y, PLAZA.rx + inflate, PLAZA.ry + inflate, 0, 0, Math.PI * 2)
+    // Bridges: rotated rectangles between (ax,ay)→(bx,by). Compute the four
+    // corners in world coords (perpendicular offset = ±halfW; longitudinal
+    // overshoot = inflate so the bridge merges seamlessly into the islands).
+    if (BRIDGES) {
+      for (const br of BRIDGES) {
+        const dx = br.bx - br.ax, dy = br.by - br.ay
+        const len = Math.hypot(dx, dy) || 1
+        const halfW = (br.w + inflate * 2) / 2
+        const nx = -dy / len, ny = dx / len           // perpendicular unit
+        const ex = (dx / len) * inflate, ey = (dy / len) * inflate  // longitudinal extension
+        const corners = [
+          [br.ax - ex + nx * halfW, br.ay - ey + ny * halfW],
+          [br.bx + ex + nx * halfW, br.by + ey + ny * halfW],
+          [br.bx + ex - nx * halfW, br.by + ey - ny * halfW],
+          [br.ax - ex - nx * halfW, br.ay - ey - ny * halfW],
+        ]
+        ctx.moveTo(corners[0][0], corners[0][1])
+        for (let i = 1; i < 4; i++) ctx.lineTo(corners[i][0], corners[i][1])
+        ctx.closePath()
+      }
+    }
+  }
+  // Cache the path for reuse (Path2D would be cleaner but breaks transforms).
+  City._traceLandPath = tracePath
 
   // Spawn portal — runa pulsante donde aparecen los recién llegados.
   // Top-down circular runic disc with rotating cross + 4 compass dots + sparkles.
@@ -74,20 +115,12 @@
     // Sandy shoreline ring just outside the world rect (the "beach edge")
     City.drawShoreline(ctx)
 
-    // ─── Grass tiles (clipped to the world rect — this is the island) ──────
+    // ─── Grass tiles (clipped to the land mask: 3 islands + plaza + bridges) ──
     // Prefer the Sprout Lands grass tile (16-px source rendered at 32-px world)
     // when the asset has loaded. Fall back to two-tone procedural fillRect.
     ctx.save()
-    ctx.beginPath()
-    // Round the world corners slightly so the island reads as an island
-    // rather than a hard rectangle of grass floating on the sea.
-    const ISLAND_R = 36
-    if (ctx.roundRect) {
-      ctx.beginPath(); ctx.roundRect(0, 0, W, H, ISLAND_R)
-    } else {
-      ctx.rect(0, 0, W, H)
-    }
-    ctx.clip()
+    tracePath(ctx, 0)
+    ctx.clip('evenodd')
     const grassSheet = window.Assets && Assets.get('tile:grass_sheet')
     if (grassSheet && GRASS_TILE_RECT) {
       const TILE = 32  // 16px source × 2 zoom = 32px world per tile
@@ -125,29 +158,11 @@
     }
     ctx.restore() // end grass clip
 
-    // ─── Paths (plaza → each zone) ──────────────────────────────────────────
-    const cx = PLAZA.x, cy = PLAZA.y
-    const drawPath = (ax, ay, bx, by, width, color, edge) => {
-      const dx = bx - ax, dy = by - ay
-      const angle = Math.atan2(dy, dx)
-      const len = Math.hypot(dx, dy)
-      ctx.save()
-      ctx.translate(ax, ay)
-      ctx.rotate(angle)
-      if (edge) {
-        ctx.fillStyle = edge
-        ctx.fillRect(0, -width/2 - 2, len, width + 4)
-      }
-      ctx.fillStyle = color
-      ctx.fillRect(0, -width/2, len, width)
-      ctx.restore()
-    }
-    ZONES.forEach(z => {
-      const tx = z.x + z.w/2, ty = z.y + z.h - 30
-      drawPath(cx, cy, tx, ty, 28, '#d6b988', '#a08868')
-    })
+    // ─── Wooden bridges (planks on top of bridge grass) ─────────────────────
+    City.drawBridges(ctx)
 
     // ─── Plaza: cobble ellipse ──────────────────────────────────────────────
+    const cx = PLAZA.x, cy = PLAZA.y
     ctx.save()
     ctx.beginPath()
     ctx.ellipse(cx, cy, PLAZA.rx, PLAZA.ry, 0, 0, Math.PI * 2)
@@ -173,17 +188,22 @@
 
     // ─── Land-only decorations from here on ─────────────────────────────────
 
-    // Bushes / flower patches — sprite anchored at (d.x, d.y) base.
+    // Bushes / flower patches — placed within the island bounds so they're
+    // not floating on water after the island reorg.
     if (sp) {
       const decoSpots = [
-        { kind: 'bush',   x: 60,   y: 380, i: 0 },
-        { kind: 'bush',   x: 670,  y: 700, i: 1 },
-        { kind: 'bush',   x: 1220, y: 660, i: 2 },
-        { kind: 'bush',   x: 220,  y: 700, i: 3 },
-        { kind: 'flower', x: 350,  y: 80,  i: 0 },
-        { kind: 'flower', x: 850,  y: 700, i: 1 },
-        { kind: 'flower', x: 1100, y: 80,  i: 2 },
-        { kind: 'flower', x: 60,   y: 500, i: 0 },
+        // ISLA NW
+        { kind: 'bush',   x: 200, y: 330, i: 0 },
+        { kind: 'flower', x: 350, y: 90,  i: 0 },
+        // ISLA NE
+        { kind: 'bush',   x: 1100, y: 340, i: 1 },
+        { kind: 'flower', x: 870,  y: 350, i: 2 },
+        // ISLA SE
+        { kind: 'bush',   x: 1220, y: 670, i: 2 },
+        { kind: 'bush',   x: 870,  y: 670, i: 3 },
+        { kind: 'flower', x: 1100, y: 690, i: 1 },
+        // PLAZA edges
+        { kind: 'flower', x: 510, y: 530, i: 0 },
       ]
       for (const d of decoSpots) {
         const img = d.kind === 'bush' ? sp.bushes[d.i % sp.bushes.length] : sp.flowers[d.i % sp.flowers.length]
@@ -216,34 +236,56 @@
     }
   }
 
-  // Sandy shoreline ring just outside the world rect — sells the "this grass
-  // is an island" reading. Drawn AFTER water (so it sits between sea and
-  // grass) and BEFORE the grass clip (so the band shows on the sea side).
+  // Sandy shoreline ring around every land mass (3 islands + plaza + bridges).
+  // Drawn AFTER water and BEFORE grass so the band shows on the sea side.
+  // Two passes (sand band + wet-sand inner) using the shared land path
+  // inflated by different amounts; even-odd fill carves the band shape.
   City.drawShoreline = function (ctx) {
-    const ISLAND_R = 36
     const sandWidth = 18
     ctx.save()
+    // Outer sand band
     ctx.fillStyle = '#f0d8a0'
-    ctx.beginPath()
-    if (ctx.roundRect) {
-      ctx.roundRect(-sandWidth, -sandWidth, W + sandWidth * 2, H + sandWidth * 2, ISLAND_R + sandWidth)
-      ctx.roundRect(0, 0, W, H, ISLAND_R)
-    } else {
-      ctx.rect(-sandWidth, -sandWidth, W + sandWidth * 2, H + sandWidth * 2)
-      ctx.rect(0, 0, W, H)
-    }
+    tracePath(ctx, sandWidth)
+    tracePath(ctx, 0)
     ctx.fill('evenodd')
-    // Subtle wet-sand inner ring
+    // Inner wet-sand seam
     ctx.fillStyle = '#dcc080'
-    ctx.beginPath()
-    if (ctx.roundRect) {
-      ctx.roundRect(-2, -2, W + 4, H + 4, ISLAND_R + 2)
-      ctx.roundRect(0, 0, W, H, ISLAND_R)
-    } else {
-      ctx.rect(-2, -2, W + 4, H + 4)
-      ctx.rect(0, 0, W, H)
-    }
+    tracePath(ctx, 2)
+    tracePath(ctx, 0)
     ctx.fill('evenodd')
+    ctx.restore()
+  }
+
+  // Wooden bridge fill (planks). Drawn AFTER grass tiles so the wood sits on
+  // top of the underlying island grass where bridge meets island, but BEFORE
+  // entities so trees/buildings render on top.
+  City.drawBridges = function (ctx) {
+    if (!BRIDGES) return
+    ctx.save()
+    for (const br of BRIDGES) {
+      const dx = br.bx - br.ax, dy = br.by - br.ay
+      const len = Math.hypot(dx, dy) || 1
+      const angle = Math.atan2(dy, dx)
+      ctx.save()
+      ctx.translate((br.ax + br.bx) / 2, (br.ay + br.by) / 2)
+      ctx.rotate(angle)
+      const w = br.w
+      // Rope-edge (darker plank trim)
+      ctx.fillStyle = '#7a4d2a'
+      ctx.fillRect(-len/2 - 4, -w/2 - 2, len + 8, w + 4)
+      // Planks (alternating wood tones, perpendicular to bridge axis)
+      const plankW = 6
+      for (let x = -len/2; x < len/2; x += plankW) {
+        ctx.fillStyle = ((x / plankW) | 0) % 2 ? '#c89a68' : '#b88858'
+        ctx.fillRect(x, -w/2, plankW - 1, w)
+      }
+      // Plank seams (subtle dark lines)
+      ctx.fillStyle = 'rgba(80,55,30,0.35)'
+      for (let x = -len/2; x < len/2; x += plankW) {
+        ctx.fillRect(x + plankW - 1, -w/2, 1, w)
+      }
+      ctx.restore()
+    }
     ctx.restore()
   }
 })()
