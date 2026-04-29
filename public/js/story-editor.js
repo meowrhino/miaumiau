@@ -43,17 +43,21 @@ const StoryEditor = {
 
   async loadImage(file) {
     if (!file) return
-    const blob = await compressImage(file, 'story')
-    StoryEditor.bgBlob = blob
-    const url = URL.createObjectURL(blob)
-    const img = $('#storyEditorBg')
-    img.src = url
-    img.onload = () => {
-      const container = $('#storyEditorCanvas')
-      const canvas = StoryEditor.canvas
-      canvas.width = container.offsetWidth
-      canvas.height = container.offsetHeight
-      StoryEditor.ctx = canvas.getContext('2d')
+    try {
+      const blob = await compressImage(file, 'story')
+      StoryEditor.bgBlob = blob
+      const url = URL.createObjectURL(blob)
+      const img = $('#storyEditorBg')
+      img.src = url
+      img.onload = () => {
+        const container = $('#storyEditorCanvas')
+        const canvas = StoryEditor.canvas
+        canvas.width = container.offsetWidth
+        canvas.height = container.offsetHeight
+        StoryEditor.ctx = canvas.getContext('2d')
+      }
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('error procesando imagen: ' + (e.message || 'desconocido'))
     }
   },
 
