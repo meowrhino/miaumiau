@@ -40,6 +40,11 @@
   const PLAZA = { x: 400, y: 510, rx: 200, ry: 110 }
   const FOUNTAIN = { x: 380, y: 510, r: 36 }
 
+  // Spawning point — runa al norte del plaza, donde aparecen los recién
+  // llegados al pueblo. Visualmente se dibuja un círculo rúnico pulsante
+  // sobre el cobble; sirve de "te encuentras aquí" + ritual de bienvenida.
+  const SPAWN = { x: 400, y: 460 }
+
   // Decorative buildings — visual filler so the village reads as a pueblo, not a hexagon.
   // None of these are interactive (no doormat trigger). They depth-sort with everything else.
   const DECO_BUILDINGS = [
@@ -108,7 +113,7 @@
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ISO_BBOX_W, ISO_BBOX_H,
     w2s, s2w,
-    ZONES, PLAZA, FOUNTAIN,
+    ZONES, PLAZA, FOUNTAIN, SPAWN,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
   }

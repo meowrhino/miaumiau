@@ -3,7 +3,67 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { W, H, ISO_BBOX_W, ISO_BBOX_H, w2s, s2w, ZONES, PLAZA } = window.CityConfig
+  const { W, H, ISO_BBOX_W, ISO_BBOX_H, w2s, s2w, ZONES, PLAZA, SPAWN } = window.CityConfig
+
+  // Spawn portal — runa pulsante donde aparecen los recién llegados.
+  // Dibujada en iso, sobre el suelo (después del plaza cobble pero antes
+  // de las entidades depth-sorted). Es parte de la "decoración del suelo".
+  City.drawSpawnPortal = function (ctx, now) {
+    const { sx: px, sy: py } = w2s(SPAWN.x, SPAWN.y)
+    const pulse = (Math.sin(now / 720) + 1) * 0.5            // 0..1
+    const rot = now * 0.0006                                  // slow spin for the rune ring
+
+    // Outer warm halo (big soft ellipse, very faint)
+    ctx.fillStyle = `rgba(255, 220, 130, ${0.10 + pulse * 0.10})`
+    ctx.beginPath(); ctx.ellipse(px, py, 56, 26, 0, 0, Math.PI * 2); ctx.fill()
+
+    // Mid ring (gold tint)
+    ctx.fillStyle = `rgba(220, 170, 80, ${0.32 + pulse * 0.18})`
+    ctx.beginPath(); ctx.ellipse(px, py, 38, 18, 0, 0, Math.PI * 2); ctx.fill()
+
+    // Inner disc (warm cream)
+    ctx.fillStyle = `rgba(255, 245, 200, ${0.55 + pulse * 0.20})`
+    ctx.beginPath(); ctx.ellipse(px, py, 24, 11, 0, 0, Math.PI * 2); ctx.fill()
+
+    // Rune cross at the center
+    ctx.save()
+    ctx.translate(px, py)
+    ctx.rotate(rot)
+    ctx.strokeStyle = `rgba(160, 100, 40, ${0.55 + pulse * 0.25})`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(-16, 0); ctx.lineTo(16, 0)
+    ctx.moveTo(0, -8);  ctx.lineTo(0, 8)
+    ctx.stroke()
+    // Diagonal accent strokes (like a 8-point compass)
+    ctx.strokeStyle = `rgba(160, 100, 40, ${0.30 + pulse * 0.15})`
+    ctx.beginPath()
+    ctx.moveTo(-11, -5); ctx.lineTo(11, 5)
+    ctx.moveTo(-11, 5);  ctx.lineTo(11, -5)
+    ctx.stroke()
+    ctx.restore()
+
+    // 4 outer rune dots at compass points (counter-rotating for sparkle)
+    const dotRot = -rot
+    const dotR = 32, dotY = 15
+    for (let i = 0; i < 4; i++) {
+      const a = dotRot + (i * Math.PI / 2)
+      const dx = px + Math.cos(a) * dotR
+      const dy = py + Math.sin(a) * dotY
+      ctx.fillStyle = `rgba(255, 200, 100, ${0.70 + pulse * 0.30})`
+      ctx.beginPath(); ctx.arc(dx, dy, 1.8, 0, Math.PI * 2); ctx.fill()
+    }
+
+    // Floating sparkle particles rising
+    for (let i = 0; i < 4; i++) {
+      const t = ((now / 1700) + i * 0.25) % 1
+      const angle = (i * 1.57) + t * 0.6
+      const spx = px + Math.cos(angle) * (10 + t * 10)
+      const spy = py - 4 - t * 22
+      ctx.fillStyle = `rgba(255, 240, 180, ${0.65 - t * 0.65})`
+      ctx.fillRect(spx | 0, spy | 0, 2, 2)
+    }
+  }
 
   City.drawGround = function (ctx, now, visL, visT, visR, visB) {
     visL = visL ?? -ISO_BBOX_W/2; visT = visT ?? 0; visR = visR ?? ISO_BBOX_W/2; visB = visB ?? ISO_BBOX_H
@@ -139,6 +199,9 @@
     ctx.closePath()
     ctx.stroke()
     ctx.restore()
+
+    // ─── Spawn portal (runa pulsante en el plaza) ────────────────────────────
+    City.drawSpawnPortal(ctx, now)
 
     // Bushes / flower patches as billboarded sprites at their iso position
     if (sp) {

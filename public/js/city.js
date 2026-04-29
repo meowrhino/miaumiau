@@ -10,7 +10,7 @@
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ISO_BBOX_W, ISO_BBOX_H,
     w2s, s2w,
-    ZONES, PLAZA, FOUNTAIN,
+    ZONES, PLAZA, FOUNTAIN, SPAWN,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
   } = window.CityConfig
@@ -21,7 +21,7 @@
     last: 0,
     keys: { up: false, down: false, left: false, right: false },
     target: null,  // {x,y} click-to-walk
-    player: { x: PLAZA.x, y: PLAZA.y, dir: 0, walking: false, color: 'Coral' },
+    player: { x: SPAWN.x, y: SPAWN.y, dir: 0, walking: false, color: 'Coral' },
     currentZone: null,
     mascots: {},  // zoneId → poporing img bitmap
     others: [],          // [{user_id, zone, x, y, username, color, avatar_seed, sprite}]
