@@ -69,6 +69,7 @@ export function openChat(other: PublicUser): void {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') void send() })
 
   current = { panel, uid: other.id, timer: window.setInterval(refresh, 3000) }
+  panel.onClose(() => { if (current?.timer) clearInterval(current.timer); current = null })
   panel.open()
   void refresh().then(() => input.focus())
 }

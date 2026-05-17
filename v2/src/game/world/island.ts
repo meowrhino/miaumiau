@@ -6,7 +6,17 @@ import { WORLD_W, WORLD_H } from '../../config'
 export interface SheetRect { sx: number; sy: number; sw: number; sh: number }
 
 // ─── Sheets de Sprout Lands ──────────────────────────────────────────────
-export const GRASS_RECT: SheetRect = { sx: 96, sy: 224, sw: 16, sh: 16 }
+// Múltiples variantes de hierba — esparcir random rompe el aspecto plano.
+// (Sprout grass_sheet bottom tiene 3 bloques grandes con variedad interna.)
+export const GRASS_VARIANTS: SheetRect[] = [
+  { sx: 16,  sy: 240, sw: 16, sh: 16 }, // plain 1
+  { sx: 48,  sy: 256, sw: 16, sh: 16 }, // plain 2
+  { sx: 96,  sy: 224, sw: 16, sh: 16 }, // plain 3
+  { sx: 112, sy: 256, sw: 16, sh: 16 }, // con detalle
+  { sx: 32,  sy: 336, sw: 16, sh: 16 }, // con flor
+  { sx: 96,  sy: 320, sw: 16, sh: 16 }, // con flor alt
+]
+export const GRASS_RECT = GRASS_VARIANTS[0]   // fallback usado en deco
 
 const HOUSE_RECT = (col: number, row: number): SheetRect =>
   ({ sx: col * 64, sy: row * 64, sw: 64, sh: 64 })
@@ -125,6 +135,63 @@ export const TREES: TreeDeco[] = [
   { variant: 3, x: 1000, y: 690 },
 ]
 export const TREE_RECT_FOR = (v: number): SheetRect => TREE_RECTS[v % TREE_RECTS.length]
+
+// ─── NPCs ambientales (poporings estáticos que dan vida sin ser jugadores) ─
+export interface AmbientNpc { x: number; y: number; color: number; name?: string }
+export const AMBIENT_NPCS: AmbientNpc[] = [
+  // NW — alrededor del café
+  { x: 215, y: 235, color: 0xffb86c, name: 'pep' },          // junto al café
+  { x: 280, y: 305, color: 0xa8e6cf },                       // entre café y tablón
+  // NE — junto al miradero / mill
+  { x: 985, y: 215, color: 0xc9b6f0, name: 'lulu' },         // junto al miradero
+  { x: 1175, y: 365, color: 0xffd6a5 },                      // junto al mill
+  // SE — banquito / casita / bakery
+  { x: 845, y: 615, color: 0xff8b8b, name: 'kiki' },         // junto al banquito
+  { x: 850, y: 680, color: 0xfff59d },                       // junto a la bakery
+  // PLAZA — la zona más viva
+  { x: 600, y: 510, color: 0x9fd8ff, name: 'tuto' },         // junto al stage
+  { x: 700, y: 530, color: 0xffc8dd },                       // junto al well
+]
+
+// ─── Flores en racimos (clusters de 3-5 flores en spots fijos) ───────────
+// Color RGB de cada pétalo; el grass sheet ya trae variantes con flores, pero
+// añadir racimos extra dibujados con primitivas concentra el ojo.
+export interface FlowerCluster { x: number; y: number; color: number; n: number }
+export const FLOWER_CLUSTERS: FlowerCluster[] = [
+  // NW
+  { x: 130, y: 200, color: 0xff8b8b, n: 4 },
+  { x: 380, y: 180, color: 0xfff59d, n: 5 },
+  { x: 100, y: 290, color: 0xffc8dd, n: 3 },
+  // NE
+  { x: 870, y: 130, color: 0xff8b8b, n: 4 },
+  { x: 1180, y: 95,  color: 0xfff59d, n: 3 },
+  { x: 1060, y: 340, color: 0xc9b6f0, n: 5 },
+  // SE
+  { x: 800, y: 510, color: 0xff8b8b, n: 4 },
+  { x: 950, y: 670, color: 0xffc8dd, n: 4 },
+  { x: 1100, y: 480, color: 0xfff59d, n: 3 },
+  // Plaza (junto a stalls)
+  { x: 525, y: 480, color: 0xff8b8b, n: 3 },
+  { x: 750, y: 480, color: 0xc9b6f0, n: 3 },
+]
+
+// ─── Props "contra pared" — barriles, sacos, macetas junto a cada zona ───
+export interface WallProp { x: number; y: number; kind: 'barrel' | 'sack' | 'pot' | 'box' }
+export const WALL_PROPS: WallProp[] = [
+  // cada par junto a una zone (cerca del doormat)
+  { x: 115, y: 220, kind: 'barrel' },                      // café
+  { x: 225, y: 215, kind: 'pot' },
+  { x: 280, y: 295, kind: 'sack' },                        // tablón
+  { x: 380, y: 290, kind: 'box' },
+  { x: 880, y: 195, kind: 'barrel' },                      // miradero
+  { x: 1000, y: 195, kind: 'pot' },
+  { x: 1085, y: 295, kind: 'sack' },                       // polaroid
+  { x: 1195, y: 295, kind: 'barrel' },
+  { x: 835, y: 595, kind: 'pot' },                         // banquito
+  { x: 945, y: 595, kind: 'box' },
+  { x: 1055, y: 655, kind: 'sack' },                       // casita
+  { x: 1165, y: 655, kind: 'pot' },
+]
 
 // ─── Colisión: ¿este punto está en tierra firme? ─────────────────────────
 function pointInRoundedRect(px: number, py: number, rect: Island): boolean {

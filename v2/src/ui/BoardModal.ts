@@ -50,9 +50,6 @@ const ZONE_TITLE: Record<Zone, string> = {
 }
 
 export function openBoard(zone: Zone): void {
-  // Si ya está abierto el mismo tablón, no hacemos nada (evita el flash
-  // "abre/cierra" cuando Phaser dispara pointerdown dos veces o el usuario
-  // re-clickea el edificio).
   if (current?.zone === zone) return
   closeBoard()
   const panel = createPanel()
@@ -97,13 +94,15 @@ export function openBoard(zone: Zone): void {
   btn.addEventListener('click', () => { void submit() })
 
   current = { panel, zone }
+  panel.onClose(() => { current = null })
   panel.open()
   void refresh()
 }
 
 export function closeBoard(): void {
   if (!current) return
-  current.panel.close()
-  setTimeout(() => current?.panel.destroy(), 250)
+  const c = current
+  c.panel.close()
+  setTimeout(() => c.panel.destroy(), 250)
   current = null
 }

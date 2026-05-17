@@ -5,7 +5,8 @@ import Phaser from 'phaser'
 import { WORLD_W, WORLD_H, WALK_SPEED, PALETTE } from '../../config'
 import {
   ZONES, ISLANDS, PLAZA, FOUNTAIN, SPAWN, BRIDGES, LAMPS, TREES,
-  DECO_BUILDINGS, GRASS_RECT, TREE_RECT_FOR,
+  DECO_BUILDINGS, GRASS_VARIANTS, TREE_RECT_FOR,
+  AMBIENT_NPCS, FLOWER_CLUSTERS, WALL_PROPS,
   isLand, zoneAt, type DecoBuilding, type SheetRect,
 } from '../world/island'
 import { Poporing } from '../systems/Poporing'
@@ -43,11 +44,15 @@ export class Town extends Phaser.Scene {
 
     this.drawWater()
     this.drawIslandsAndPlaza()
+    this.drawFlowerClusters()
     this.drawBridges()
     this.drawTrees()
     this.drawLamps()
     this.drawDecoBuildings()
+    this.drawWallProps()
     this.drawZones()
+    this.drawWindowLights()
+    this.drawAmbientNpcs()
     this.drawSpawnRune()
     this.drawFountain()
 
@@ -73,46 +78,73 @@ export class Town extends Phaser.Scene {
       const tex = this.textures.get(key)
       if (tex && !tex.has(name)) tex.add(name, 0, r.sx, r.sy, r.sw, r.sh)
     }
-    reg('sheet:grass', 'tile', GRASS_RECT)
+    GRASS_VARIANTS.forEach((r, i) => reg('sheet:grass', `g${i}`, r))
     for (const z of ZONES) reg(`sheet:${z.sheet}`, z.id, z.rect)
     TREES.forEach((t, i) => reg('sheet:trees', `t${i}`, TREE_RECT_FOR(t.variant)))
   }
 
   // ─── Render: agua, islas, plaza ──────────────────────────────────────
   private drawWater(): void {
-    // Fondo de mar plano con bandas de wave más oscuras (estática, evita
-    // tween cost). Sparkles añadidos como ronda de puntos.
+    // Fondo de mar — capas: base + bandas onduladas + sparkles + spuma costa.
     this.add.rectangle(WORLD_W / 2, WORLD_H / 2, WORLD_W, WORLD_H, PALETTE.water).setDepth(-2000)
     const g = this.add.graphics().setDepth(-1990)
-    g.fillStyle(PALETTE.waterDk, 0.25)
-    for (let y = 0; y < WORLD_H; y += 14) g.fillRect(0, y, WORLD_W, 2)
-    // Sparkles deterministas (no animados — añadir tween cuesta y pesa).
-    g.fillStyle(0xffffff, 0.8)
-    for (let i = 0; i < 60; i++) {
+    // Bandas onduladas (sin animar — caras varias capas dan textura)
+    g.fillStyle(PALETTE.waterDk, 0.18)
+    for (let y = 0; y < WORLD_H; y += 18) g.fillRect(0, y, WORLD_W, 2)
+    g.fillStyle(0xffffff, 0.06)
+    for (let y = 6; y < WORLD_H; y += 18) g.fillRect(0, y, WORLD_W, 1)
+    // Sparkles densos
+    g.fillStyle(0xffffff, 0.9)
+    for (let i = 0; i < 160; i++) {
       const sx = (i * 71) % WORLD_W
       const sy = (i * 137) % WORLD_H
-      // sólo pintar sparkles donde sea agua (fuera de islas/plaza/bridges)
-      if (!isLand(sx, sy)) g.fillRect(sx, sy, 2, 1)
+      if (!isLand(sx, sy)) {
+        g.fillRect(sx, sy, 2, 1)
+        if (i % 3 === 0) g.fillRect(sx + 1, sy + 1, 1, 1)
+      }
     }
+    // Espuma — anillos ligeros alrededor de cada isla
+    const foam = this.add.graphics().setDepth(-1985)
+    foam.lineStyle(2, 0xffffff, 0.4)
+    for (const i of ISLANDS) {
+      foam.strokeRoundedRect(i.x - 8, i.y - 8, i.w + 16, i.h + 16, i.r + 4)
+    }
+    foam.strokeEllipse(PLAZA.x, PLAZA.y, PLAZA.rx * 2 + 14, PLAZA.ry * 2 + 14)
   }
 
   private drawIslandsAndPlaza(): void {
-    // Las islas son rounded rects → tileSprite con grass + máscara, pero
-    // como Phaser no hace clip rounded fácilmente, pintamos un rect de grass
-    // por isla (los corners "redondeados" se simulan con shoreline encima).
+    // Cada isla se pinta celda a celda (16×16) eligiendo una variante de
+    // grass random determinística por (x,y). Romper el grid del único tile
+    // que había antes es el cambio que más cuesta detectar pero más vida da.
+    const VAR_N = GRASS_VARIANTS.length
     for (const i of ISLANDS) {
-      this.add.tileSprite(i.x, i.y, i.w, i.h, 'sheet:grass', 'tile')
-        .setOrigin(0, 0).setDepth(-1500)
+      for (let y = i.y; y < i.y + i.h; y += 16) {
+        for (let x = i.x; x < i.x + i.w; x += 16) {
+          // hash determinístico: misma celda → mismo tile en cada recarga
+          const h = ((x * 73856093) ^ (y * 19349663)) >>> 0
+          // 80% planos, 20% con detalle/flor
+          const idx = h % 100 < 80 ? h % 4 : 4 + (h % 2)
+          this.add.image(x, y, 'sheet:grass', `g${idx % VAR_N}`)
+            .setOrigin(0, 0).setDepth(-1500)
+        }
+      }
       this.drawShoreline(i.x, i.y, i.w, i.h, i.r)
     }
-    // Plaza ellipse: cobble plano + rim shadow.
+    // Plaza ellipse — cobble plano con rim
     const p = this.add.graphics().setDepth(-1500)
     p.fillStyle(PALETTE.path, 1)
     p.fillEllipse(PLAZA.x, PLAZA.y, PLAZA.rx * 2, PLAZA.ry * 2)
-    // Rim suave
     p.lineStyle(2, 0x000000, 0.12)
     p.strokeEllipse(PLAZA.x, PLAZA.y, PLAZA.rx * 2, PLAZA.ry * 2)
-    // Borde arenoso de la plaza (depth justo encima de la plaza)
+    // Cobbles dibujados como elipses pequeñas dispersas (textura visual)
+    p.fillStyle(0x000000, 0.06)
+    for (let i = 0; i < 90; i++) {
+      const a = (i * 137.5) * Math.PI / 180
+      const r = Math.sqrt(i / 90) * 0.9
+      const cx = PLAZA.x + Math.cos(a) * PLAZA.rx * r
+      const cy = PLAZA.y + Math.sin(a) * PLAZA.ry * r
+      p.fillEllipse(cx, cy, 6, 4)
+    }
     const shore = this.add.graphics().setDepth(-1490)
     shore.lineStyle(3, PALETTE.shore, 1)
     shore.strokeEllipse(PLAZA.x, PLAZA.y, PLAZA.rx * 2 + 6, PLAZA.ry * 2 + 6)
@@ -165,9 +197,9 @@ export class Town extends Phaser.Scene {
   // ─── Render: árboles ─────────────────────────────────────────────────
   private drawTrees(): void {
     TREES.forEach((t, i) => {
+      this.shadow(t.x, t.y + 4, 38, 10)   // sombra grande proyectada
       const img = this.add.image(t.x, t.y, 'sheet:trees', `t${i}`)
-        .setOrigin(0.5, 0.85)
-        .setScale(2)
+        .setOrigin(0.5, 0.85).setScale(2)
       img.setDepth(t.y + 30)
     })
   }
@@ -319,6 +351,8 @@ export class Town extends Phaser.Scene {
   private drawZones(): void {
     for (const z of ZONES) {
       const scale = z.w / z.rect.sw
+      // sombra dura bajo la casa — pega el sprite al suelo
+      this.shadow(z.cx, z.cy + z.h / 2 - 6, z.w * 0.55, 9)
       const img = this.add.image(z.cx, z.cy, `sheet:${z.sheet}`, z.id)
         .setOrigin(0.5, 0.5).setScale(scale)
       img.setDepth(z.cy + z.h / 2 - 4)
@@ -328,6 +362,90 @@ export class Town extends Phaser.Scene {
         fontFamily: 'sans-serif', fontSize: '11px', color: '#fff8e7',
         backgroundColor: 'rgba(26,26,46,0.6)', padding: { x: 4, y: 1 },
       }).setOrigin(0.5, 0).setDepth(z.cy + z.h / 2 - 3)
+    }
+  }
+
+  // ─── Sombra dura (helper) ────────────────────────────────────────────
+  private shadow(x: number, y: number, w: number, h: number): void {
+    const g = this.add.graphics().setDepth(y - 1)
+    g.fillStyle(0x000000, 0.22); g.fillEllipse(x, y, w, h)
+  }
+
+  // ─── Render: flores en racimos ───────────────────────────────────────
+  private drawFlowerClusters(): void {
+    for (const f of FLOWER_CLUSTERS) {
+      const g = this.add.graphics().setDepth(f.y - 1)
+      // verde del tallo/follaje suave
+      g.fillStyle(0x4a8a3a, 0.35); g.fillEllipse(f.x, f.y + 2, 18, 6)
+      // pétalos esparcidos
+      for (let i = 0; i < f.n; i++) {
+        const a = (i / f.n) * Math.PI * 2 + (f.x * 0.1)
+        const r = 5 + (i % 2) * 2
+        const px = f.x + Math.cos(a) * r, py = f.y + Math.sin(a) * r * 0.6
+        g.fillStyle(f.color, 1); g.fillCircle(px, py, 1.8)
+        g.fillStyle(0xfff59d, 1); g.fillCircle(px, py, 0.8)  // centro amarillo
+      }
+    }
+  }
+
+  // ─── Render: luz cálida en ventanas (subtle pulse al final) ─────────
+  private windowGlows: Array<{ g: Phaser.GameObjects.Graphics; x: number; y: number; phase: number }> = []
+  private drawWindowLights(): void {
+    // cada zone tiene su ventana en mitad superior de la casa
+    for (const z of ZONES) {
+      const wx = z.cx - z.w * 0.22, wy = z.cy - z.h * 0.05
+      const g = this.add.graphics().setDepth(z.cy + z.h / 2 - 5)
+      this.windowGlows.push({ g, x: wx, y: wy, phase: (z.cx + z.cy) * 0.01 })
+    }
+  }
+
+  // ─── Render: props pegados a paredes ─────────────────────────────────
+  private drawWallProps(): void {
+    for (const p of WALL_PROPS) {
+      const g = this.add.graphics().setDepth(p.y)
+      // sombrita
+      g.fillStyle(0x000000, 0.2); g.fillEllipse(p.x, p.y + 4, 16, 5)
+      switch (p.kind) {
+        case 'barrel':
+          g.fillStyle(0x8a5a3b, 1); g.fillRoundedRect(p.x - 6, p.y - 12, 12, 14, 2)
+          g.fillStyle(0x6b4128, 1); g.fillRect(p.x - 6, p.y - 9, 12, 2); g.fillRect(p.x - 6, p.y - 3, 12, 2)
+          g.fillStyle(0x3a3a3a, 1); g.fillRect(p.x - 6, p.y - 12, 12, 1)  // aro arriba
+          break
+        case 'sack':
+          g.fillStyle(0xd8c9a3, 1); g.fillRoundedRect(p.x - 7, p.y - 10, 14, 12, 4)
+          g.fillStyle(0xb09a72, 1); g.fillRect(p.x - 3, p.y - 11, 6, 2)   // cuello
+          break
+        case 'pot':
+          g.fillStyle(0x9b6b3f, 1); g.fillTriangle(p.x - 7, p.y - 6, p.x + 7, p.y - 6, p.x + 5, p.y + 2)
+          g.fillTriangle(p.x - 5, p.y - 6, p.x + 5, p.y - 6, p.x + 3, p.y + 2)  // simulamos trapezoide
+          g.fillStyle(0x4a8a3a, 1); g.fillCircle(p.x, p.y - 10, 5)   // planta
+          g.fillStyle(0xff8b8b, 1); g.fillCircle(p.x - 2, p.y - 13, 1.5); g.fillCircle(p.x + 3, p.y - 12, 1.5)
+          break
+        case 'box':
+          g.fillStyle(0xb98852, 1); g.fillRect(p.x - 7, p.y - 10, 14, 10)
+          g.fillStyle(0x6b4128, 1); g.fillRect(p.x - 7, p.y - 10, 14, 1); g.fillRect(p.x - 7, p.y - 6, 14, 1)
+          g.fillRect(p.x - 1, p.y - 10, 2, 10)
+          break
+      }
+    }
+  }
+
+  // ─── Render: NPCs ambientales (poporings sin nombre, decorativos) ───
+  private drawAmbientNpcs(): void {
+    for (const n of AMBIENT_NPCS) {
+      // sombra
+      this.shadow(n.x, n.y + 6, 18, 5)
+      const g = this.add.graphics().setDepth(n.y)
+      g.fillStyle(n.color, 1); g.fillRoundedRect(n.x - 9, n.y - 12, 18, 16, 8)
+      g.fillCircle(n.x - 5, n.y - 12, 3.5); g.fillCircle(n.x + 5, n.y - 12, 3.5)  // orejas
+      g.fillStyle(0x2a2a3a, 1); g.fillCircle(n.x - 3, n.y - 6, 1.2); g.fillCircle(n.x + 3, n.y - 6, 1.2)
+      // nombre opcional
+      if (n.name) {
+        this.add.text(n.x, n.y - 18, n.name, {
+          fontFamily: 'sans-serif', fontSize: '9px', color: '#fff8e7',
+          backgroundColor: 'rgba(26,26,46,0.5)', padding: { x: 3, y: 0 },
+        }).setOrigin(0.5, 1).setDepth(n.y)
+      }
     }
   }
 
@@ -387,6 +505,7 @@ export class Town extends Phaser.Scene {
     this.animateFountain()
     this.animateRune()
     this.animateMill()
+    this.animateWindows()
 
     if (!this.player) return
     this.player.tickIdle(delta)
@@ -442,6 +561,18 @@ export class Town extends Phaser.Scene {
       g.lineTo(x + Math.cos(a2) * 16, y + Math.sin(a2) * 16)
     }
     g.strokePath()
+  }
+
+  private animateWindows(): void {
+    // Las ventanas laten lentamente (flicker cálido). Una sola pasada por
+    // frame redibujando todos los glows — pocos objetos, coste mínimo.
+    for (const w of this.windowGlows) {
+      const t = this.fountainT * 0.6 + w.phase
+      const alpha = 0.55 + Math.sin(t) * 0.18
+      w.g.clear()
+      w.g.fillStyle(0xffd58c, alpha * 0.35); w.g.fillRect(w.x - 7, w.y - 5, 14, 10)
+      w.g.fillStyle(0xfff2b3, alpha)      ; w.g.fillRect(w.x - 4, w.y - 3, 8, 6)
+    }
   }
 
   private animateMill(): void {

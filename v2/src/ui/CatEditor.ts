@@ -78,6 +78,7 @@ export function openCatEditor(): void {
   })
 
   current = { panel }
+  panel.onClose(() => { current = null })
   panel.open()
 }
 

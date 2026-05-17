@@ -8,6 +8,7 @@ export interface PanelHandle {
   open(): void
   close(): void
   destroy(): void
+  onClose(cb: () => void): void   // se dispara cuando el user cierra (X o Esc)
 }
 
 export function createPanel(): PanelHandle {
@@ -29,12 +30,18 @@ export function createPanel(): PanelHandle {
   const closeBtn = root.querySelector('.close') as HTMLButtonElement
 
   let opening: number | null = null
+  const closeCbs = new Set<() => void>()
   const open = () => { opening = requestAnimationFrame(() => { opening = null; root.classList.add('open') }) }
   const close = () => { if (opening != null) { cancelAnimationFrame(opening); opening = null } ; root.classList.remove('open') }
-  closeBtn.addEventListener('click', close)
+  const userClose = () => { close(); for (const cb of closeCbs) cb() }
+  closeBtn.addEventListener('click', userClose)
+  // Esc cierra el panel encima
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') userClose() }
+  document.addEventListener('keydown', onKey)
 
   return {
     root, title, body, footer, open, close,
-    destroy: () => root.remove(),
+    onClose: (cb) => { closeCbs.add(cb) },
+    destroy: () => { document.removeEventListener('keydown', onKey); root.remove() },
   }
 }

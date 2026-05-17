@@ -43,9 +43,9 @@ export class Poporing extends Phaser.GameObjects.Container {
     const g = this.gfx
     g.clear()
     const c = colorOf(this.user)
-    // sombra
-    g.fillStyle(0x000000, 0.25)
-    g.fillEllipse(0, 6, 22, 6)
+    // sombra dura (más opaca = se pega al suelo)
+    g.fillStyle(0x000000, 0.32)
+    g.fillEllipse(0, 7, 24, 7)
     // cuerpo (gota)
     g.fillStyle(c, 1)
     g.fillRoundedRect(-11, -14, 22, 18, 9)
