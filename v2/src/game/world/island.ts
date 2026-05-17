@@ -1,38 +1,17 @@
-// Tilemap + capa de edificios. Tiles son 32×32 px y se pintan con
-// grass_sheet (Sprout Lands). Los edificios usan house_sheet con un
-// sub-rect distinto por zona.
-import { ISLAND_COLS, ISLAND_ROWS, TILE, PALETTE } from '../../config'
-
-export const TILE_WATER = 0
-export const TILE_GRASS = 1
-export const TILE_PATH = 2
-export type TileKind = 0 | 1 | 2
+// Geometría del pueblo: 3 islas + plaza central + puentes que las conectan.
+// Coordenadas absolutas en px (world = 1280×720). Reusa el layout del
+// legacy (city.config.js).
+import { WORLD_W, WORLD_H } from '../../config'
 
 export interface SheetRect { sx: number; sy: number; sw: number; sh: number }
 
-export interface Building {
-  id: string
-  label: string
-  sheet: 'house' | 'brick' | 'hut'
-  rect: SheetRect
-  x: number; y: number; w: number; h: number  // bbox en tiles
-  doorX: number; doorY: number                // doormat en tiles
-}
-
-export interface Decoration {
-  sheet: 'trees'
-  rect: SheetRect
-  x: number; y: number   // tile coords
-}
-
-// ─── Sub-rects de los sheets de Sprout Lands ─────────────────────────────
-// Tomados del legacy (city.config.js). Cada zona tiene su variante de techo.
+// ─── Sheets de Sprout Lands ──────────────────────────────────────────────
 export const GRASS_RECT: SheetRect = { sx: 96, sy: 224, sw: 16, sh: 16 }
 
 const HOUSE_RECT = (col: number, row: number): SheetRect =>
   ({ sx: col * 64, sy: row * 64, sw: 64, sh: 64 })
 
-// Grid del house_sheet (3×3, 64×64 c/u): blue, green, pink / yellow, orange, brown / red, purple, gray
+// Grid del house_sheet (3×3 de 64×64): blue/green/pink / yellow/orange/brown / red/purple/gray
 const HOUSE = {
   blue:   HOUSE_RECT(0, 0), green:  HOUSE_RECT(1, 0), pink:   HOUSE_RECT(2, 0),
   yellow: HOUSE_RECT(0, 1), orange: HOUSE_RECT(1, 1), brown:  HOUSE_RECT(2, 1),
@@ -46,68 +25,170 @@ const TREE_RECTS: SheetRect[] = [
   { sx: 160, sy: 0, sw: 32, sh: 48 },
 ]
 
-// ─── Layout de la isla ───────────────────────────────────────────────────
-function buildTiles(): TileKind[][] {
-  const cols = ISLAND_COLS, rows = ISLAND_ROWS
-  const t: TileKind[][] = []
-  for (let y = 0; y < rows; y++) {
-    const row: TileKind[] = []
-    for (let x = 0; x < cols; x++) {
-      const insetX = Math.min(x, cols - 1 - x)
-      const insetY = Math.min(y, rows - 1 - y)
-      // Borde de mar + esquinas redondeadas
-      const isWater = insetX < 2 || insetY < 2 || (insetX + insetY < 4)
-      row.push(isWater ? TILE_WATER : TILE_GRASS)
+// ─── Islas y plaza ───────────────────────────────────────────────────────
+export const ISLAND_R = 36
+export interface Island { id: 'nw' | 'ne' | 'se'; x: number; y: number; w: number; h: number; r: number }
+
+export const ISLANDS: Island[] = [
+  { id: 'nw', x: 40,  y: 60,  w: 400, h: 290, r: ISLAND_R },
+  { id: 'ne', x: 820, y: 40,  w: 420, h: 320, r: ISLAND_R },
+  { id: 'se', x: 760, y: 460, w: 480, h: 240, r: ISLAND_R },
+]
+
+// Plaza central (ellipse).
+export const PLAZA = { x: 640, y: 490, rx: 180, ry: 120 }
+export const FOUNTAIN = { x: 640, y: 510, r: 28 }
+export const SPAWN = { x: 640, y: 420 }
+
+// Bridges plaza ↔ islas. (ax,ay) está dentro de la plaza, (bx,by) dentro
+// de la isla → solapamiento que evita gaps de agua.
+export interface Bridge { ax: number; ay: number; bx: number; by: number; w: number }
+export const BRIDGES: Bridge[] = [
+  { ax: 510, ay: 410, bx: 415, by: 335, w: 26 }, // plaza → NW
+  { ax: 770, ay: 410, bx: 850, by: 345, w: 26 }, // plaza → NE
+  { ax: 810, ay: 510, bx: 770, by: 510, w: 26 }, // plaza → SE
+]
+
+// Lámparas (una por puente, en el midpoint).
+export const LAMPS = BRIDGES.map(b => ({
+  x: Math.round((b.ax + b.bx) / 2),
+  y: Math.round((b.ay + b.by) / 2),
+}))
+
+// ─── Zonas funcionales (con sprite de casa) ──────────────────────────────
+export type ZoneId = 'cafe' | 'tablon' | 'miradero' | 'polaroid' | 'banquito' | 'casita'
+
+export interface Zone {
+  id: ZoneId
+  label: string
+  badge: string                    // emoji-sello sobre el techo
+  sheet: 'house'
+  rect: SheetRect
+  // bbox del sprite render (centro x/y, ancho/alto)
+  cx: number; cy: number; w: number; h: number
+  // doormat (donde aterriza el poporing al entrar)
+  doorX: number; doorY: number
+}
+
+export const ZONES: Zone[] = [
+  // ─── ISLA NW (relax / social) ───
+  { id: 'cafe',     label: 'el café',     badge: '☕', sheet: 'house', rect: HOUSE.orange, cx: 170, cy: 170, w: 112, h: 112, doorX: 170, doorY: 240 },
+  { id: 'tablon',   label: 'el tablón',   badge: '📌', sheet: 'house', rect: HOUSE.blue,   cx: 330, cy: 250, w: 112, h: 112, doorX: 330, doorY: 320 },
+  // ─── ISLA NE (visual / alta) ───
+  { id: 'miradero', label: 'el miradero', badge: '🌙', sheet: 'house', rect: HOUSE.purple, cx: 940,  cy: 150, w: 112, h: 112, doorX: 940,  doorY: 220 },
+  { id: 'polaroid', label: 'la polaroid', badge: '📷', sheet: 'house', rect: HOUSE.yellow, cx: 1140, cy: 250, w: 112, h: 112, doorX: 1140, doorY: 320 },
+  // ─── ISLA SE (íntima / cozy) ───
+  { id: 'banquito', label: 'el banquito', badge: '🪑', sheet: 'house', rect: HOUSE.green,  cx: 890,  cy: 550, w: 112, h: 112, doorX: 890,  doorY: 620 },
+  { id: 'casita',   label: 'tu casa',     badge: '🏠', sheet: 'house', rect: HOUSE.pink,   cx: 1110, cy: 610, w: 112, h: 112, doorX: 1110, doorY: 680 },
+]
+
+// ─── Edificios decorativos (sin zona, sólo deco) ─────────────────────────
+export type DecoKind = 'cottage' | 'mill' | 'bakery' | 'workshop' | 'barn' | 'stall' | 'well' | 'stage'
+
+export interface DecoBuilding {
+  kind: DecoKind
+  x: number; y: number     // anchor inferior-centro
+  h: number                // alto en px (ancho derivado)
+  seed?: number            // para variar colores en cottage/stall
+}
+
+export const DECO_BUILDINGS: DecoBuilding[] = [
+  // ISLA NW
+  { kind: 'cottage', seed: 11, x: 100,  y: 120, h: 80 },
+  { kind: 'cottage', seed: 44, x: 410,  y: 130, h: 80 },
+  // ISLA NE
+  { kind: 'cottage', seed: 22, x: 840,  y: 110, h: 80 },
+  { kind: 'cottage', seed: 33, x: 1210, y: 110, h: 80 },
+  { kind: 'mill',    x: 1190, y: 320,  h: 130 },
+  // ISLA SE
+  { kind: 'bakery',   x: 800,  y: 680, h: 90 },
+  { kind: 'workshop', x: 1210, y: 540, h: 90 },
+  { kind: 'barn',     x: 1010, y: 690, h: 75 },
+  // PLAZA
+  { kind: 'well',  x: 720, y: 540, h: 50 },
+  { kind: 'stage', x: 560, y: 540, h: 42 },
+  { kind: 'stall', seed: 7,  x: 580, y: 458, h: 48 },
+  { kind: 'stall', seed: 13, x: 700, y: 458, h: 48 },
+]
+
+// ─── Árboles ─────────────────────────────────────────────────────────────
+export interface TreeDeco { variant: number; x: number; y: number }
+export const TREES: TreeDeco[] = [
+  // NW
+  { variant: 0, x: 60,  y: 110 }, { variant: 1, x: 260, y: 80  },
+  { variant: 2, x: 90,  y: 320 }, { variant: 3, x: 420, y: 300 },
+  // NE
+  { variant: 0, x: 830, y: 70  }, { variant: 3, x: 1090, y: 70 },
+  { variant: 1, x: 1240, y: 350 },
+  // SE
+  { variant: 2, x: 770, y: 480 }, { variant: 0, x: 1230, y: 560 },
+  { variant: 3, x: 1000, y: 690 },
+]
+export const TREE_RECT_FOR = (v: number): SheetRect => TREE_RECTS[v % TREE_RECTS.length]
+
+// ─── Colisión: ¿este punto está en tierra firme? ─────────────────────────
+function pointInRoundedRect(px: number, py: number, rect: Island): boolean {
+  const { x, y, w, h, r } = rect
+  if (px < x || py < y || px > x + w || py > y + h) return false
+  // Cuatro esquinas recortadas por arco de radio r
+  const corners = [
+    { cx: x + r,     cy: y + r,     vx: x,     vy: y     },
+    { cx: x + w - r, cy: y + r,     vx: x + w, vy: y     },
+    { cx: x + r,     cy: y + h - r, vx: x,     vy: y + h },
+    { cx: x + w - r, cy: y + h - r, vx: x + w, vy: y + h },
+  ]
+  for (const c of corners) {
+    if ((px - c.vx) * (px - c.vx) + (py - c.vy) * (py - c.vy) > 0) {
+      // dentro de la "esquina cuadrada" pero fuera del rectángulo central
+      const inXCorner = (c.vx === x ? px < x + r : px > x + w - r)
+      const inYCorner = (c.vy === y ? py < y + r : py > y + h - r)
+      if (inXCorner && inYCorner) {
+        const dx = px - c.cx, dy = py - c.cy
+        if (dx * dx + dy * dy > r * r) return false
+      }
     }
-    t.push(row)
   }
-  // Camino en cruz hacia los 4 edificios
-  const cx = Math.floor(cols / 2)
-  const cy = Math.floor(rows / 2)
-  for (let x = 4; x < cols - 4; x++) t[cy][x] = TILE_PATH
-  for (let y = 4; y < rows - 4; y++) t[y][cx] = TILE_PATH
-  return t
+  return true
 }
 
-export const TILES = buildTiles()
+function pointInEllipse(px: number, py: number, e: typeof PLAZA): boolean {
+  const dx = (px - e.x) / e.rx
+  const dy = (py - e.y) / e.ry
+  return dx * dx + dy * dy <= 1
+}
 
-export const BUILDINGS: Building[] = [
-  { id: 'cafe',     label: 'café',     sheet: 'house', rect: HOUSE.orange, x: 5,  y: 4,  w: 4, h: 4, doorX: 7,  doorY: 8 },
-  { id: 'tablon',   label: 'tablón',   sheet: 'house', rect: HOUSE.blue,   x: 21, y: 4,  w: 4, h: 4, doorX: 23, doorY: 8 },
-  { id: 'miradero', label: 'miradero', sheet: 'house', rect: HOUSE.purple, x: 5,  y: 13, w: 4, h: 4, doorX: 7,  doorY: 13 },
-  { id: 'casita',   label: 'tu casa',  sheet: 'house', rect: HOUSE.pink,   x: 21, y: 13, w: 4, h: 4, doorX: 23, doorY: 13 },
-]
+function pointInBridge(px: number, py: number, b: Bridge): boolean {
+  // Proyectamos el punto sobre el segmento (ax,ay)-(bx,by). Si la distancia
+  // perpendicular es ≤ w/2 y la proyección cae en [0,1], es puente.
+  const vx = b.bx - b.ax, vy = b.by - b.ay
+  const len2 = vx * vx + vy * vy
+  if (len2 === 0) return false
+  const t = ((px - b.ax) * vx + (py - b.ay) * vy) / len2
+  if (t < 0 || t > 1) return false
+  const projX = b.ax + t * vx, projY = b.ay + t * vy
+  const dx = px - projX, dy = py - projY
+  return dx * dx + dy * dy <= (b.w / 2) * (b.w / 2)
+}
 
-// Árboles decorativos esparcidos por la isla (no colisionan, sólo deco).
-export const TREES: Decoration[] = [
-  { sheet: 'trees', rect: TREE_RECTS[0], x: 3,  y: 4 },
-  { sheet: 'trees', rect: TREE_RECTS[1], x: 12, y: 3 },
-  { sheet: 'trees', rect: TREE_RECTS[2], x: 17, y: 3 },
-  { sheet: 'trees', rect: TREE_RECTS[3], x: 26, y: 4 },
-  { sheet: 'trees', rect: TREE_RECTS[1], x: 2,  y: 11 },
-  { sheet: 'trees', rect: TREE_RECTS[3], x: 14, y: 12 },
-  { sheet: 'trees', rect: TREE_RECTS[0], x: 27, y: 11 },
-  { sheet: 'trees', rect: TREE_RECTS[2], x: 4,  y: 19 },
-  { sheet: 'trees', rect: TREE_RECTS[1], x: 12, y: 19 },
-  { sheet: 'trees', rect: TREE_RECTS[3], x: 17, y: 19 },
-  { sheet: 'trees', rect: TREE_RECTS[0], x: 26, y: 19 },
-]
-
-// ─── Helpers ─────────────────────────────────────────────────────────────
+export function islandAt(px: number, py: number): Island | null {
+  for (const i of ISLANDS) if (pointInRoundedRect(px, py, i)) return i
+  return null
+}
+export function inPlaza(px: number, py: number): boolean { return pointInEllipse(px, py, PLAZA) }
+export function inBridge(px: number, py: number): boolean {
+  for (const b of BRIDGES) if (pointInBridge(px, py, b)) return true
+  return false
+}
 export function isLand(px: number, py: number): boolean {
-  const tx = Math.floor(px / TILE)
-  const ty = Math.floor(py / TILE)
-  if (tx < 0 || ty < 0 || tx >= ISLAND_COLS || ty >= ISLAND_ROWS) return false
-  return TILES[ty][tx] !== TILE_WATER
+  if (px < 0 || py < 0 || px > WORLD_W || py > WORLD_H) return false
+  return !!islandAt(px, py) || inPlaza(px, py) || inBridge(px, py)
 }
 
-export function buildingAt(px: number, py: number): Building | null {
-  const tx = Math.floor(px / TILE)
-  const ty = Math.floor(py / TILE)
-  for (const b of BUILDINGS) {
-    if (tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.h) return b
+// ─── Click sobre zona: ¿este punto cae en el bbox de alguna casa? ────────
+export function zoneAt(px: number, py: number): Zone | null {
+  for (const z of ZONES) {
+    if (px >= z.cx - z.w / 2 && px <= z.cx + z.w / 2 &&
+        py >= z.cy - z.h / 2 && py <= z.cy + z.h / 2) return z
   }
   return null
 }
-
-export function pathColor(): number { return PALETTE.path }

@@ -8,6 +8,7 @@ import { TOWN_EVENT } from './game/scenes/Town'
 import { mountHud } from './ui/Hud'
 import { openChat, closeChat } from './ui/ChatPanel'
 import { openBoard, closeBoard } from './ui/BoardModal'
+import { openCatEditor, closeCatEditor } from './ui/CatEditor'
 import { ZONES, type Zone } from './config'
 
 declare global { interface Window { __mm2_booted?: true } }
@@ -25,9 +26,12 @@ async function start(): Promise<void> {
     const hudOff = mountHud()
     town.bus.on(TOWN_EVENT.poporingClick, (user: PublicUser) => openChat(user))
     town.bus.on(TOWN_EVENT.buildingEnter, (id: string) => {
-      if ((ZONES as readonly string[]).includes(id)) openBoard(id as Zone)
+      // casita = tu casa = perfil propio → abre cat editor.
+      // El resto son tablones por zona.
+      if (id === 'casita') openCatEditor()
+      else if ((ZONES as readonly string[]).includes(id)) openBoard(id as Zone)
     })
-    cleanup = () => { hudOff(); closeChat(); closeBoard(); stopGame() }
+    cleanup = () => { hudOff(); closeChat(); closeBoard(); closeCatEditor(); stopGame() }
   }
 
   const mountLogin = () => {

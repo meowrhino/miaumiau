@@ -27,5 +27,5 @@ export interface PresenceTick {
   others: Array<PublicUser & { x: number; y: number; updated_at: string }>
 }
 
-export const ZONES = ['plaza', 'cafe', 'tablon', 'miradero'] as const
+export const ZONES = ['plaza', 'cafe', 'tablon', 'miradero', 'polaroid', 'banquito'] as const
 export type Zone = typeof ZONES[number]

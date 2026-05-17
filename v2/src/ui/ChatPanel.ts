@@ -25,6 +25,8 @@ function renderMsgs(body: HTMLElement, msgs: DmMessage[]): void {
 }
 
 export function openChat(other: PublicUser): void {
+  // Si ya está abierto el chat con esta misma persona, no recrear.
+  if (current?.uid === other.id) return
   closeChat()
   const panel = createPanel()
   panel.title.textContent = `miau con ${other.name}`

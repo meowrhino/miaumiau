@@ -4,7 +4,7 @@ import type { Zone } from '../config'
 import { toast } from './Toast'
 import { createPanel, type PanelHandle } from './Panel'
 
-let current: { panel: PanelHandle } | null = null
+let current: { panel: PanelHandle; zone: Zone } | null = null
 
 function timeAgo(ts: string): string {
   const t = new Date(ts.replace(' ', 'T') + 'Z').getTime()
@@ -42,12 +42,18 @@ function renderPosts(body: HTMLElement, posts: BoardPost[]): void {
 
 const ZONE_TITLE: Record<Zone, string> = {
   plaza:    '🌳 plaza',
-  cafe:     '☕ café',
-  tablon:   '📌 tablón',
-  miradero: '🌙 miradero',
+  cafe:     '☕ café — miaus rápidos',
+  tablon:   '📌 tablón — del día',
+  miradero: '🌙 miradero — notas de noche',
+  polaroid: '📷 polaroid — qué ves',
+  banquito: '🪑 banquito — conversación',
 }
 
 export function openBoard(zone: Zone): void {
+  // Si ya está abierto el mismo tablón, no hacemos nada (evita el flash
+  // "abre/cierra" cuando Phaser dispara pointerdown dos veces o el usuario
+  // re-clickea el edificio).
+  if (current?.zone === zone) return
   closeBoard()
   const panel = createPanel()
   panel.title.textContent = ZONE_TITLE[zone]
@@ -90,7 +96,7 @@ export function openBoard(zone: Zone): void {
 
   btn.addEventListener('click', () => { void submit() })
 
-  current = { panel }
+  current = { panel, zone }
   panel.open()
   void refresh()
 }
