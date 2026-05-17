@@ -9,12 +9,28 @@ import {
 import * as db from './db'
 import { generateCatSvg, colorHex, COLOR_NAMES } from './poporing'
 import { ConversationDO } from './conversation'
+import v2 from './v2'
 
 // El DO debe re-exportarse desde el entrypoint del Worker.
 export { ConversationDO }
 
 const app = new Hono<{ Bindings: Env }>()
 app.use('*', cors())
+
+// ─── v2: app rebuild en /v2/* (frontend) y /api/v2/* (backend) ───
+app.route('/api/v2', v2)
+app.get('/v2', (c) => Response.redirect(new URL('/v2/', c.req.url).toString(), 302))
+app.get('/v2/*', async (c) => {
+  const url = new URL(c.req.url)
+  // Servimos el asset si existe; si no, devolvemos el shell SPA de /v2/index.html.
+  const asset = await c.env.ASSETS.fetch(new Request(url.toString()))
+  if (asset.status !== 404) return asset
+  const shell = await c.env.ASSETS.fetch(new Request(new URL('/v2/index.html', url).toString()))
+  return new Response(shell.body, {
+    status: shell.status,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
+  })
+})
 
 // ─── Maintenance kill switch ───
 // When system_flags.maintenance_mode = '1', refuse writes (POST/PUT/DELETE).
