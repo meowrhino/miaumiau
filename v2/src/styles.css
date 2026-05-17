@@ -26,6 +26,9 @@ canvas {
   width: 100vw !important;
   height: 100vh !important;
   object-fit: contain;
+  /* Sprites de Sprout Lands son pixel-art: nada de smoothing al escalar. */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 /* ─── Login screen ─── */

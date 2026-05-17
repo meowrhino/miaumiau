@@ -26,8 +26,9 @@ export function startGame(parent: HTMLElement): { game: Phaser.Game; town: Town 
       height: RENDER_H,
     },
     scene: [Boot, town],
-    pixelArt: false,
+    pixelArt: true,    // sprites de Sprout Lands son pixel-art: NO interpolar
     banner: false,
+    render: { antialias: false, roundPixels: true },
   })
   return { game, town }
 }

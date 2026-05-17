@@ -1,24 +1,25 @@
-// Escena principal: el pueblo. Renderiza tilemap, dibuja edificios, controla
-// el poporing del jugador (click-to-walk), pinta los otros poporings online, y
-// emite eventos hacia el DOM cuando hay que abrir chat o entrar a un edificio.
+// Escena principal: el pueblo. Pinta el suelo con tiles de Sprout Lands,
+// edificios con sub-rects del house_sheet, árboles, y controla movimiento +
+// presencia. Emite eventos hacia el DOM (chat, board) por town.bus.
 import Phaser from 'phaser'
 import { TILE, WORLD_W, WORLD_H, WALK_SPEED, PALETTE, ISLAND_COLS, ISLAND_ROWS } from '../../config'
-import { BUILDINGS, TILES, isLand, buildingAt, tileColor } from '../world/island'
+import { BUILDINGS, TILES, TILE_WATER, TILE_PATH, TREES, GRASS_RECT, isLand, buildingAt, type SheetRect } from '../world/island'
 import { Poporing } from '../systems/Poporing'
 import { Net } from '../systems/Net'
 import { me } from '../../state'
 import type { PresenceOther } from '../../api'
 
-// Eventos que la escena emite hacia el DOM (main.ts los conecta a los paneles).
 export const TOWN_EVENT = {
   poporingClick: 'town:poporingClick',
   buildingEnter: 'town:buildingEnter',
 } as const
 
+// Emoji "sello" sobre el techo de cada zona — pista visual rápida de qué es.
+const ZONE_BADGE: Record<string, string> = {
+  cafe: '☕', tablon: '📌', miradero: '🌙', casita: '🏠',
+}
+
 export class Town extends Phaser.Scene {
-  // bus es un emitter propio (no el this.events built-in, que sólo existe
-  // cuando la escena ya está añadida al SceneManager). main.ts se suscribe
-  // a bus desde el momento en que se construye la Town.
   public readonly bus = new Phaser.Events.EventEmitter()
   private net = new Net()
   private player?: Poporing
@@ -30,79 +31,145 @@ export class Town extends Phaser.Scene {
   constructor() { super('Town') }
 
   create(): void {
-    this.cameras.main.setBackgroundColor(PALETTE.bg)
+    this.cameras.main.setBackgroundColor(PALETTE.water)
     this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H)
+    this.registerFrames()
 
-    this.drawGround()
+    this.drawWater()
+    this.drawGrass()
+    this.drawPaths()
+    this.drawShore()
+    this.drawTrees()
     this.drawBuildings()
 
     const meUser = me.get()
-    if (!meUser) return  // protegido por main.ts, pero por si acaso
+    if (!meUser) return
 
     const spawn = this.tileToWorld(Math.floor(ISLAND_COLS / 2), Math.floor(ISLAND_ROWS / 2))
     this.player = new Poporing(this, spawn.x, spawn.y, meUser)
-    this.targetX = spawn.x
-    this.targetY = spawn.y
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
+    this.targetX = spawn.x; this.targetY = spawn.y
+    this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onPointer(p))
 
-    // Sync otros poporings al recibir tick de presencia
     this.net.onOthers((list) => this.applyOthers(list))
     this.net.updatePosition(this.player.x, this.player.y, null)
     this.net.start()
-
   }
 
   shutdown(): void { this.net.stop() }
 
-  // ─── Render ───
-  private drawGround(): void {
-    const g = this.add.graphics().setDepth(-1000)
+  // ─── Frames ──────────────────────────────────────────────────────────
+  // Phaser no soporta dibujar sub-rects arbitrarios de una imagen sin
+  // registrarlos como frames. Lo hacemos una vez al inicio.
+  private registerFrames(): void {
+    const reg = (key: string, name: string, r: SheetRect) => {
+      const tex = this.textures.get(key)
+      if (tex && !tex.has(name)) tex.add(name, 0, r.sx, r.sy, r.sw, r.sh)
+    }
+    reg('sheet:grass', 'tile', GRASS_RECT)
+    for (const b of BUILDINGS) reg(`sheet:${b.sheet}`, b.id, b.rect)
+    TREES.forEach((d, i) => reg('sheet:trees', `t${i}`, d.rect))
+  }
+
+  // ─── Render ──────────────────────────────────────────────────────────
+  private drawWater(): void {
+    // Fondo de mar — un solo rect. El grass se pinta encima donde toca.
+    this.add.rectangle(WORLD_W / 2, WORLD_H / 2, WORLD_W, WORLD_H, PALETTE.water)
+      .setDepth(-2000)
+  }
+
+  private drawGrass(): void {
+    // TileSprite tilea la textura del frame 'tile' del grass sheet sobre
+    // toda la zona de tierra. Sale baratísimo (un solo draw call).
     for (let y = 0; y < ISLAND_ROWS; y++) {
-      for (let x = 0; x < ISLAND_COLS; x++) {
-        g.fillStyle(tileColor(TILES[y][x]), 1)
-        g.fillRect(x * TILE, y * TILE, TILE, TILE)
+      let runStart = -1
+      for (let x = 0; x <= ISLAND_COLS; x++) {
+        const isLandTile = x < ISLAND_COLS && TILES[y][x] !== TILE_WATER
+        if (isLandTile && runStart === -1) runStart = x
+        if (!isLandTile && runStart !== -1) {
+          const w = (x - runStart) * TILE
+          this.add.tileSprite(runStart * TILE, y * TILE, w, TILE, 'sheet:grass', 'tile')
+            .setOrigin(0, 0).setDepth(-1500)
+          runStart = -1
+        }
       }
     }
   }
 
-  private drawBuildings(): void {
-    for (const b of BUILDINGS) {
-      const px = b.x * TILE, py = b.y * TILE
-      const w = b.w * TILE, h = b.h * TILE
-      const g = this.add.graphics()
-      g.setDepth(py + h - 10)
-      // sombra
-      g.fillStyle(0x000000, 0.18); g.fillEllipse(px + w / 2, py + h + 4, w * 0.85, 10)
-      // pared
-      g.fillStyle(PALETTE.cream, 1); g.fillRoundedRect(px, py + 8, w, h - 8, 4)
-      // tejado
-      g.fillStyle(0xff8b8b, 1)
-      g.beginPath()
-      g.moveTo(px - 4, py + 14)
-      g.lineTo(px + w / 2, py - 6)
-      g.lineTo(px + w + 4, py + 14)
-      g.closePath()
-      g.fillPath()
-      // puerta + ventana
-      g.fillStyle(0x6b4f3b, 1); g.fillRect(px + w / 2 - 6, py + h - 16, 12, 16)
-      g.fillStyle(0xfff2b3, 1); g.fillCircle(px + 10, py + 18, 4)
-      g.fillCircle(px + w - 10, py + 18, 4)
-      // cartel emoji + label
-      this.add.text(px + w / 2, py - 18, b.emoji, { fontSize: '18px' }).setOrigin(0.5).setDepth(py + h - 9)
-      this.add.text(px + w / 2, py + h + 14, b.label, {
-        fontFamily: 'sans-serif', fontSize: '11px', color: '#fff8e7',
-        backgroundColor: 'rgba(26,26,46,0.6)', padding: { x: 4, y: 1 },
-      }).setOrigin(0.5).setDepth(py + h - 9)
+  private drawPaths(): void {
+    // Camino marrón sobre el grass (rect plano, queda elegante y simple).
+    for (let y = 0; y < ISLAND_ROWS; y++) {
+      for (let x = 0; x < ISLAND_COLS; x++) {
+        if (TILES[y][x] !== TILE_PATH) continue
+        this.add.rectangle(x * TILE + TILE / 2, y * TILE + TILE / 2, TILE, TILE, PALETTE.path)
+          .setDepth(-1400)
+      }
     }
   }
 
-  // ─── Input ───
+  private drawShore(): void {
+    // Borde arenoso entre grass y agua (línea fina cream alrededor de cada
+    // tile que tenga vecino de agua). Da el toque "isla" sin tilemap real.
+    const g = this.add.graphics().setDepth(-1450)
+    g.lineStyle(2, PALETTE.shore, 0.9)
+    for (let y = 0; y < ISLAND_ROWS; y++) {
+      for (let x = 0; x < ISLAND_COLS; x++) {
+        if (TILES[y][x] === TILE_WATER) continue
+        const top    = y === 0 || TILES[y - 1][x] === TILE_WATER
+        const bottom = y === ISLAND_ROWS - 1 || TILES[y + 1][x] === TILE_WATER
+        const left   = x === 0 || TILES[y][x - 1] === TILE_WATER
+        const right  = x === ISLAND_COLS - 1 || TILES[y][x + 1] === TILE_WATER
+        const px = x * TILE, py = y * TILE
+        if (top)    { g.beginPath(); g.moveTo(px, py);            g.lineTo(px + TILE, py);            g.strokePath() }
+        if (bottom) { g.beginPath(); g.moveTo(px, py + TILE);     g.lineTo(px + TILE, py + TILE);     g.strokePath() }
+        if (left)   { g.beginPath(); g.moveTo(px, py);            g.lineTo(px, py + TILE);            g.strokePath() }
+        if (right)  { g.beginPath(); g.moveTo(px + TILE, py);     g.lineTo(px + TILE, py + TILE);     g.strokePath() }
+      }
+    }
+  }
+
+  private drawTrees(): void {
+    TREES.forEach((d, i) => {
+      const px = d.x * TILE + TILE / 2
+      const py = d.y * TILE + TILE / 2
+      // Sprout trees son 32×48 — escalamos x2 para que tengan presencia.
+      const img = this.add.image(px, py, 'sheet:trees', `t${i}`)
+        .setOrigin(0.5, 0.85)
+        .setScale(2)
+      img.setDepth(py + 30)
+    })
+  }
+
+  private drawBuildings(): void {
+    for (const b of BUILDINGS) {
+      const px = b.x * TILE + (b.w * TILE) / 2
+      const py = b.y * TILE + (b.h * TILE) / 2
+      // Casas son 64×64 en el sheet — escalamos para llenar la bbox.
+      const scale = (b.w * TILE) / b.rect.sw
+      const img = this.add.image(px, py, `sheet:${b.sheet}`, b.id)
+        .setOrigin(0.5, 0.5)
+        .setScale(scale)
+      img.setDepth(py + (b.h * TILE) / 2 - 4)
+
+      // Sello-emoji sobre el techo
+      const badge = ZONE_BADGE[b.id] ?? ''
+      if (badge) {
+        this.add.text(px, b.y * TILE - 4, badge, { fontSize: '18px' })
+          .setOrigin(0.5, 1).setDepth(py + (b.h * TILE) / 2 - 3)
+      }
+      // Label bajo el edificio
+      this.add.text(px, (b.y + b.h) * TILE + 6, b.label, {
+        fontFamily: 'sans-serif', fontSize: '11px', color: '#fff8e7',
+        backgroundColor: 'rgba(26,26,46,0.6)', padding: { x: 4, y: 1 },
+      }).setOrigin(0.5, 0).setDepth(py + (b.h * TILE) / 2 - 3)
+    }
+  }
+
+  // ─── Input ──────────────────────────────────────────────────────────
   private onPointer(p: Phaser.Input.Pointer): void {
     const world = this.cameras.main.getWorldPoint(p.x, p.y)
 
-    // ¿Click en otro poporing?
     for (const op of this.others.values()) {
       const dx = world.x - op.x, dy = world.y - op.y
       if (dx * dx + dy * dy < 18 * 18) {
@@ -110,16 +177,12 @@ export class Town extends Phaser.Scene {
         return
       }
     }
-
-    // ¿Click en edificio?
     const bld = buildingAt(world.x, world.y)
     if (bld) {
       this.bus.emit(TOWN_EVENT.buildingEnter, bld.id)
       this.walkTo(bld.doorX * TILE + TILE / 2, bld.doorY * TILE + TILE / 2)
       return
     }
-
-    // Click en suelo → walk si es tierra
     if (isLand(world.x, world.y)) this.walkTo(world.x, world.y)
   }
 
@@ -127,11 +190,10 @@ export class Town extends Phaser.Scene {
     this.targetX = x; this.targetY = y; this.moving = true
   }
 
-  // ─── Update ───
+  // ─── Update ─────────────────────────────────────────────────────────
   update(_t: number, delta: number): void {
     if (!this.player) return
     this.player.tickIdle(delta)
-
     if (this.moving) {
       const dx = this.targetX - this.player.x
       const dy = this.targetY - this.player.y
@@ -143,7 +205,6 @@ export class Town extends Phaser.Scene {
       } else {
         const nx = this.player.x + (dx / dist) * step
         const ny = this.player.y + (dy / dist) * step
-        // slide separado X/Y para resbalar por la costa
         if (isLand(nx, this.player.y)) this.player.x = nx
         if (isLand(this.player.x, ny)) this.player.y = ny
       }
@@ -152,18 +213,14 @@ export class Town extends Phaser.Scene {
     for (const op of this.others.values()) op.tickIdle(delta)
   }
 
-  // ─── Presencia ───
   private applyOthers(list: PresenceOther[]): void {
     const seen = new Set<number>()
     for (const o of list) {
       seen.add(o.id)
       let p = this.others.get(o.id)
-      if (!p) {
-        p = new Poporing(this, o.x, o.y, o)
-        this.others.set(o.id, p)
-      } else {
+      if (!p) { p = new Poporing(this, o.x, o.y, o); this.others.set(o.id, p) }
+      else {
         p.setUser(o)
-        // interpolación simple: tween a la nueva pos
         this.tweens.add({ targets: p, x: o.x, y: o.y, duration: 800, ease: 'Sine.easeOut' })
       }
     }
@@ -172,7 +229,6 @@ export class Town extends Phaser.Scene {
     }
   }
 
-  // ─── Helpers ───
   private tileToWorld(tx: number, ty: number) {
     return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 }
   }
