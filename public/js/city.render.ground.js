@@ -141,16 +141,16 @@
       const endWX   = Math.ceil(visR / TILE) * TILE + TILE
       const startWY = Math.floor(visT / TILE) * TILE - TILE
       const endWY   = Math.ceil(visB / TILE) * TILE + TILE
-      const colA = '#a8d8a0', colB = '#9bd095'
+      const colA = '#8fc457', colB = '#80b648'
       for (let wy = startWY; wy < endWY; wy += TILE) {
         for (let wx = startWX; wx < endWX; wx += TILE) {
           const inWorld = wx >= 0 && wy >= 0 && wx < W && wy < H
           const c = (((wx/TILE) + (wy/TILE)) & 1) ? colB : colA
-          ctx.fillStyle = inWorld ? c : '#90c890'
+          ctx.fillStyle = inWorld ? c : '#6fa33c'
           ctx.fillRect(wx, wy, TILE, TILE)
         }
       }
-      ctx.fillStyle = 'rgba(120,170,90,0.45)'
+      ctx.fillStyle = 'rgba(80,135,55,0.5)'
       for (let i = 0; i < 220; i++) {
         const wx = (i * 53) % W, wy = ((i * 97) + 17) % H
         ctx.fillRect(wx|0, wy|0, 2, 2)
@@ -171,7 +171,7 @@
     for (let wy = cy - PLAZA.ry - COBBLE; wy < cy + PLAZA.ry + COBBLE; wy += COBBLE) {
       for (let wx = cx - PLAZA.rx - COBBLE; wx < cx + PLAZA.rx + COBBLE; wx += COBBLE) {
         const tone = (((wx/COBBLE)|0) + ((wy/COBBLE)|0)) & 1
-        ctx.fillStyle = tone ? '#d8c8a0' : '#c8b890'
+        ctx.fillStyle = tone ? '#e4d8b4' : '#d0c198'
         ctx.fillRect(wx, wy, COBBLE, COBBLE)
       }
     }
@@ -216,7 +216,7 @@
   // Two-tone blue base + slow-drifting wave bands + occasional sparkle pixels.
   City.drawWater = function (ctx, now, visL, visT, visR, visB) {
     // Base sea fill
-    ctx.fillStyle = '#5fb1d8'
+    ctx.fillStyle = '#4f9fc4'
     ctx.fillRect(visL, visT, visR - visL, visB - visT)
     // Soft horizontal wave bands (slow vertical drift)
     const drift = (now / 60) % 24

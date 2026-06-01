@@ -214,14 +214,28 @@
     ctx.restore()
   }
 
+  // Small RO-style parchment panel helper (gradient + dark outline + hard shadow).
+  City.drawPanel = function (ctx, x, y, w, h, r) {
+    r = r == null ? 8 : r
+    ctx.fillStyle = 'rgba(36,26,20,0.45)'
+    ctx.beginPath(); ctx.roundRect(x + 3, y + 3, w, h, r); ctx.fill()  // hard shadow
+    const grd = ctx.createLinearGradient(0, y, 0, y + h)
+    grd.addColorStop(0, '#f3e6c4'); grd.addColorStop(1, '#e2cd9b')
+    ctx.fillStyle = grd
+    ctx.strokeStyle = '#3a2a14'; ctx.lineWidth = 2; ctx.lineJoin = 'round'
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); ctx.stroke()
+    ctx.strokeStyle = 'rgba(255,247,224,0.7)'; ctx.lineWidth = 1   // inner light bevel
+    ctx.beginPath(); ctx.roundRect(x + 2, y + 2, w - 4, h - 4, Math.max(1, r - 2)); ctx.stroke()
+  }
+
   City.drawHud = function (ctx, now) {
-    // Bottom-center hint
+    // Bottom-center hint (pixel text, parchment-ink colours)
     if (!City.currentZone) {
       ctx.save()
-      ctx.font = '500 13px "Pixelify Sans", monospace'
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'
-      ctx.strokeStyle = 'rgba(0,0,0,0.4)'
-      ctx.lineWidth = 3
+      ctx.font = '600 13px "Pixelify Sans", monospace'
+      ctx.fillStyle = '#fff4d8'
+      ctx.strokeStyle = 'rgba(36,26,20,0.85)'
+      ctx.lineWidth = 4
       ctx.lineJoin = 'round'
       ctx.textAlign = 'center'
       const msg = 'WASD o click · click un poporing para entrar'
@@ -229,19 +243,18 @@
       ctx.fillText(msg, W/2, H - 14)
       ctx.restore()
     }
-    // Online counter (sesión 8) when there are people around
+    // Online counter (sesión 8) — now a little RO parchment plaque
     const total = City.others.length + 1
     if (total >= 2) {
       ctx.save()
       ctx.font = '700 14px "Pixelify Sans", monospace'
-      const text = `${total} cats en el pueblo`
+      const text = `${total} cats al poble`
       const m = ctx.measureText(text)
-      const pad = 10
-      const bw = m.width + pad * 2, bh = 26
+      const pad = 12
+      const bw = m.width + pad * 2, bh = 28
       const bx = 18, by = 18
-      ctx.fillStyle = 'rgba(20,14,8,0.55)'
-      ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.fill()
-      ctx.fillStyle = '#fff'
+      City.drawPanel(ctx, bx, by, bw, bh, 8)
+      ctx.fillStyle = '#3a2a14'
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
       ctx.fillText(text, bx + pad, by + bh/2 + 1)
       ctx.restore()
