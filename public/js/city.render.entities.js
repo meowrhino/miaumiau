@@ -135,7 +135,7 @@
     }
     // Username label
     ctx.save()
-    ctx.font = '600 11px "Pixelify Sans", monospace'
+    ctx.font = '600 11px "Galmuri11", "Pixelify Sans", monospace'
     ctx.textAlign = 'center'
     ctx.lineWidth = 3
     ctx.lineJoin = 'round'
@@ -192,7 +192,7 @@
     ctx.save()
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha == null ? 1 : alpha))
     ctx.imageSmoothingEnabled = false
-    ctx.font = '600 12px "Pixelify Sans", monospace'
+    ctx.font = '600 12px "Galmuri11", "Pixelify Sans", monospace'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     const padX = 8, bh = 22
@@ -232,7 +232,7 @@
     // Bottom-center hint (pixel text, parchment-ink colours)
     if (!City.currentZone) {
       ctx.save()
-      ctx.font = '600 13px "Pixelify Sans", monospace'
+      ctx.font = '600 13px "Galmuri11", "Pixelify Sans", monospace'
       ctx.fillStyle = '#fff4d8'
       ctx.strokeStyle = 'rgba(36,26,20,0.85)'
       ctx.lineWidth = 4
@@ -247,7 +247,7 @@
     const total = City.others.length + 1
     if (total >= 2) {
       ctx.save()
-      ctx.font = '700 14px "Pixelify Sans", monospace'
+      ctx.font = '700 14px "Galmuri11", "Pixelify Sans", monospace'
       const text = `${total} cats al poble`
       const m = ctx.measureText(text)
       const pad = 12

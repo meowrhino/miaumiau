@@ -86,11 +86,11 @@
     s.textContent = [
       '.city-chat-bar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);',
       'display:flex;gap:6px;z-index:5;width:min(420px,86%);}',
-      '.city-chat-bar input{flex:1;min-width:0;font:600 14px/1 "Pixelify Sans",ui-monospace,monospace;',
+      '.city-chat-bar input{flex:1;min-width:0;font:600 14px/1 "Galmuri11","Pixelify Sans",ui-monospace,monospace;',
       'padding:9px 12px;border:2px solid #241a33;border-radius:10px;background:rgba(255,247,234,.95);',
       'color:#241a33;box-shadow:3px 3px 0 rgba(36,26,51,.35);outline:none;}',
       '.city-chat-bar input::placeholder{color:#9a8aa0;}',
-      '.city-chat-bar button{font:600 14px/1 "Pixelify Sans",ui-monospace,monospace;cursor:pointer;',
+      '.city-chat-bar button{font:600 14px/1 "Galmuri11","Pixelify Sans",ui-monospace,monospace;cursor:pointer;',
       'padding:0 16px;border:2px solid #241a33;border-radius:10px;background:#ff5d8f;color:#fff;',
       'box-shadow:3px 3px 0 rgba(36,26,51,.35);}',
       '.city-chat-bar button:active{transform:translate(2px,2px);box-shadow:none;}'
