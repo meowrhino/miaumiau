@@ -165,6 +165,15 @@ CREATE TABLE IF NOT EXISTS city_waves (
 );
 CREATE INDEX IF NOT EXISTS idx_city_waves_created ON city_waves(created_at DESC);
 
+CREATE TABLE IF NOT EXISTS city_chat (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    zone TEXT,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_city_chat_created ON city_chat(created_at DESC);
+
 CREATE TABLE IF NOT EXISTS admin_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date  TEXT NOT NULL,

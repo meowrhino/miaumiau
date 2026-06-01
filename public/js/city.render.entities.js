@@ -144,6 +144,12 @@
     ctx.strokeText(o.username, ox, oy - PLAYER_SIZE/2 - 2)
     ctx.fillText(o.username, ox, oy - PLAYER_SIZE/2 - 2)
     ctx.restore()
+    // Proximity chat bubble (sesión 13)
+    const say = City._says && City._says[o.user_id]
+    if (say && say.until > now) {
+      const a = (say.until - now) > 400 ? 1 : (say.until - now) / 400
+      City.drawSpeechBubble(ctx, ox, oy - PLAYER_SIZE/2 - 12, say.text, a)
+    }
   }
 
   City.drawPlayer = function (ctx, p, now) {
@@ -167,6 +173,45 @@
       ctx.fillStyle = '#FFB800'
       ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, Math.PI * 2); ctx.fill()
     }
+    // My own proximity chat bubble (sesión 13)
+    const meId = (window.App && App.user) ? App.user.id : null
+    const meSay = (meId != null && City._says) ? City._says[meId] : null
+    if (meSay && meSay.until > now) {
+      const a = (meSay.until - now) > 400 ? 1 : (meSay.until - now) / 400
+      City.drawSpeechBubble(ctx, p.x, p.y - PLAYER_SIZE/2 - 12, meSay.text, a)
+    }
+  }
+
+  // Speech bubble over an avatar — RO-style pergamino box + little tail.
+  // Drawn in world space (inside the camera transform) so it tracks the map.
+  // cx = avatar centre x; bottomY = where the tail tip points (just above head).
+  City.drawSpeechBubble = function (ctx, cx, bottomY, text, alpha) {
+    text = String(text == null ? '' : text)
+    if (!text) return
+    if (text.length > 42) text = text.slice(0, 41) + '…'
+    ctx.save()
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha == null ? 1 : alpha))
+    ctx.imageSmoothingEnabled = false
+    ctx.font = '600 12px "Pixelify Sans", monospace'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const padX = 8, bh = 22
+    const bw = ctx.measureText(text).width + padX * 2
+    const bx = cx - bw / 2, by = bottomY - bh
+    ctx.fillStyle = '#fff7ea'
+    ctx.strokeStyle = '#241a33'
+    ctx.lineWidth = 2
+    ctx.lineJoin = 'round'
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 6); ctx.fill(); ctx.stroke()
+    // tail pointing down toward the head
+    ctx.beginPath()
+    ctx.moveTo(cx - 5, by + bh - 1)
+    ctx.lineTo(cx, by + bh + 6)
+    ctx.lineTo(cx + 5, by + bh - 1)
+    ctx.closePath(); ctx.fill(); ctx.stroke()
+    ctx.fillStyle = '#241a33'
+    ctx.fillText(text, cx, by + bh / 2)
+    ctx.restore()
   }
 
   City.drawHud = function (ctx, now) {

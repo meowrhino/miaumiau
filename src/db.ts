@@ -277,6 +277,27 @@ export const waveListRecent = (db: DB, seconds: number = 8) =>
 export const waveCleanup = (db: DB) =>
   db.prepare("DELETE FROM city_waves WHERE created_at < datetime('now', '-5 minutes')").run()
 
+// ─── City chat (sesión 13: bocadillos de proximidad sobre los avatares) ───
+
+export const cityChatInsert = (db: DB, userId: number, zone: string | null, content: string) =>
+  db.prepare('INSERT INTO city_chat (user_id, zone, content) VALUES (?, ?, ?)')
+    .bind(userId, zone, content).run()
+
+// Recent messages (last N seconds, default 12) with author name + color for the bubble.
+export const cityChatListRecent = (db: DB, seconds: number = 12) =>
+  db.prepare(`
+    SELECT m.id, m.user_id, m.zone, m.content, m.created_at,
+      COALESCE(u.display_name, u.username) AS username, u.color
+    FROM city_chat m JOIN users u ON m.user_id = u.id
+    WHERE m.created_at > datetime('now', '-' || ? || ' seconds')
+    ORDER BY m.id DESC
+    LIMIT 100
+  `).bind(seconds).all()
+
+// Drop messages older than 5 minutes — called opportunistically on POST.
+export const cityChatCleanup = (db: DB) =>
+  db.prepare("DELETE FROM city_chat WHERE created_at < datetime('now', '-5 minutes')").run()
+
 // ─── Admin-managed calendar events (sesión 12) ───
 
 export const adminEventList = (db: DB) =>

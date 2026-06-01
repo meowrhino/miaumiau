@@ -408,6 +408,29 @@ app.get('/api/city/waves', async (c) => {
   return json(rows.results)
 })
 
+// ─── City chat: ephemeral proximity bubbles over avatars (sesión 13) ───
+
+app.post('/api/city/chat', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':citychat', 20)) return err('demasiados mensajes, baja el ritmo 🐱', 429)
+  const body = await c.req.json<{ content?: string; zone?: string | null }>()
+  const content = validateText(body.content, 1, 120)
+  if (!content) return err('mensaje: 1-120 caracteres')
+  const zone = body.zone && ZONE_VALID.has(body.zone) ? body.zone : null
+  await db.cityChatInsert(c.env.DB, user.id, zone, content)
+  // Best-effort cleanup so the table doesn't grow forever
+  c.executionCtx.waitUntil(db.cityChatCleanup(c.env.DB))
+  return json({ ok: true }, 201)
+})
+
+app.get('/api/city/chat', async (c) => {
+  // Public — anyone in the city sees the speech bubbles
+  const rows = await db.cityChatListRecent(c.env.DB, 12)
+  return json(rows.results)
+})
+
 // ─── Calendar events (sesión 12) ───
 // Public: returns all upcoming events. Admins manage the table via /api/admin/events.
 
@@ -1042,5 +1065,6 @@ export default {
     await db.storyCleanup(env.DB, env.STORAGE)
     await env.DB.prepare("DELETE FROM events     WHERE created_at < datetime('now', '-90 days')").run()
     await env.DB.prepare("DELETE FROM city_waves WHERE created_at < datetime('now', '-1 hour')").run()
+    await env.DB.prepare("DELETE FROM city_chat  WHERE created_at < datetime('now', '-1 hour')").run()
   }
 }
