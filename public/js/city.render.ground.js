@@ -121,40 +121,32 @@
     ctx.save()
     tracePath(ctx, 0)
     ctx.clip('evenodd')
-    const grassSheet = window.Assets && Assets.get('tile:grass_sheet')
-    if (grassSheet && GRASS_TILE_RECT) {
-      const TILE = 32  // 16px source × 2 zoom = 32px world per tile
-      const startWX = 0
-      const endWX   = Math.ceil(W / TILE) * TILE
-      const startWY = 0
-      const endWY   = Math.ceil(H / TILE) * TILE
-      const { sx, sy, sw, sh } = GRASS_TILE_RECT
-      for (let wy = startWY; wy < endWY; wy += TILE) {
-        for (let wx = startWX; wx < endWX; wx += TILE) {
-          ctx.drawImage(grassSheet, sx, sy, sw, sh, wx, wy, TILE, TILE)
-        }
+    // ── Césped estilo Ragnarok (procedural; ignora el tile Sprout Lands) ──
+    // Campo verde con variación de tono por tile + briznas de hierba pixel y
+    // alguna florecilla. Todo determinista (no parpadea entre frames).
+    const TILE = 48
+    const TONES = ['#6aa838', '#74b340', '#62a033', '#6fae3c']
+    const gsx = Math.floor(visL / TILE) * TILE - TILE
+    const gex = Math.ceil(visR / TILE) * TILE + TILE
+    const gsy = Math.floor(visT / TILE) * TILE - TILE
+    const gey = Math.ceil(visB / TILE) * TILE + TILE
+    for (let wy = gsy; wy < gey; wy += TILE) {
+      for (let wx = gsx; wx < gex; wx += TILE) {
+        const inWorld = wx >= 0 && wy >= 0 && wx < W && wy < H
+        const hsh = (((wx * 73856093) ^ (wy * 19349663)) >>> 0)
+        ctx.fillStyle = inWorld ? TONES[hsh % TONES.length] : '#4f8a2a'
+        ctx.fillRect(wx, wy, TILE, TILE)
       }
-    } else {
-      // Procedural fallback: two grass tones in a checkerboard.
-      const TILE = 64
-      const startWX = Math.floor(visL / TILE) * TILE - TILE
-      const endWX   = Math.ceil(visR / TILE) * TILE + TILE
-      const startWY = Math.floor(visT / TILE) * TILE - TILE
-      const endWY   = Math.ceil(visB / TILE) * TILE + TILE
-      const colA = '#8fc457', colB = '#80b648'
-      for (let wy = startWY; wy < endWY; wy += TILE) {
-        for (let wx = startWX; wx < endWX; wx += TILE) {
-          const inWorld = wx >= 0 && wy >= 0 && wx < W && wy < H
-          const c = (((wx/TILE) + (wy/TILE)) & 1) ? colB : colA
-          ctx.fillStyle = inWorld ? c : '#6fa33c'
-          ctx.fillRect(wx, wy, TILE, TILE)
-        }
-      }
-      ctx.fillStyle = 'rgba(80,135,55,0.5)'
-      for (let i = 0; i < 220; i++) {
-        const wx = (i * 53) % W, wy = ((i * 97) + 17) % H
-        ctx.fillRect(wx|0, wy|0, 2, 2)
-      }
+    }
+    // briznas de hierba (tufts) + florecillas — patrón pseudo-aleatorio fijo
+    for (let i = 0; i < 900; i++) {
+      const wx = (i * 137 + i * i * 7) % W
+      const wy = (i * 89 + 31) % H
+      ctx.fillStyle = (i & 1) ? 'rgba(158,206,96,0.55)' : 'rgba(38,86,28,0.5)'
+      ctx.fillRect(wx, wy, 1, 2)
+      ctx.fillRect(wx + 1, wy - 1, 1, 2)
+      if (i % 23 === 0) { ctx.fillStyle = 'rgba(255,238,90,0.7)'; ctx.fillRect(wx, wy - 1, 1, 1) }
+      else if (i % 37 === 0) { ctx.fillStyle = 'rgba(240,240,255,0.75)'; ctx.fillRect(wx, wy - 1, 1, 1) }
     }
     ctx.restore() // end grass clip
 
