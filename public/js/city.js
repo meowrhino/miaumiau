@@ -8,73 +8,51 @@
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
     ISLANDS, ISLAND_R, BRIDGES,
+    VERJA, WATER,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
   } = window.CityConfig
 
-  // Returns 'nw' | 'ne' | 'se' | 'plaza' | 'bridge' | null for a world point.
-  // Used by pathfinding to decide if click-to-walk needs to route via plaza.
-  function whichLand(x, y) {
-    for (const isl of ISLANDS) {
-      const left = isl.x, top = isl.y
-      const right = isl.x + isl.w, bottom = isl.y + isl.h
-      if (x < left || x > right || y < top || y > bottom) continue
-      const r = isl.r || ISLAND_R
-      if (x < left + r && y < top + r    && Math.hypot(x - (left+r),  y - (top+r))    > r) continue
-      if (x > right - r && y < top + r   && Math.hypot(x - (right-r), y - (top+r))    > r) continue
-      if (x < left + r && y > bottom - r && Math.hypot(x - (left+r),  y - (bottom-r)) > r) continue
-      if (x > right - r && y > bottom - r&& Math.hypot(x - (right-r), y - (bottom-r)) > r) continue
-      return isl.id
+  // ── Colisión del parque (reskin Retiro) ──────────────────────────────────
+  // Andable = DENTRO de la verja (polígono) y FUERA del agua.
+  function pointInPolygon(x, y, poly) {
+    let inside = false
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside
     }
-    const px = (x - PLAZA.x) / PLAZA.rx, py = (y - PLAZA.y) / PLAZA.ry
-    if (px*px + py*py <= 1) return 'plaza'
-    if (BRIDGES) {
-      for (const br of BRIDGES) {
-        const dx = br.bx - br.ax, dy = br.by - br.ay
-        const len = Math.hypot(dx, dy) || 1
-        const ux = dx / len, uy = dy / len
-        const nx = -uy, ny = ux
-        const rx = x - br.ax, ry = y - br.ay
-        const along = rx * ux + ry * uy
-        const across = rx * nx + ry * ny
-        if (along >= 0 && along <= len && Math.abs(across) <= br.w/2) return 'bridge'
-      }
-    }
-    return null
+    return inside
   }
-
-  // Land collision: returns true if the world point (x,y) is on walkable
-  // ground (one of the 3 islands, the plaza ellipse, or a bridge).
-  // Rounded-rect islands: inside bbox AND outside the corner exclusion arcs.
-  function pointInLand(x, y) {
-    for (const isl of ISLANDS) {
-      const left = isl.x, top = isl.y
-      const right = isl.x + isl.w, bottom = isl.y + isl.h
-      if (x < left || x > right || y < top || y > bottom) continue
-      const r = isl.r || ISLAND_R
-      if (x < left + r && y < top + r)    { if (Math.hypot(x - (left+r),  y - (top+r))    > r) continue }
-      if (x > right - r && y < top + r)   { if (Math.hypot(x - (right-r), y - (top+r))    > r) continue }
-      if (x < left + r && y > bottom - r) { if (Math.hypot(x - (left+r),  y - (bottom-r)) > r) continue }
-      if (x > right - r && y > bottom - r){ if (Math.hypot(x - (right-r), y - (bottom-r)) > r) continue }
-      return true
-    }
-    // Plaza (ellipse)
-    const px = (x - PLAZA.x) / PLAZA.rx, py = (y - PLAZA.y) / PLAZA.ry
-    if (px*px + py*py <= 1) return true
-    // Bridges (rotated rect from ax,ay → bx,by, half-width br.w/2 perpendicular)
-    if (BRIDGES) {
-      for (const br of BRIDGES) {
-        const dx = br.bx - br.ax, dy = br.by - br.ay
-        const len = Math.hypot(dx, dy) || 1
-        const ux = dx / len, uy = dy / len
-        const nx = -uy, ny = ux
-        const rx = x - br.ax, ry = y - br.ay
-        const along = rx * ux + ry * uy
-        const across = rx * nx + ry * ny
-        if (along >= 0 && along <= len && Math.abs(across) <= br.w/2) return true
+  function distToSeg(px, py, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y
+    const l2 = dx * dx + dy * dy
+    let t = l2 ? ((px - a.x) * dx + (py - a.y) * dy) / l2 : 0
+    t = Math.max(0, Math.min(1, t))
+    return Math.hypot(px - (a.x + t * dx), py - (a.y + t * dy))
+  }
+  function pointInWater(x, y) {
+    if (!WATER) return false
+    for (const w of WATER) {
+      if (w.type === 'rect') {
+        if (x >= w.x && x <= w.x + w.w && y >= w.y && y <= w.y + w.h) return true
+      } else if (w.type === 'ellipse') {
+        const dx = (x - w.x) / w.rx, dy = (y - w.y) / w.ry
+        if (dx * dx + dy * dy <= 1) return true
+      } else if (w.type === 'stroke') {
+        for (let i = 0; i < w.pts.length - 1; i++) {
+          if (distToSeg(x, y, w.pts[i], w.pts[i + 1]) <= w.w / 2) return true
+        }
       }
     }
     return false
+  }
+  // Walkable ground: inside the park fence, not in water.
+  function pointInLand(x, y) {
+    return pointInPolygon(x, y, VERJA) && !pointInWater(x, y)
+  }
+  // Coarse region id (kept for API parity; the park is one landmass now).
+  function whichLand(x, y) {
+    return pointInLand(x, y) ? 'park' : null
   }
 
   const City = {
@@ -339,8 +317,9 @@
       // Throttled presence write while moving
       if (p.walking) City.writePresence(false)
 
-      // Camera: follow player in mobile-follow, lerp toward targets, refit transform.
-      if (City.camera.mode === 'mobile-follow') {
+      // Camera: follow player on desktop + mobile-follow (RO-style). 'overview'
+      // and 'mobile-free' keep their own target. Lerp toward target, refit.
+      if (City.camera.mode === 'desktop' || City.camera.mode === 'mobile-follow') {
         City.camera.targetX = City.player.x
         City.camera.targetY = City.player.y
       }
@@ -378,34 +357,17 @@
   //   player on isla X, target on isla Y     → bridge X (cross), plaza, bridge Y (cross), target
   //   player on bridge → treat as "plaza" for this purpose (close enough)
   City.setWalkTarget = function (x, y) {
+    // El parque es una sola masa de tierra (sin puentes que rodear): el target
+    // es directo si el punto es andable. El deslizamiento por bordes de agua lo
+    // resuelve el move por ejes en tick().
     if (!pointInLand(x, y)) { City.target = null; City.targetQueue = null; return }
-    const pLand = whichLand(City.player.x, City.player.y)
-    const tLand = whichLand(x, y)
-    const isIsland = (k) => k === 'nw' || k === 'ne' || k === 'se'
-    const wp = []  // waypoints to traverse before the final (x,y)
-    if (isIsland(pLand) && isIsland(tLand) && pLand !== tLand) {
-      const a = BRIDGE_BY_ISLAND[pLand], b = BRIDGE_BY_ISLAND[tLand]
-      wp.push({ x: a.bx, y: a.by }, { x: a.ax, y: a.ay })
-      wp.push({ x: b.ax, y: b.ay }, { x: b.bx, y: b.by })
-    } else if (isIsland(pLand) && (tLand === 'plaza' || tLand === 'bridge')) {
-      const a = BRIDGE_BY_ISLAND[pLand]
-      wp.push({ x: a.bx, y: a.by }, { x: a.ax, y: a.ay })
-    } else if ((pLand === 'plaza' || pLand === 'bridge') && isIsland(tLand)) {
-      const b = BRIDGE_BY_ISLAND[tLand]
-      wp.push({ x: b.ax, y: b.ay }, { x: b.bx, y: b.by })
-    }
-    // First waypoint becomes target; remainder + final go in the queue.
-    if (wp.length === 0) {
-      City.target = { x, y }
-      City.targetQueue = null
-    } else {
-      City.target = wp.shift()
-      City.targetQueue = wp.concat([{ x, y }])
-    }
+    City.target = { x, y }
+    City.targetQueue = null
   }
   // Expose collision predicates for debugging / future pathfinding work.
   City._pointInLand = pointInLand
   City._whichLand   = whichLand
+  City._pointInWater = pointInWater
 
   window.City = City
 

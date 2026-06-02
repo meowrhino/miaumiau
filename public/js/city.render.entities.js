@@ -223,36 +223,61 @@
     ctx.beginPath(); ctx.roundRect(x + 2, y + 2, w - 4, h - 4, Math.max(1, r - 2)); ctx.stroke()
   }
 
-  City.drawHud = function (ctx, now) {
-    // Bottom-center hint (pixel text, parchment-ink colours)
-    if (!City.currentZone) {
-      ctx.save()
-      ctx.font = '600 13px "Galmuri11", "Pixelify Sans", monospace'
-      ctx.fillStyle = '#fff4d8'
-      ctx.strokeStyle = 'rgba(36,26,20,0.85)'
-      ctx.lineWidth = 4
-      ctx.lineJoin = 'round'
-      ctx.textAlign = 'center'
-      const msg = 'WASD o click · click un poporing para entrar'
-      ctx.strokeText(msg, W/2, H - 14)
-      ctx.fillText(msg, W/2, H - 14)
-      ctx.restore()
+  // Ventana de chat estilo RO (abajo-izquierda). Espacio de PANTALLA.
+  City.drawChatLog = function (ctx, x, bottomY) {
+    const log = City._chatLog
+    if (!log || !log.length) return
+    const lines = log.slice(-7)
+    ctx.save()
+    ctx.font = '600 12px "Galmuri11", "Pixelify Sans", monospace'
+    ctx.textBaseline = 'middle'
+    const w = 360, lh = 17, h = lines.length * lh + 16
+    const y = bottomY - h
+    ctx.fillStyle = 'rgba(20,14,26,0.58)'
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill()
+    let yy = y + 12
+    for (const l of lines) {
+      ctx.textAlign = 'left'
+      const name = (l.name || 'gato') + ': '
+      ctx.fillStyle = l.color || '#ffd24a'
+      ctx.fillText(name, x + 10, yy)
+      const nw = ctx.measureText(name).width
+      ctx.fillStyle = '#eae4f0'
+      let t = l.text; if (t.length > 38) t = t.slice(0, 37) + '…'
+      ctx.fillText(t, x + 10 + nw, yy)
+      yy += lh
     }
-    // Online counter (sesión 8) — now a little RO parchment plaque
+    ctx.restore()
+  }
+
+  City.drawHud = function (ctx, now) {
+    // El HUD se dibuja en ESPACIO DE PANTALLA (CSS px). Con la cámara-follow ya
+    // no vale dibujar en coords de mundo: reseteamos la matriz a (dpr,0,0,dpr).
+    const v = City._view || { vw: window.innerWidth, vh: window.innerHeight, dpr: 1 }
+    const dpr = v.dpr || 1, VW = v.vw, VH = v.vh
+    ctx.save()
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    // Pista (arriba-centro, para no chocar con la barra de chat de abajo)
+    if (!City.currentZone) {
+      ctx.font = '600 13px "Galmuri11", "Pixelify Sans", monospace'
+      ctx.fillStyle = '#fff4d8'; ctx.strokeStyle = 'rgba(36,26,20,0.85)'
+      ctx.lineWidth = 4; ctx.lineJoin = 'round'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'
+      const msg = 'WASD o click · click un poporing para entrar'
+      ctx.strokeText(msg, VW / 2, 26); ctx.fillText(msg, VW / 2, 26)
+    }
+    // Contador online (arriba-izquierda) — placa de pergamino RO
     const total = City.others.length + 1
     if (total >= 2) {
-      ctx.save()
       ctx.font = '700 14px "Galmuri11", "Pixelify Sans", monospace'
       const text = `${total} cats al poble`
-      const m = ctx.measureText(text)
-      const pad = 12
-      const bw = m.width + pad * 2, bh = 28
-      const bx = 18, by = 18
+      const pad = 12, bw = ctx.measureText(text).width + pad * 2, bh = 28, bx = 14, by = 14
       City.drawPanel(ctx, bx, by, bw, bh, 8)
-      ctx.fillStyle = '#3a2a14'
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
-      ctx.fillText(text, bx + pad, by + bh/2 + 1)
-      ctx.restore()
+      ctx.fillStyle = '#3a2a14'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+      ctx.fillText(text, bx + pad, by + bh / 2 + 1)
     }
+    // Ventana de chat RO (abajo-izquierda)
+    City.drawChatLog(ctx, 14, VH - 14)
+    ctx.restore()
   }
 })()

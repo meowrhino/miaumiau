@@ -11,6 +11,13 @@
   City._cityChatSeen = City._cityChatSeen || new Set()
   const SAY_MS = 5200                         // how long a bubble lingers
 
+  // Registro del chat (ventana estilo RO abajo-izquierda; lo pinta City.drawHud).
+  City._chatLog = City._chatLog || []
+  City._pushChat = function (name, color, text) {
+    City._chatLog.push({ name: name || 'gato', color: color || '#ffd24a', text: String(text == null ? '' : text) })
+    if (City._chatLog.length > 40) City._chatLog.shift()
+  }
+
   // DB content is HTML-escaped server-side (esc()); decode for canvas display.
   const UNESC = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" }
   const unesc = (s) => String(s).replace(/&(amp|lt|gt|quot|#39);/g, (_, e) => UNESC[e])
@@ -29,7 +36,11 @@
         if (City._cityChatSeen.has(m.id)) continue
         City._cityChatSeen.add(m.id)
         if (m.user_id === meId) continue       // my own bubble is shown optimistically
-        City._says[m.user_id] = { text: unesc(m.content), until: now + SAY_MS }
+        const txt = unesc(m.content)
+        City._says[m.user_id] = { text: txt, until: now + SAY_MS }
+        const other = City.others.find(o => o.user_id === m.user_id)
+        City._pushChat(other ? other.username : ('gato#' + m.user_id),
+                       (other && typeof colorHex === 'function') ? colorHex(other.color) : '#9ad06a', txt)
       }
       if (City._cityChatSeen.size > 600) {
         City._cityChatSeen = new Set(Array.from(City._cityChatSeen).slice(-300))
@@ -43,6 +54,8 @@
     if (!text || !(window.App && App.user) || !window.API) return
     if (text.length > 120) text = text.slice(0, 120)
     City._says[App.user.id] = { text, until: performance.now() + SAY_MS }
+    City._pushChat((App.user.display_name || App.user.username || 'tú'),
+                   (typeof colorHex === 'function' ? colorHex(App.user.color) : '#ffd24a'), text)
     try {
       await API.post('/city/chat', { content: text, zone: City.currentZone || 'plaza' })
     } catch (_) {}

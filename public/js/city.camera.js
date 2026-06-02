@@ -22,9 +22,9 @@
       City.canvas.width = targetW; City.canvas.height = targetH
       City.canvas.style.width = vw + 'px'; City.canvas.style.height = vh + 'px'
     }
-    // Camera-aware composition: baseScale fits the world rect to viewport;
-    // camera.zoom multiplies on top. Camera.x/y are world coords (top-down 1:1).
-    const baseScale = Math.min(vw / W, vh / H)
+    // Follow-cam (RO-style): follow modes use a fixed 1:1 pixel scale so a world
+    // bigger than the viewport scrolls with the camera. 'overview' fits it all.
+    const baseScale = (City.camera.mode === 'overview') ? Math.min(vw / W, vh / H) : 1
     const scale = baseScale * City.camera.zoom
     const ox = vw / 2 - City.camera.x * scale
     const oy = vh / 2 - City.camera.y * scale
@@ -43,13 +43,20 @@
   City.applyCameraMode = function (mode) {
     City.camera.mode = mode
     if (mode === 'desktop') {
+      // Desktop now FOLLOWS the player (RO-style) at 1:1 instead of fitting the
+      // whole world. With baseScale=1, zoom 1 shows ~one viewport of world.
+      City.camera.targetZoom = 1
+      City.camera.targetX = City.player.x
+      City.camera.targetY = City.player.y
+    } else if (mode === 'mobile-follow') {
+      City.camera.targetZoom = 1.3
+      City.camera.targetX = City.player.x
+      City.camera.targetY = City.player.y
+    } else if (mode === 'overview') {
+      // Whole-world view (the centrar / zoom-out button).
       City.camera.targetZoom = 1
       City.camera.targetX = W / 2
       City.camera.targetY = H / 2
-    } else if (mode === 'mobile-follow') {
-      City.camera.targetZoom = 1.6
-      City.camera.targetX = City.player.x
-      City.camera.targetY = City.player.y
     }
     // mobile-free: leave target as-is (user is in control)
   }
@@ -57,14 +64,20 @@
   // Clamp camera so player roughly stays in world bounds. Slack lets the
   // grass spillover paint outside the world rect without revealing void.
   City.clampCamera = function () {
-    const slack = 120
-    const lo = -slack, hiX = W + slack, hiY = H + slack
-    City.camera.x = Math.max(lo, Math.min(hiX, City.camera.x))
-    City.camera.y = Math.max(lo, Math.min(hiY, City.camera.y))
-    City.camera.targetX = Math.max(lo, Math.min(hiX, City.camera.targetX))
-    City.camera.targetY = Math.max(lo, Math.min(hiY, City.camera.targetY))
-    City.camera.zoom = Math.max(0.5, Math.min(3, City.camera.zoom))
-    City.camera.targetZoom = Math.max(0.5, Math.min(3, City.camera.targetZoom))
+    City.camera.zoom = Math.max(0.4, Math.min(3, City.camera.zoom))
+    City.camera.targetZoom = Math.max(0.4, Math.min(3, City.camera.targetZoom))
+    // Keep the *view* inside the world so we never reveal void at the edges.
+    // Uses last frame's scale (set by fitCanvas); fine frame-to-frame. When the
+    // world is smaller than the view on an axis, just center on that axis.
+    const v = City._view
+    const scale = v ? v.scale : 1
+    const vw = v ? v.vw : window.innerWidth
+    const vh = v ? v.vh : window.innerHeight
+    const halfW = (vw / 2) / scale, halfH = (vh / 2) / scale
+    const cx = (val) => (halfW * 2 >= W) ? W / 2 : Math.max(halfW, Math.min(W - halfW, val))
+    const cy = (val) => (halfH * 2 >= H) ? H / 2 : Math.max(halfH, Math.min(H - halfH, val))
+    City.camera.x = cx(City.camera.x);  City.camera.targetX = cx(City.camera.targetX)
+    City.camera.y = cy(City.camera.y);  City.camera.targetY = cy(City.camera.targetY)
   }
 
   // Reset camera to the default for the current viewport mode (used by the
