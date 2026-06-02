@@ -40,23 +40,32 @@
     ctx.restore()
   }
 
+  // Árboles de Cainos (hoja 'plant'): 3 variantes, cajas detectadas del atlas.
+  const CAINOS_TREES = [
+    { sx: 24, sy: 14, sw: 113, sh: 139 },
+    { sx: 161, sy: 14, sw: 95, sh: 139 },
+    { sx: 295, sy: 14, sw: 79, sh: 139 },
+  ]
   City.drawTree = function (ctx, x, y, now, idx) {
-    const sp = City.sprites
     ctx.save()
-    ctx.fillStyle = 'rgba(40,25,15,0.30)'
-    ctx.beginPath(); ctx.ellipse(x, y + 30, 20, 6, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = 'rgba(40,25,15,0.28)'
+    ctx.beginPath(); ctx.ellipse(x, y + 24, 26, 8, 0, 0, Math.PI * 2); ctx.fill()
     ctx.imageSmoothingEnabled = false
-    const sway = Math.sin(now/1500 + x*0.01) * 1.5
-    // RO reskin: procedural trees (sprites.js). The Sprout Lands trees_sheet is
-    // no longer used; a dedicated PNG could still override via Assets if added.
-    if (sp && sp.trees && sp.trees[idx ?? 0]) {
-      const img = sp.trees[idx ?? 0]
-      const scale = 1.9
-      const renderW = img.width * scale, renderH = img.height * scale
-      ctx.drawImage(img, x - renderW/2 + sway, y - renderH + 30, renderW, renderH)
+    const sway = Math.sin(now / 1500 + x * 0.01) * 1.5
+    const plant = window.Assets && Assets.get('cainos:plant')
+    if (plant) {
+      const r = CAINOS_TREES[(idx ?? 0) % CAINOS_TREES.length]
+      const scale = 1.25
+      const rw = r.sw * scale, rh = r.sh * scale
+      ctx.drawImage(plant, r.sx, r.sy, r.sw, r.sh, x - rw / 2 + sway, y - rh + 22, rw, rh)
     } else {
-      ctx.fillStyle = '#3c8042'
-      ctx.beginPath(); ctx.arc(x, y - 8, 18, 0, Math.PI * 2); ctx.fill()
+      const sp = City.sprites
+      if (sp && sp.trees && sp.trees[idx ?? 0]) {
+        const img = sp.trees[idx ?? 0], s = 1.9
+        ctx.drawImage(img, x - img.width * s / 2 + sway, y - img.height * s + 30, img.width * s, img.height * s)
+      } else {
+        ctx.fillStyle = '#3c8042'; ctx.beginPath(); ctx.arc(x, y - 8, 18, 0, Math.PI * 2); ctx.fill()
+      }
     }
     ctx.restore()
   }
