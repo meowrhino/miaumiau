@@ -913,12 +913,12 @@
     for (let dy = -rr; dy <= 4; dy++) for (let dx = -rr; dx <= rr; dx++) {
       if (dx*dx + dy*dy <= rr*rr) {
         const onEdge = dx*dx + dy*dy >= (rr-1)*(rr-1)
-        px(ctx, cx + dx, cy + dy, onEdge ? '#3a8a4a' : '#4a9a58')
+        px(ctx, cx + dx, cy + dy, onEdge ? '#1d4a26' : '#357c3d')
       }
     }
     // Highlight
     for (let i = 0; i < 5; i++) {
-      px(ctx, cx - 6 + Math.floor(r()*12), cy - 4 + Math.floor(r()*4), '#5fb070')
+      px(ctx, cx - 6 + Math.floor(r()*12), cy - 4 + Math.floor(r()*4), '#6fb357')
     }
     // Tiny berries
     if (r() > 0.5) {
@@ -947,8 +947,8 @@
   // ─── FOUNTAIN ───────────────────────────────────────────────────────────────
   function fountain() {
     const { c, ctx } = mkc(72, 56)
-    const stone = '#bdb1a3', stoneD = dk(stone, 0.30), stoneL = lt(stone, 0.18)
-    const water = '#7fc6e8', waterD = dk(water, 0.30)
+    const stone = '#c6b89a', stoneD = dk(stone, 0.30), stoneL = lt(stone, 0.18)
+    const water = '#3f86ab', waterD = dk(water, 0.34)
     // Shadow
     rect(ctx, 8, 48, 56, 6, 'rgba(40,25,15,0.30)')
     // Outer basin (octagonal-ish)
@@ -959,6 +959,7 @@
       [4, 38, 4, 8, stoneD],
       [64, 38, 4, 8, stoneD],
     ])
+    outline(ctx, 8, 36, 56, 12, '#2e2114')
     // Stone segments (bricks)
     for (let x = 12; x < 64; x += 8) px(ctx, x, 42, stoneD)
     // Inner water surface (ellipse)
@@ -989,6 +990,8 @@
       [28, 27, 16, 1, stoneD],
     ])
     outline(ctx, 28, 22, 16, 6, '#3a2613')
+    // Small finial on the bowl
+    rect(ctx, 35, 18, 2, 4, stone); px(ctx, 35, 17, stoneL)
     // Tiny moss on pedestal
     px(ctx, 33, 38, '#5fb070'); px(ctx, 38, 39, '#5fb070'); px(ctx, 35, 41, '#5fb070')
     return c
@@ -1366,7 +1369,7 @@
     const c = mkc(80, 120)
     const ctx = c.ctx
     const stone = '#bdb1a3', stoneD = dk(stone, 0.30), stoneL = lt(stone, 0.18)
-    const cap = '#7a4d2a', capL = lt('#7a4d2a', 0.20)
+    const cap = '#c75b34', capL = lt('#c75b34', 0.22), capS = dk('#c75b34', 0.28)
     const stroke = '#3a2613'
     // Shadow
     rect(ctx, 14, 116, 52, 3, 'rgba(40,25,15,0.35)')
@@ -1399,14 +1402,15 @@
     rect(ctx, 36, 70, 8, 8, '#ffe9a8')
     outline(ctx, 36, 70, 8, 8, stroke)
     rect(ctx, 40, 70, 1, 8, stroke); rect(ctx, 36, 74, 8, 1, stroke)
-    // Conical cap (roof)
+    // Conical cap (terracotta tiles)
     tri(ctx, 40, 12, 22, 36, cap)
     for (let i = 0; i <= 24; i++) {
       const w = Math.round(22 * i / 24)
       px(ctx, 40 - w, 12 + i, stroke); px(ctx, 40 + w, 12 + i, stroke)
+      if (i % 4 === 3) for (let xx = 40 - w + 2; xx < 40 + w - 1; xx += 4) px(ctx, xx, 12 + i, capS)
     }
-    // Cap highlight
-    for (let i = 0; i < 24; i += 2) px(ctx, 40 - Math.round(22 * i / 24) + 1, 12 + i, capL)
+    // Ridge highlight down the centre
+    for (let i = 0; i < 24; i += 2) px(ctx, 40, 12 + i, capL)
     // Hub for blades (front)
     paintBlocks(ctx, [
       [36, 36, 8, 8, stroke],
@@ -1421,7 +1425,7 @@
     const ctx = c.ctx
     const stone = '#bdb1a3', stoneD = dk(stone, 0.30), stoneL = lt(stone, 0.18)
     const wood = '#7a4d2a', woodL = lt('#7a4d2a', 0.20)
-    const stroke = '#3a2613', water = '#3a78a8'
+    const stroke = '#3a2613', water = '#3f86ab'
     rect(ctx, 6, 52, 28, 4, 'rgba(40,25,15,0.30)')
     // Round stone base
     for (let y = 32; y < 52; y++) {
@@ -1452,8 +1456,10 @@
     // Cross beam
     rect(ctx, 10, 8, 20, 4, wood)
     rect(ctx, 10, 8, 20, 1, woodL)
-    // Tiny roof (peaked)
-    tri(ctx, 20, 0, 12, 8, '#5a3018')
+    // Tiny roof (peaked, terracotta)
+    tri(ctx, 20, 0, 12, 8, '#c75b34')
+    for (let i = 0; i <= 8; i++) { const w = Math.round(12 * i / 8); px(ctx, 20 - w, i, '#2e2114'); px(ctx, 20 + w, i, '#2e2114') }
+    px(ctx, 20, 1, '#fff0cf')
     // Bucket hanging
     paintBlocks(ctx, [
       [18, 18, 4, 6, wood],
@@ -1469,7 +1475,7 @@
     const r = rng(seed)
     const c = mkc(56, 56)
     const ctx = c.ctx
-    const tarpColors = ['#d04060', '#3a78a8', '#c89030', '#5a8830', '#a050b0']
+    const tarpColors = ['#b5352b', '#3a78a8', '#caa23a', '#3f7a44', '#7a4f9a']
     const tarp = tarpColors[Math.floor(r() * tarpColors.length)]
     const tarpD = dk(tarp, 0.25), tarpL = lt(tarp, 0.20)
     const wood = '#7a4d2a', woodD = dk(wood, 0.30)
@@ -1517,7 +1523,7 @@
   function stage() {
     const c = mkc(80, 48)
     const ctx = c.ctx
-    const wood = '#8a5a32', woodD = dk(wood, 0.30), woodL = lt(wood, 0.20)
+    const wood = '#7a4a24', woodD = dk(wood, 0.30), woodL = lt(wood, 0.20)
     const curtain = '#a82038', curtainD = dk(curtain, 0.30), curtainL = lt(curtain, 0.20)
     const stroke = '#3a2010'
     rect(ctx, 6, 44, 68, 3, 'rgba(40,25,15,0.30)')
