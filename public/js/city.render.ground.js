@@ -207,23 +207,28 @@
   // Animated ocean. Painted under everything else (called first by drawGround).
   // Two-tone blue base + slow-drifting wave bands + occasional sparkle pixels.
   City.drawWater = function (ctx, now, visL, visT, visR, visB) {
-    // Base sea fill
-    ctx.fillStyle = '#4f9fc4'
+    // RO sea — deeper, more saturated blue with drifting ripple bands.
+    ctx.fillStyle = '#3f86ab'
     ctx.fillRect(visL, visT, visR - visL, visB - visT)
-    // Soft horizontal wave bands (slow vertical drift)
     const drift = (now / 60) % 24
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'
+    // Darker trough bands (slow vertical drift)
+    ctx.fillStyle = 'rgba(26,74,110,0.22)'
     for (let y = (Math.floor(visT / 24) * 24) - drift; y < visB; y += 24) {
-      ctx.fillRect(visL, y, visR - visL, 2)
+      ctx.fillRect(visL, y, visR - visL, 3)
+    }
+    // Light crest line just below each trough
+    ctx.fillStyle = 'rgba(190,230,240,0.10)'
+    for (let y = (Math.floor(visT / 24) * 24) - drift; y < visB; y += 24) {
+      ctx.fillRect(visL, y + 4, visR - visL, 1)
     }
     // Sparkle pixels (deterministic positions, twinkle by time)
     const cellW = visR - visL, cellH = visB - visT
-    const baseAlpha = 0.45
+    const baseAlpha = 0.42
     for (let i = 0; i < 60; i++) {
       const sx = visL + ((i * 137) % Math.max(1, cellW))
       const sy = visT + (((i * 191) + 47) % Math.max(1, cellH))
       const tw = (Math.sin(now / 800 + i * 1.7) + 1) * 0.5
-      ctx.fillStyle = `rgba(255,255,255,${baseAlpha * tw})`
+      ctx.fillStyle = `rgba(220,245,255,${baseAlpha * tw})`
       ctx.fillRect(sx | 0, sy | 0, 2, 2)
     }
   }
@@ -235,14 +240,19 @@
   City.drawShoreline = function (ctx) {
     const sandWidth = 18
     ctx.save()
-    // Outer sand band
-    ctx.fillStyle = '#f0d8a0'
+    // Foam ring where the sea meets the sand (outermost)
+    ctx.fillStyle = 'rgba(225,245,250,0.55)'
+    tracePath(ctx, sandWidth + 4)
+    tracePath(ctx, sandWidth)
+    ctx.fill('evenodd')
+    // Outer warm sand band
+    ctx.fillStyle = '#e8c98a'
     tracePath(ctx, sandWidth)
     tracePath(ctx, 0)
     ctx.fill('evenodd')
     // Inner wet-sand seam
-    ctx.fillStyle = '#dcc080'
-    tracePath(ctx, 2)
+    ctx.fillStyle = '#cba768'
+    tracePath(ctx, 4)
     tracePath(ctx, 0)
     ctx.fill('evenodd')
     ctx.restore()

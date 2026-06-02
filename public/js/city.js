@@ -219,7 +219,7 @@
         const seed = i * 31 + 7
         const v = i % 4
         if (v === 0) return MiauSprites.treeLush(seed)
-        if (v === 1) return MiauSprites.treeSakura(seed)
+        if (v === 1) return MiauSprites.treeAutumn(seed)
         if (v === 2) return MiauSprites.treePine(seed)
         return MiauSprites.treeLush(seed + 13)
       })

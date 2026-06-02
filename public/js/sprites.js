@@ -787,7 +787,7 @@
     return houseBench(roofColor, opts)
   }
 
-  // ─── TREES (5 variants) ──────────────────────────────────────────────────────
+  // ─── TREES (3 variants — RO) ─────────────────────────────────────────────────
   function treePine(seed) {
     const r = rng(seed)
     const { c, ctx } = mkc(40, 56)
@@ -796,22 +796,30 @@
     // Trunk
     rect(ctx, 18, 42, 4, 12, '#5a3a1c')
     rect(ctx, 18, 42, 1, 12, dk('#5a3a1c', 0.30))
-    // Layered canopy (3 cones)
+    rect(ctx, 21, 42, 1, 12, dk('#5a3a1c', 0.45))
+    // Layered canopy (3 deep-green cones, RO conifer)
+    const edge = '#173a1f'
     const layers = [
-      { y: 32, hw: 14, h: 12, color: '#3a7a3a' },
-      { y: 22, hw: 11, h: 10, color: '#4a8a48' },
-      { y: 12, hw: 8,  h: 8,  color: '#5fa050' },
+      { y: 32, hw: 15, h: 13, color: '#2c6a34' },
+      { y: 21, hw: 12, h: 11, color: '#357c3d' },
+      { y: 11, hw: 8,  h: 9,  color: '#479249' },
     ]
     for (const L of layers) {
       tri(ctx, 20, L.y, L.hw, L.y + L.h, L.color)
-      // Highlight
+      // dark edges for a crisp pixel silhouette
+      for (let i = 0; i <= L.h; i++) {
+        const w = Math.round(L.hw * i / L.h)
+        px(ctx, 20 - w, L.y + i, edge)
+        px(ctx, 20 + w, L.y + i, edge)
+      }
+      // left-slope highlight
       for (let i = 0; i < L.h; i += 2) {
         const w = Math.round(L.hw * i / L.h)
-        px(ctx, 20 - w + 1, L.y + i, lt(L.color, 0.20))
+        px(ctx, 20 - w + 1, L.y + i, lt(L.color, 0.22))
       }
     }
-    // Snow/light on top tip
-    px(ctx, 20, 12, '#e8f8d8')
+    // Tiny tip highlight
+    px(ctx, 20, 11, '#7fc06a')
     return c
   }
 
@@ -819,16 +827,16 @@
     const r = rng(seed)
     const { c, ctx } = mkc(48, 56)
     rect(ctx, 14, 50, 20, 4, 'rgba(40,25,15,0.30)')
-    // Trunk
-    rect(ctx, 22, 38, 4, 16, '#5a3a1c')
-    rect(ctx, 22, 38, 1, 16, dk('#5a3a1c', 0.30))
-    // Big rounded foliage (multi-blob with pixel border)
-    const cx = 24
+    // Trunk (runs up under the canopy so there's no gap between them)
+    rect(ctx, 22, 30, 4, 24, '#5a3a1c')
+    rect(ctx, 22, 30, 1, 24, dk('#5a3a1c', 0.30))
+    // Big rounded foliage (deep RO greens, dark pixel border)
+    const cx = 24, edge = '#1d4a26'
     const blobs = [
-      { x: cx,    y: 16, r: 14, c: '#3a8a4a' },
-      { x: cx-9,  y: 22, r: 10, c: '#4a9a58' },
-      { x: cx+9,  y: 22, r: 10, c: '#4a9a58' },
-      { x: cx-4,  y: 12, r: 8,  c: '#5faa68' },
+      { x: cx,    y: 16, r: 15, c: '#2f6b34' },
+      { x: cx-10, y: 22, r: 11, c: '#357c3d' },
+      { x: cx+10, y: 22, r: 11, c: '#357c3d' },
+      { x: cx-4,  y: 12, r: 9,  c: '#46924a' },
     ]
     for (const b of blobs) {
       for (let dy = -b.r; dy <= b.r; dy++) for (let dx = -b.r; dx <= b.r; dx++) {
@@ -836,33 +844,40 @@
           const xx = b.x + dx, yy = b.y + dy
           if (xx >= 0 && yy >= 0 && xx < 48 && yy < 56) {
             const onEdge = dx*dx + dy*dy >= (b.r-1)*(b.r-1)
-            px(ctx, xx, yy, onEdge ? dk(b.c, 0.30) : b.c)
+            px(ctx, xx, yy, onEdge ? edge : b.c)
           }
         }
       }
     }
-    // Highlight specks
-    const speckN = 6 + Math.floor(r() * 4)
-    for (let i = 0; i < speckN; i++) {
-      const sx = cx - 10 + Math.floor(r() * 20)
-      const sy = 12 + Math.floor(r() * 16)
-      px(ctx, sx, sy, '#80c068')
+    // Sun-side highlight clump (top-left)
+    for (let i = 0; i < 10; i++) {
+      const sx = cx - 12 + Math.floor(r() * 14)
+      const sy = 10 + Math.floor(r() * 12)
+      px(ctx, sx, sy, '#6fb357')
+    }
+    // A few darker leaf gaps for texture
+    for (let i = 0; i < 5; i++) {
+      const sx = cx - 8 + Math.floor(r() * 18)
+      const sy = 16 + Math.floor(r() * 14)
+      px(ctx, sx, sy, '#244f29')
     }
     return c
   }
 
-  function treeSakura(seed) {
+  // Payon-style autumn tree — warm amber/gold canopy for RO variety.
+  function treeAutumn(seed) {
     const r = rng(seed)
     const { c, ctx } = mkc(44, 56)
     rect(ctx, 12, 50, 20, 4, 'rgba(40,25,15,0.30)')
-    rect(ctx, 20, 38, 4, 16, '#6a4828')
-    rect(ctx, 20, 38, 1, 16, dk('#6a4828', 0.30))
-    // Pink blossom canopy
-    const cx = 22
+    // Trunk (runs up under the canopy so there's no gap between them)
+    rect(ctx, 20, 30, 4, 24, '#5a3a1c')
+    rect(ctx, 20, 30, 1, 24, dk('#5a3a1c', 0.30))
+    // Amber/gold canopy with a dark pixel border
+    const cx = 22, edge = '#7a3f17'
     const blobs = [
-      { x: cx, y: 18, r: 13, c: '#f0a0c0' },
-      { x: cx-8, y: 22, r: 9, c: '#f5b0d0' },
-      { x: cx+8, y: 22, r: 9, c: '#f5b0d0' },
+      { x: cx, y: 18, r: 13, c: '#c2742a' },
+      { x: cx-8, y: 22, r: 9, c: '#d8923a' },
+      { x: cx+8, y: 22, r: 9, c: '#cf7f30' },
     ]
     for (const b of blobs) {
       for (let dy = -b.r; dy <= b.r; dy++) for (let dx = -b.r; dx <= b.r; dx++) {
@@ -870,22 +885,22 @@
           const xx = b.x + dx, yy = b.y + dy
           if (xx >= 0 && yy >= 0 && xx < 44 && yy < 56) {
             const onEdge = dx*dx + dy*dy >= (b.r-1)*(b.r-1)
-            px(ctx, xx, yy, onEdge ? dk(b.c, 0.20) : b.c)
+            px(ctx, xx, yy, onEdge ? edge : b.c)
           }
         }
       }
     }
-    // Bright petals
+    // Gold highlight specks
     for (let i = 0; i < 8; i++) {
-      const sx = cx - 12 + Math.floor(r() * 24)
-      const sy = 12 + Math.floor(r() * 16)
-      px(ctx, sx, sy, '#fff0f5')
+      const sx = cx - 11 + Math.floor(r() * 22)
+      const sy = 12 + Math.floor(r() * 14)
+      px(ctx, sx, sy, '#e8b24a')
     }
-    // Petals falling
+    // Falling leaves
     for (let i = 0; i < 4; i++) {
       const fx = cx - 14 + Math.floor(r() * 28)
       const fy = 38 + Math.floor(r() * 14)
-      px(ctx, fx, fy, '#f5b0d0')
+      px(ctx, fx, fy, '#cf7f30')
     }
     return c
   }
@@ -1544,7 +1559,7 @@
   window.MiauSprites = {
     house: paintHouse,
     cottage, bakery, workshop, barn, mill, well, marketStall, stage,
-    treePine, treeLush, treeSakura, bush, flowerPatch,
+    treePine, treeLush, treeAutumn, bush, flowerPatch,
     fountain, lampPost, bench, fence,
     grassTile, cobbleTile, dirtPathTile, cloud,
     // experimental — only used by /cafe-options.html

@@ -3,7 +3,7 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { W, H, PLAYER_SIZE, TREE_RECTS } = window.CityConfig
+  const { W, H, PLAYER_SIZE } = window.CityConfig
 
   City.drawFountain = function (ctx, x, y, now) {
     // Pixel-art fountain sprite + animated water shimmer/jet/droplets overlays.
@@ -47,20 +47,15 @@
     ctx.beginPath(); ctx.ellipse(x, y + 30, 20, 6, 0, 0, Math.PI * 2); ctx.fill()
     ctx.imageSmoothingEnabled = false
     const sway = Math.sin(now/1500 + x*0.01) * 1.5
-    // Prefer Sprout Lands sheet with sub-rect; fall back to procedural sprite.
-    const sheet = window.Assets && Assets.get('tile:trees_sheet')
-    const rect  = TREE_RECTS && TREE_RECTS[(idx ?? 0) % TREE_RECTS.length]
-    if (sheet && rect) {
-      const scale = 2.4  // 16-px source pixels at 2.4x = pleasant chunky pixel art
-      const renderW = rect.sw * scale, renderH = rect.sh * scale
-      ctx.drawImage(sheet, rect.sx, rect.sy, rect.sw, rect.sh,
-        x - renderW/2 + sway, y - renderH + 30, renderW, renderH)
-    } else if (sp && sp.trees && sp.trees[idx ?? 0]) {
+    // RO reskin: procedural trees (sprites.js). The Sprout Lands trees_sheet is
+    // no longer used; a dedicated PNG could still override via Assets if added.
+    if (sp && sp.trees && sp.trees[idx ?? 0]) {
       const img = sp.trees[idx ?? 0]
-      const renderW = img.width * 1.6, renderH = img.height * 1.6
-      ctx.drawImage(img, x - renderW/2 + sway, y - renderH + 36, renderW, renderH)
+      const scale = 1.9
+      const renderW = img.width * scale, renderH = img.height * scale
+      ctx.drawImage(img, x - renderW/2 + sway, y - renderH + 30, renderW, renderH)
     } else {
-      ctx.fillStyle = '#5fb070'
+      ctx.fillStyle = '#3c8042'
       ctx.beginPath(); ctx.arc(x, y - 8, 18, 0, Math.PI * 2); ctx.fill()
     }
     ctx.restore()
