@@ -34,10 +34,7 @@
         }
         if (window.Menu) Menu.toggle()
       })
-      // First-visit discovery hint — show after a delay so the user notices the pet first
-      if (App.user && !localStorage.getItem(HINT_KEY)) {
-        setTimeout(() => { if (!localStorage.getItem(HINT_KEY)) Pet.showHint() }, 1800)
-      }
+      // (hint de descubrimiento "click en tu miau" retirado — abultaba sobre el chat)
     },
 
     refresh() {

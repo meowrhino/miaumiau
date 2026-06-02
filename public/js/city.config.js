@@ -73,12 +73,6 @@
     { id: 'profile', name: 'Casita del Pescador',  x: 3100 - ZW/2, y: 840 - ZH/2,  w: ZW, h: ZH, color: '#a87dd8', mascotColor: '#BF7BD9', habitat: 'profile', building: '🏠', roof: '#7e54a8' },
   ]
 
-  // Vestigial (islas/puentes ya no existen) — se mantienen los KEYS exportados
-  // para no romper destructuring de consumidores que aún los nombran.
-  const ISLANDS = []
-  const ISLAND_R = 36
-  const BRIDGES = []
-
   // ─── Deco buildings (kinds existentes → loadSprites los conoce) ───────────
   // Repartidos por el parque para densidad. 'stall' x varios = mercado del feed.
   const DECO_BUILDINGS = [
@@ -158,31 +152,11 @@
     profile: { heart:   [0.50, 0.78], door: [0.50, 0.78] },
   }
 
-  // Vestigial sheet rects (Sprout Lands ya no se usa; KEYS mantenidos por compat).
-  const GRASS_TILE_RECT = { sx: 96, sy: 224, sw: 16, sh: 16 }
-  const HOUSE_RECTS = {
-    tweets:  { sx: 64, sy: 64, sw: 64, sh: 64 }, posts: { sx: 0, sy: 0, sw: 64, sh: 64 },
-    stories: { sx: 64, sy: 128, sw: 64, sh: 64 }, chat: { sx: 64, sy: 0, sw: 64, sh: 64 },
-    bereal:  { sx: 0, sy: 64, sw: 64, sh: 64 }, profile: { sx: 128, sy: 0, sw: 64, sh: 64 },
-  }
-  const TREE_RECTS = [
-    { sx: 0, sy: 0, sw: 32, sh: 48 }, { sx: 32, sy: 0, sw: 32, sh: 48 },
-    { sx: 96, sy: 0, sw: 32, sh: 48 }, { sx: 160, sy: 0, sw: 32, sh: 48 },
-  ]
-  const COTTAGE_RECTS = [
-    { sx: 128, sy: 64, sw: 64, sh: 64 }, { sx: 0, sy: 128, sw: 64, sh: 64 },
-    { sx: 128, sy: 128, sw: 64, sh: 64 }, { sx: 64, sy: 64, sw: 64, sh: 64 },
-  ]
-  const HUT_RECT = { sx: 0, sy: 0, sw: 64, sh: 64 }
-  const BRICK_RECTS = { bakery: { sx: 0, sy: 0, sw: 96, sh: 80 }, workshop: { sx: 96, sy: 0, sw: 96, sh: 80 } }
-
   window.CityConfig = {
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
-    ISLANDS, ISLAND_R, BRIDGES,
     VERJA, WATER, PASEOS, ESTANQUE, MONUMENT, GATES,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
-    GRASS_TILE_RECT, HOUSE_RECTS, TREE_RECTS, COTTAGE_RECTS, HUT_RECT, BRICK_RECTS,
   }
 })()

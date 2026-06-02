@@ -164,7 +164,4 @@
     }
   }
 
-  // No-ops mantenidos por compatibilidad (islas/puentes ya no existen).
-  City.drawShoreline = function () {}
-  City.drawBridges = function () {}
 })()

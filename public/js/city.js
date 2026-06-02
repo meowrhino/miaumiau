@@ -7,7 +7,6 @@
   const {
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
-    ISLANDS, ISLAND_R, BRIDGES,
     VERJA, WATER,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST, ZONE_ANCHORS,
@@ -343,9 +342,6 @@
 
   // ─── Other-poporing tooltip + popover live in city.tooltip.js (loaded after this file) ───
   // ─── Presence (MASCOT_COORDS, writePresenceForMode, etc) live in city.presence.js ───
-
-  // Bridge index by island id. Order in config matters: BRIDGES[0]=NW etc.
-  const BRIDGE_BY_ISLAND = { nw: BRIDGES[0], ne: BRIDGES[1], se: BRIDGES[2] }
 
   // Pathfinding helper: build a waypoint queue so click-to-walk auto-routes
   // through bridges instead of getting stuck on the shore. Each bridge has
