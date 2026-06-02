@@ -5,7 +5,6 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { HOUSE_RECTS, COTTAGE_RECTS, HUT_RECT, BRICK_RECTS } = window.CityConfig
 
   City.drawBuilding = function (ctx, z, now) {
     // Top-down pixel-art house sprite + animated overlays (smoke, sign,
@@ -23,20 +22,16 @@
     ctx.beginPath(); ctx.ellipse(cx, my + 6, 44, 12, 0, 0, Math.PI * 2); ctx.fill()
     ctx.restore()
 
-    // House sprite, in priority order:
-    //   1. Sprout Lands sheet (tile:house_sheet) with per-zone sub-rect
-    //   2. dedicated PNG asset (building:<zoneId>) — for future hand-made art
-    //   3. procedural sprite from sprites.js
-    //   4. colored rect as last resort
+    // House sprite, in priority order (RO reskin — the Sprout Lands house_sheet
+    // is no longer used; it read too cozy next to the RO town look):
+    //   1. dedicated PNG asset (building:<zoneId>) — for future hand-made art
+    //   2. procedural RO sprite from sprites.js
+    //   3. colored rect as last resort
     const useAssetForZone = City.useImageAssets &&
       (!City._assetWhitelist || City._assetWhitelist.has(z.id))
     ctx.imageSmoothingEnabled = false
-    const sheet = useAssetForZone && window.Assets ? Assets.get('tile:house_sheet') : null
-    const rect  = HOUSE_RECTS && HOUSE_RECTS[z.id]
     const assetImg = useAssetForZone && window.Assets ? Assets.get('building:' + z.id) : null
-    if (sheet && rect) {
-      ctx.drawImage(sheet, rect.sx, rect.sy, rect.sw, rect.sh, bx, by, renderW, renderH)
-    } else if (assetImg) {
+    if (assetImg) {
       ctx.drawImage(assetImg, bx, by, renderW, renderH)
     } else if (sp && sp.house && sp.house[z.id]) {
       ctx.drawImage(sp.house[z.id], bx, by, renderW, renderH)
@@ -120,22 +115,10 @@
     const sp = City.sprites
     const useAssetForKind = City.useImageAssets &&
       (!City._assetWhitelist || City._assetWhitelist.has(d.kind))
-    // Sheet+sub-rect lookups: cottage uses house_sheet; barn uses hut_sheet;
-    // bakery/workshop use brick_sheet. mill/well/stage/stalls stay procedural
-    // (they need bespoke art and are too distinctive for a generic house).
-    let sheet = null, rect = null
+    // RO reskin: every deco renders from its procedural RO sprite (sprites.js).
+    // A dedicated hand-made PNG still overrides if one is dropped in later
+    // (deco:<kind>[:variant]). The Sprout Lands sheets are no longer used.
     if (useAssetForKind && window.Assets) {
-      if (d.kind === 'cottage' && COTTAGE_RECTS) {
-        sheet = Assets.get('tile:house_sheet')
-        rect  = sheet ? COTTAGE_RECTS[(d.seed || 0) % COTTAGE_RECTS.length] : null
-      } else if (d.kind === 'barn' && HUT_RECT) {
-        sheet = Assets.get('tile:hut_sheet'); rect = sheet ? HUT_RECT : null
-      } else if ((d.kind === 'bakery' || d.kind === 'workshop') && BRICK_RECTS) {
-        sheet = Assets.get('tile:brick_sheet'); rect = sheet ? BRICK_RECTS[d.kind] : null
-      }
-    }
-    // Other kinds: fall back to dedicated PNG (most are still procedural).
-    if (!sheet && useAssetForKind && window.Assets) {
       const variant = (d.kind === 'cottage') ? (((d.seed || 0) % 4) + 1)
                     : (d.kind === 'stall')   ? (((d.seed || 0) % 2) + 1)
                     : null
@@ -148,12 +131,7 @@
     // Floor shadow
     ctx.fillStyle = 'rgba(0,0,0,0.18)'
     ctx.beginPath(); ctx.ellipse(d.x, d.y - 4, (d.h * 0.42), 8, 0, 0, Math.PI * 2); ctx.fill()
-    if (sheet && rect) {
-      const aspect = rect.sw / rect.sh
-      const rh = d.h, rw = rh * aspect
-      ctx.drawImage(sheet, rect.sx, rect.sy, rect.sw, rect.sh,
-        d.x - rw/2, d.y - rh, rw, rh)
-    } else if (img) {
+    if (img) {
       const aspect = img.width / img.height
       const rh = d.h, rw = rh * aspect
       ctx.drawImage(img, d.x - rw/2, d.y - rh, rw, rh)

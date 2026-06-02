@@ -165,6 +165,42 @@ for (const z of ZONES) {
   }
 }
 
+// ─── Deco strip (cottages, shops, props) ───
+const decoDefs = [
+  ['cottage', () => MiauSprites.cottage(11)],
+  ['cottage', () => MiauSprites.cottage(22)],
+  ['bakery',  () => MiauSprites.bakery()],
+  ['workshop',() => MiauSprites.workshop()],
+  ['barn',    () => MiauSprites.barn()],
+  ['mill',    () => MiauSprites.mill()],
+  ['well',    () => MiauSprites.well()],
+  ['stall',   () => MiauSprites.marketStall(7)],
+  ['stage',   () => MiauSprites.stage()],
+]
+const dh = document.createElement('h1')
+dh.textContent = 'deco — pueblo'
+dh.style.marginTop = '32px'
+document.body.appendChild(dh)
+const drow = document.createElement('div')
+Object.assign(drow.style, {
+  display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end',
+  background: '#b3dba8', padding: '20px', borderRadius: '12px', width: 'fit-content',
+})
+for (const [name, gen] of decoDefs) {
+  const cell = document.createElement('div')
+  Object.assign(cell.style, { display: 'flex', flexDirection: 'column', alignItems: 'center' })
+  const src = gen()
+  const cv = document.createElement('canvas')
+  cv.width = src.width; cv.height = src.height
+  Object.assign(cv.style, { width: (src.width * 2) + 'px', height: (src.height * 2) + 'px', imageRendering: 'pixelated' })
+  cv.getContext('2d').drawImage(src, 0, 0)
+  const lab = document.createElement('div')
+  lab.textContent = name
+  Object.assign(lab.style, { fontSize: '11px', marginTop: '6px', color: '#2d1f10' })
+  cell.appendChild(cv); cell.appendChild(lab); drow.appendChild(cell)
+}
+document.body.appendChild(drow)
+
 function spacer() {
   const s = document.createElement('div')
   s.className = 'col-header'

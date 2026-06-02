@@ -48,29 +48,37 @@
     ctx.fillRect(x+w-1, y, 1, h)
   }
 
-  // ─── HOUSE PALETTE ──────────────────────────────────────────────────────────
-  // Each house shares a "cozy cabin" wall family but the roof, accents and decoration vary by zone.
-  // opts: { wall, stroke, trim, door, win } — any override defaults below.
+  // ─── HOUSE PALETTE (Ragnarok town) ───────────────────────────────────────────
+  // Warm sandstone walls + timber framing + saturated terracotta-style tiled roof.
+  // The roof keeps each zone's identity HUE (café orange, tablón blue, …) but is
+  // rendered as a steep, shingled, ridged roof — that shape is what reads as "RO".
+  // opts: { wall, stroke, trim, door, win, stone, beam } — any override defaults below.
   function housePalette(roofColor, accentColor, opts) {
     opts = opts || {}
-    const wall = opts.wall || '#f7ead0'    // warm cream (default)
-    const wallS = dk(wall, 0.10)
-    const wallD = dk(wall, 0.22)
-    const trim = opts.trim || '#7a4d2a'    // wood trim
+    const wall = opts.wall || '#ecdcb4'    // sandstone (RO town wall)
+    const wallS = dk(wall, 0.12)
+    const wallD = dk(wall, 0.24)
+    const stone = opts.stone || '#cdb98e'  // foundation sillería
+    const stoneD = dk(stone, 0.28)
+    const beam = opts.beam || '#6f4a27'    // timber framing
+    const beamD = dk(beam, 0.32)
+    const trim = opts.trim || beam
     const trimD = dk(trim, 0.30)
-    const door = opts.door || '#8a5a32'
+    const door = opts.door || '#7a4a24'
     const doorD = dk(door, 0.30)
     const doorL = lt(door, 0.15)
     const win = opts.win || '#ffe9a8'      // warm window glow
     const winD = dk(win, 0.30)
-    const winFrame = '#5a3a20'
+    const winFrame = '#4a2f18'
     const roof = roofColor
-    const roofS = dk(roofColor, 0.25)
-    const roofL = lt(roofColor, 0.18)
-    const stroke = opts.stroke || '#3a2613'
-    const groundShadow = 'rgba(40,25,15,0.30)'
+    const roofS = dk(roofColor, 0.28)
+    const roofL = lt(roofColor, 0.22)
+    const roofE = dk(roofColor, 0.45)      // eave / deep shadow
+    const ridge = '#fff0cf'                // warm ridge highlight
+    const stroke = opts.stroke || '#2e2114'
+    const groundShadow = 'rgba(40,25,15,0.32)'
     const accent = accentColor || lt(roofColor, 0.4)
-    return { wall, wallS, wallD, trim, trimD, door, doorD, doorL, win, winD, winFrame, roof, roofS, roofL, stroke, groundShadow, accent }
+    return { wall, wallS, wallD, stone, stoneD, beam, beamD, trim, trimD, door, doorD, doorL, win, winD, winFrame, roof, roofS, roofL, roofE, ridge, stroke, groundShadow, accent }
   }
 
   // ─── HOUSE BUILDER (shared base) ───────────────────────────────────────────
@@ -87,100 +95,89 @@
     rect(ctx, bx - 6, H - 8, bw + 12, 4, p.groundShadow)
     rect(ctx, bx - 4, H - 4, bw + 8, 2, 'rgba(40,25,15,0.18)')
 
-    // Walls
+    // Sandstone wall body
     rect(ctx, bx, by, bw, bh, p.wall)
-    rect(ctx, bx, by + bh - 4, bw, 4, p.wallS)             // bottom shade band
     rect(ctx, bx + bw - 3, by, 3, bh, p.wallS)             // right shade
     rect(ctx, bx, by, 1, bh, p.wallD)                      // left edge accent
+    // Faint ashlar (stone-block) courses
+    for (let yy = by + 7; yy < by + bh - 3; yy += 7) {
+      rect(ctx, bx + 1, yy, bw - 4, 1, p.wallS)
+      for (let xx = bx + ((yy & 7) ? 8 : 15); xx < bx + bw - 3; xx += 14) px(ctx, xx, yy + 1, p.wallS)
+    }
+    // Timber corner posts + top plate (Geffen-ish framing)
+    rect(ctx, bx, by, 2, bh, p.beam)
+    rect(ctx, bx + bw - 2, by, 2, bh, p.beam)
+    rect(ctx, bx, by, bw, 2, p.beam)
+    rect(ctx, bx, by, 1, bh, p.beamD)
     outline(ctx, bx, by, bw, bh, p.stroke)
 
-    // Foundation stones
-    for (let i = 0; i < bw; i += 6) {
-      rect(ctx, bx + i, H - 8, 5, 4, p.trimD)
-      px(ctx, bx + i + 1, H - 7, p.trim)
+    // Stone foundation course (sillería)
+    rect(ctx, bx - 1, H - 9, bw + 2, 5, p.stone)
+    for (let i = 0; i < bw + 2; i += 7) {
+      px(ctx, bx - 1 + i, H - 9, p.stoneD)
+      rect(ctx, bx - 1 + i, H - 6, 1, 2, p.stoneD)
     }
+    rect(ctx, bx - 1, H - 4, bw + 2, 1, p.stroke)
   }
 
-  function paintRoofGable(ctx, p, opts) {
-    // Gable (triangular) roof
-    const W = 96
-    const apex = opts.apexY ?? 16
+  // ─── ROOF: steep terracotta-style tiled gable (the signature RO silhouette) ──
+  // Horizontal shingle banding + bright ridge + overhanging eaves with a little
+  // pagoda upturn at the corners. Colours derive from the zone roof hue.
+  function paintRoofTiled(ctx, p, opts) {
+    opts = opts || {}
+    const cx = opts.cx ?? 48
+    const apex = opts.apexY ?? 14
     const baseY = opts.baseY ?? 50
-    const cx = W / 2
-    const halfBase = opts.halfBase ?? 38
-    // Roof shadow under eaves
-    rect(ctx, cx - halfBase, baseY, halfBase * 2, 3, p.roofS)
-    // Triangle body (scanlines)
-    tri(ctx, cx, apex, halfBase, baseY, p.roof)
-    // Highlight on left slope
-    for (let i = 0; i < (baseY - apex); i += 1) {
-      const t = i / (baseY - apex)
-      const w = Math.round(halfBase * t)
-      if (i % 2 === 0) px(ctx, cx - w + 1, apex + i, p.roofL)
+    const halfBase = opts.halfBase ?? 40          // overhangs the wall (eaves)
+    const h = Math.max(1, baseY - apex)
+
+    // Eave shadow cast on the wall just under the roof
+    rect(ctx, cx - halfBase + 3, baseY, (halfBase - 3) * 2, 2, p.roofE)
+
+    // Roof triangle with horizontal shingle banding
+    for (let i = 0; i <= h; i++) {
+      const w = Math.round(halfBase * (i / h))
+      const band = (i % 4 === 3)
+      ctx.fillStyle = band ? p.roofS : p.roof
+      ctx.fillRect(cx - w, apex + i, w * 2 + 1, 1)
+      if (i % 2 === 0) px(ctx, cx - w + 1, apex + i, p.roofL)   // left-slope sheen
+      if (band) for (let xx = cx - w + 3; xx < cx + w - 1; xx += 5) px(ctx, xx, apex + i, p.roofE)
     }
-    // Outline (left + right edge)
-    for (let i = 0; i <= (baseY - apex); i++) {
-      const t = i / (baseY - apex)
-      const w = Math.round(halfBase * t)
+    // Slope outlines
+    for (let i = 0; i <= h; i++) {
+      const w = Math.round(halfBase * (i / h))
       px(ctx, cx - w, apex + i, p.stroke)
       px(ctx, cx + w, apex + i, p.stroke)
     }
-    // Eave shadow on wall top
-    rect(ctx, cx - halfBase, baseY, halfBase * 2, 1, p.stroke)
+    // Bright ridge down the centre
+    for (let i = 0; i < h; i++) px(ctx, cx, apex + i + 1, (i % 3) ? p.roofL : p.ridge)
+    // Eave lip + base outline
+    rect(ctx, cx - halfBase, baseY - 2, halfBase * 2 + 1, 2, p.roofS)
+    rect(ctx, cx - halfBase, baseY, halfBase * 2 + 1, 1, p.stroke)
+    // Upturned eave tips (pagoda kick)
+    paintBlocks(ctx, [
+      [cx - halfBase - 2, baseY - 4, 2, 2, p.roofS],
+      [cx - halfBase - 1, baseY - 3, 2, 2, p.roof],
+      [cx + halfBase,     baseY - 3, 2, 2, p.roof],
+      [cx + halfBase + 1, baseY - 4, 2, 2, p.roofS],
+    ])
+    // Finial knob at the apex
+    paintBlocks(ctx, [
+      [cx - 1, apex - 4, 2, 1, p.ridge],
+      [cx - 1, apex - 3, 2, 4, p.beam],
+    ])
   }
 
-  function paintRoofMansard(ctx, p) {
-    // Two-tier mansard (café look). Lower steeper, upper flatter.
-    const W = 96
-    const cx = W / 2
-    // Lower flare (wide)
-    paintBlocks(ctx, [
-      [cx - 36, 38, 72, 12, p.roof],
-      [cx - 36, 38, 72, 2, p.roofL],
-      [cx - 36, 48, 72, 2, p.roofS],
-    ])
-    // Tile lines
-    for (let x = cx - 34; x < cx + 36; x += 4) px(ctx, x, 44, p.roofS)
-    // Upper roof (smaller triangle)
-    tri(ctx, cx, 18, 28, 38, p.roof)
-    for (let i = 0; i <= 20; i++) {
-      const w = Math.round(28 * i / 20)
-      px(ctx, cx - w, 18 + i, p.stroke)
-      px(ctx, cx + w, 18 + i, p.stroke)
-    }
-    rect(ctx, cx - 36, 50, 72, 1, p.stroke)
-  }
-
-  function paintRoofPyramid(ctx, p) {
-    // Pyramid (observatory tower). Tall + narrow.
-    const cx = 48
-    paintBlocks(ctx, [
-      [cx - 18, 38, 36, 4, p.roof],
-      [cx - 18, 38, 36, 1, p.roofL],
-      [cx - 18, 41, 36, 1, p.roofS],
-    ])
-    tri(ctx, cx, 14, 18, 38, p.roof)
-    for (let i = 0; i <= 24; i++) {
-      const w = Math.round(18 * i / 24)
-      px(ctx, cx - w, 14 + i, p.stroke)
-      px(ctx, cx + w, 14 + i, p.stroke)
-    }
-    // Ridge highlight
-    for (let i = 0; i < 24; i += 2) px(ctx, cx, 14 + i, p.roofL)
-  }
-
-  function paintRoofFlat(ctx, p) {
-    // Studio flat roof with a small parapet.
-    const cx = 48
-    paintBlocks(ctx, [
-      [cx - 34, 32, 68, 18, p.roof],
-      [cx - 34, 32, 68, 2, p.roofL],
-      [cx - 34, 48, 68, 2, p.roofS],
-      [cx - 36, 30, 72, 4, p.roofS],          // parapet
-      [cx - 36, 30, 72, 2, p.roof],
-    ])
-    outline(ctx, cx - 34, 32, 68, 18, p.stroke)
-    outline(ctx, cx - 36, 30, 72, 4, p.stroke)
+  // Small hanging pennant in an accent colour — extra RO flavour + zone identity
+  // even when two zones share a roof hue. Anchored at (x,y) = hook top.
+  function paintBannerRO(ctx, x, y, color) {
+    const cD = dk(color, 0.30), cL = lt(color, 0.25)
+    rect(ctx, x, y, 1, 3, '#4a2f18')              // hook
+    rect(ctx, x - 3, y + 2, 7, 7, color)
+    rect(ctx, x - 3, y + 2, 7, 1, cL)
+    rect(ctx, x - 3, y + 8, 7, 1, cD)
+    px(ctx, x - 1, y + 9, color); px(ctx, x + 1, y + 9, color)   // V-notch tip
+    outline(ctx, x - 3, y + 2, 7, 7, '#3a2412')
   }
 
   // ─── HOUSE: el café ☕ (mansard roof + chimney + chalkboard hint baked in fascia) ──
@@ -188,7 +185,7 @@
     const p = housePalette(roofColor, '#c97a3a', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 64, bh: 44 })
-    paintRoofMansard(ctx, p)
+    paintRoofTiled(ctx, p, { apexY: 12, baseY: 50, halfBase: 40 })
 
     // Chimney with smoke pot (smoke is animated in city.js as overlay)
     paintBlocks(ctx, [
@@ -244,7 +241,7 @@
     const p = housePalette(roofColor, '#d4a83c', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 60, bh: 40 })
-    paintRoofGable(ctx, p, { apexY: 14, baseY: 50, halfBase: 36 })
+    paintRoofTiled(ctx, p, { apexY: 14, baseY: 52, halfBase: 40 })
 
     // Flag on roof apex
     paintBlocks(ctx, [
@@ -297,7 +294,7 @@
     const p = housePalette(roofColor, '#b890d8', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 60, bh: 40 })
-    paintRoofGable(ctx, p, { apexY: 22, baseY: 50, halfBase: 36 })
+    paintRoofTiled(ctx, p, { apexY: 20, baseY: 52, halfBase: 40 })
 
     // Small dome perched on the roof apex
     const dcx = 48, dcy = 22
@@ -355,7 +352,7 @@
     const p = housePalette(roofColor, '#5fb070', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 64, bh: 38 })
-    paintRoofGable(ctx, p, { apexY: 18, baseY: 50, halfBase: 38 })
+    paintRoofTiled(ctx, p, { apexY: 18, baseY: 54, halfBase: 40 })
 
     // Porch beam over door
     rect(ctx, 30, 56, 36, 3, p.trim)
@@ -407,7 +404,7 @@
     const p = housePalette(roofColor, '#ff8a3c', opts)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 64, bh: 42 })
-    paintRoofFlat(ctx, p)
+    paintRoofTiled(ctx, p, { apexY: 18, baseY: 50, halfBase: 40 })
 
     // Big camera mounted on flat roof
     paintBlocks(ctx, [
@@ -464,7 +461,7 @@
     const catD = dk(cat, 0.25)
     const { c, ctx } = mkc(96, 96)
     paintHouseBase(ctx, p, { bw: 64, bh: 40 })
-    paintRoofGable(ctx, p, { apexY: 14, baseY: 50, halfBase: 38 })
+    paintRoofTiled(ctx, p, { apexY: 14, baseY: 52, halfBase: 40 })
 
     // Heart-shape decoration above door (mini gable accent)
     paintBlocks(ctx, [
@@ -1150,142 +1147,137 @@
   // Smaller "you can't enter these" buildings that fill the village. Same pixel-art
   // style family as the 6 functional houses but visibly different roles.
 
-  // Cottage — tiny neighbour house, 64×64. Roof color seeded so they don't all match.
+  // Cottage — tiny neighbour house, 64×64. RO sandstone + tiled roof; roof hue
+  // seeded from an RO-town palette so they don't all match.
   function cottage(seed, roofColor) {
     const r = rng(seed)
     const c = mkc(64, 64)
     const ctx = c.ctx
-    const wall = '#f7ead0', wallS = dk(wall, 0.10)
-    const roof = roofColor || ['#c97a3a', '#5fa3d8', '#7a8e3a', '#a87dd8', '#b85258'][Math.floor(r() * 5)]
-    const stroke = '#3a2613', door = '#8a5a32', win = '#ffe9a8'
+    const wall = '#ecdcb4', wallS = dk(wall, 0.12)
+    const stone = '#cdb98e', stoneD = dk(stone, 0.28), beam = '#6f4a27'
+    const roof = roofColor || ['#c75b34', '#3f86b0', '#5a9a52', '#9a5a86', '#caa23a'][Math.floor(r() * 5)]
+    const rp = { roof, roofS: dk(roof, 0.28), roofL: lt(roof, 0.22), roofE: dk(roof, 0.45), ridge: '#fff0cf', stroke: '#2e2114', beam }
+    const stroke = '#2e2114', door = '#7a4a24', win = '#ffe9a8', winFrame = '#4a2f18'
     // Shadow
     rect(ctx, 6, 60, 52, 3, 'rgba(40,25,15,0.30)')
-    // Walls
-    rect(ctx, 12, 30, 40, 28, wall)
-    rect(ctx, 12, 54, 40, 4, wallS)
-    rect(ctx, 12, 30, 1, 28, dk(wall, 0.22))
-    outline(ctx, 12, 30, 40, 28, stroke)
-    // Roof (gable)
-    tri(ctx, 32, 8, 26, 30, roof)
-    for (let i = 0; i <= 22; i++) {
-      const w = Math.round(26 * i / 22)
-      px(ctx, 32 - w, 8 + i, stroke)
-      px(ctx, 32 + w, 8 + i, stroke)
-    }
-    rect(ctx, 6, 30, 52, 1, stroke)
-    // Highlight on roof
-    for (let i = 0; i < 22; i += 2) px(ctx, 32 - Math.round(26 * i / 22) + 1, 8 + i, lt(roof, 0.18))
+    // Walls (sandstone) with timber posts + ashlar courses
+    const bx = 12, by = 30, bw = 40, bh = 25
+    rect(ctx, bx, by, bw, bh, wall)
+    rect(ctx, bx + bw - 3, by, 3, bh, wallS)
+    for (let yy = by + 7; yy < by + bh - 3; yy += 7) rect(ctx, bx + 1, yy, bw - 4, 1, wallS)
+    rect(ctx, bx, by, 2, bh, beam); rect(ctx, bx + bw - 2, by, 2, bh, beam); rect(ctx, bx, by, bw, 2, beam)
+    outline(ctx, bx, by, bw, bh, stroke)
+    // Stone foundation course
+    rect(ctx, bx - 1, 55, bw + 2, 4, stone)
+    for (let i = 0; i < bw + 2; i += 7) px(ctx, bx - 1 + i, 55, stoneD)
+    rect(ctx, bx - 1, 59, bw + 2, 1, stroke)
+    // Tiled roof
+    paintRoofTiled(ctx, rp, { cx: 32, apexY: 8, baseY: 32, halfBase: 26 })
     // Door
     rect(ctx, 28, 42, 8, 16, door)
     rect(ctx, 28, 42, 8, 1, lt(door, 0.20))
     outline(ctx, 28, 42, 8, 16, stroke)
     px(ctx, 34, 50, '#ffd86a')
     // Window (one or two depending on seed)
-    rect(ctx, 16, 38, 8, 8, win)
-    outline(ctx, 16, 38, 8, 8, stroke)
-    rect(ctx, 20, 38, 1, 8, stroke); rect(ctx, 16, 42, 8, 1, stroke)
+    rect(ctx, 16, 40, 8, 8, win)
+    outline(ctx, 16, 40, 8, 8, winFrame)
+    rect(ctx, 20, 40, 1, 8, winFrame); rect(ctx, 16, 44, 8, 1, winFrame)
     if (r() > 0.5) {
-      rect(ctx, 40, 38, 8, 8, win)
-      outline(ctx, 40, 38, 8, 8, stroke)
-      rect(ctx, 44, 38, 1, 8, stroke); rect(ctx, 40, 42, 8, 1, stroke)
+      rect(ctx, 40, 40, 8, 8, win)
+      outline(ctx, 40, 40, 8, 8, winFrame)
+      rect(ctx, 44, 40, 1, 8, winFrame); rect(ctx, 40, 44, 8, 1, winFrame)
     }
-    // Optional chimney with seed
+    // Optional stone chimney with seed
     if (r() > 0.4) {
-      rect(ctx, 42, 12, 6, 14, '#a87859')
-      rect(ctx, 42, 12, 6, 2, '#7a4a30')
-      outline(ctx, 42, 12, 6, 14, stroke)
-    }
-    // Optional laundry line (sheet between corner posts)
-    if (r() > 0.5) {
-      rect(ctx, 4, 38, 1, 12, '#7a4d2a')
-      rect(ctx, 5, 39, 6, 1, 'rgba(120,90,60,0.6)')
-      rect(ctx, 5, 40, 4, 5, '#a8d0e8')
+      rect(ctx, 42, 10, 6, 12, stone)
+      rect(ctx, 42, 10, 6, 2, stoneD)
+      outline(ctx, 42, 10, 6, 12, stroke)
     }
     return c.c
   }
 
-  // Bakery — comercio pequeño con escaparate y pan
+  // Bakery — comercio RO: arenisca + tejado de tejas terracota + toldo + escaparate
   function bakery() {
     const c = mkc(88, 80)
     const ctx = c.ctx
-    const wall = '#f0d8a8', wallS = dk(wall, 0.12)
-    const roof = '#9a4a2a', roofL = lt('#9a4a2a', 0.18)
-    const stroke = '#3a2613', door = '#5a3a20', win = '#fff1c8'
+    const wall = '#ecdcb4', wallS = dk(wall, 0.12)
+    const stone = '#cdb98e', stoneD = dk(stone, 0.28), beam = '#6f4a27'
+    const roof = '#c75b34'
+    const rp = { roof, roofS: dk(roof, 0.28), roofL: lt(roof, 0.22), roofE: dk(roof, 0.45), ridge: '#fff0cf', stroke: '#2e2114', beam }
+    const stroke = '#2e2114', door = '#5a3a20', win = '#fff1c8', winFrame = '#4a2f18'
+    const awn = '#c0392b', awnL = lt(awn, 0.25), awnD = dk(awn, 0.30)
     rect(ctx, 8, 76, 72, 3, 'rgba(40,25,15,0.30)')
-    // Walls (slightly wider than cottage)
-    rect(ctx, 12, 36, 64, 38, wall)
-    rect(ctx, 12, 70, 64, 4, wallS)
-    outline(ctx, 12, 36, 64, 38, stroke)
-    // Awning (tilted overhang above storefront)
-    paintBlocks(ctx, [
-      [10, 32, 68, 4, roof],
-      [10, 32, 68, 1, roofL],
-      [10, 35, 68, 1, '#3a1810'],
-    ])
-    // Roof — flatter mansard
-    paintBlocks(ctx, [
-      [16, 14, 56, 18, roof],
-      [16, 14, 56, 2, roofL],
-      [16, 30, 56, 2, '#3a1810'],
-    ])
-    outline(ctx, 16, 14, 56, 18, stroke)
-    for (let x = 20; x < 72; x += 4) px(ctx, x, 22, '#3a1810')
-    // Big shop window (left)
-    rect(ctx, 18, 44, 24, 18, win)
-    outline(ctx, 18, 44, 24, 18, stroke)
-    rect(ctx, 30, 44, 1, 18, stroke); rect(ctx, 18, 53, 24, 1, stroke)
+    // Walls (sandstone) + timber posts + ashlar courses
+    const bx = 12, by = 36, bw = 64, bh = 38
+    rect(ctx, bx, by, bw, bh, wall)
+    rect(ctx, bx + bw - 3, by, 3, bh, wallS)
+    for (let yy = by + 8; yy < by + bh - 4; yy += 8) rect(ctx, bx + 1, yy, bw - 4, 1, wallS)
+    rect(ctx, bx, by, 2, bh, beam); rect(ctx, bx + bw - 2, by, 2, bh, beam)
+    outline(ctx, bx, by, bw, bh, stroke)
+    // Stone foundation
+    rect(ctx, bx - 1, 71, bw + 2, 4, stone)
+    for (let i = 0; i < bw + 2; i += 7) px(ctx, bx - 1 + i, 71, stoneD)
+    rect(ctx, bx - 1, 75, bw + 2, 1, stroke)
+    // Tiled roof
+    paintRoofTiled(ctx, rp, { cx: 44, apexY: 8, baseY: 36, halfBase: 38 })
+    // Striped awning over the storefront
+    rect(ctx, 14, 44, 32, 5, awn)
+    rect(ctx, 14, 44, 32, 1, awnL)
+    rect(ctx, 14, 48, 32, 1, awnD)
+    for (let x = 16; x < 46; x += 4) rect(ctx, x, 45, 2, 3, '#fff5e0')
+    for (let x = 14; x <= 46; x += 4) { px(ctx, x, 50, awnD); px(ctx, x + 1, 50, awnD) }
+    // Big shop window (left, under awning)
+    rect(ctx, 18, 52, 24, 14, win)
+    outline(ctx, 18, 52, 24, 14, winFrame)
+    rect(ctx, 30, 52, 1, 14, winFrame); rect(ctx, 18, 59, 24, 1, winFrame)
     // Bread loaves in window
     paintBlocks(ctx, [
-      [21, 56, 6, 4, '#c89858'], [21, 56, 6, 1, '#e8b878'],
-      [29, 56, 5, 4, '#d8a868'], [29, 56, 5, 1, '#f0c888'],
-      [36, 56, 4, 4, '#c89858'], [36, 56, 4, 1, '#e8b878'],
+      [21, 60, 6, 4, '#c89858'], [21, 60, 6, 1, '#e8b878'],
+      [29, 60, 5, 4, '#d8a868'], [29, 60, 5, 1, '#f0c888'],
+      [36, 60, 4, 4, '#c89858'], [36, 60, 4, 1, '#e8b878'],
     ])
     // Door (right side)
     rect(ctx, 52, 50, 14, 24, door)
     rect(ctx, 52, 50, 14, 2, lt(door, 0.20))
     outline(ctx, 52, 50, 14, 24, stroke)
-    // Door window (small)
     rect(ctx, 56, 54, 6, 6, win)
-    outline(ctx, 56, 54, 6, 6, stroke)
+    outline(ctx, 56, 54, 6, 6, winFrame)
     px(ctx, 64, 64, '#ffd86a')
-    // Sign hanging "PAN"
-    paintBlocks(ctx, [
-      [32, 4, 24, 10, '#fff5e0'],
-      [32, 4, 24, 1, dk('#fff5e0', 0.20)],
-      [44, 4, 1, 10, '#7a4d2a'],
-    ])
-    outline(ctx, 32, 4, 24, 10, stroke)
-    // Tiny baguette icon
-    rect(ctx, 36, 7, 8, 4, '#c89858')
-    rect(ctx, 38, 8, 1, 1, '#3a1810'); rect(ctx, 41, 8, 1, 1, '#3a1810')
+    // Small wall plaque with a baguette (under the eave, above the door)
+    rect(ctx, 50, 38, 18, 8, '#fff5e0')
+    outline(ctx, 50, 38, 18, 8, stroke)
+    rect(ctx, 53, 40, 12, 4, '#c89858')
+    px(ctx, 56, 41, '#3a1810'); px(ctx, 60, 41, '#3a1810')
     return c.c
   }
 
-  // Workshop / herrería — yunque y herramientas
+  // Workshop / herrería RO — muro de sillería + tejado de pizarra + fragua
   function workshop() {
     const c = mkc(80, 80)
     const ctx = c.ctx
-    const wall = '#a8907a', wallS = dk(wall, 0.20)
-    const roof = '#4a3a2a', roofL = lt('#4a3a2a', 0.18)
-    const stroke = '#1a0e08', door = '#5a3018', win = '#ffd070'
+    const wall = '#b6ab98', wallS = dk(wall, 0.20)
+    const stone = '#9c8f78', stoneD = dk(stone, 0.30), beam = '#5a4128'
+    const roof = '#5a4632'
+    const rp = { roof, roofS: dk(roof, 0.28), roofL: lt(roof, 0.22), roofE: dk(roof, 0.45), ridge: '#d8c9a8', stroke: '#1a0e08', beam }
+    const stroke = '#1a0e08', door = '#4a2c14', win = '#ffd070'
     rect(ctx, 6, 76, 68, 3, 'rgba(40,25,15,0.35)')
-    // Stone wall (chunky)
-    rect(ctx, 10, 36, 60, 38, wall)
-    rect(ctx, 10, 70, 60, 4, wallS)
-    outline(ctx, 10, 36, 60, 38, stroke)
-    // Stone texture
-    for (let y = 40; y < 70; y += 6) {
-      for (let x = 12; x < 70; x += 8) {
-        px(ctx, x + (y % 12 ? 0 : 4), y, dk(wall, 0.30))
-      }
+    // Stone wall (ashlar)
+    const bx = 10, by = 38, bw = 60, bh = 36
+    rect(ctx, bx, by, bw, bh, wall)
+    rect(ctx, bx + bw - 3, by, 3, bh, wallS)
+    for (let y = by + 6; y < by + bh - 3; y += 6) {
+      rect(ctx, bx + 1, y, bw - 4, 1, stoneD)
+      for (let x = bx + ((y % 12) ? 6 : 13); x < bx + bw - 3; x += 13) px(ctx, x, y + 1, stoneD)
     }
-    // Roof (low gable, dark wood)
-    tri(ctx, 40, 14, 32, 36, roof)
-    for (let i = 0; i <= 22; i++) {
-      const w = Math.round(32 * i / 22)
-      px(ctx, 40 - w, 14 + i, stroke); px(ctx, 40 + w, 14 + i, stroke)
-    }
-    // Open forge window with red glow
+    rect(ctx, bx, by, 2, bh, beam); rect(ctx, bx + bw - 2, by, 2, bh, beam)
+    outline(ctx, bx, by, bw, bh, stroke)
+    // Stone foundation
+    rect(ctx, bx - 1, 71, bw + 2, 4, stone)
+    for (let i = 0; i < bw + 2; i += 7) px(ctx, bx - 1 + i, 71, stoneD)
+    rect(ctx, bx - 1, 75, bw + 2, 1, stroke)
+    // Tiled (slate) roof
+    paintRoofTiled(ctx, rp, { cx: 40, apexY: 10, baseY: 38, halfBase: 36 })
+    // Open forge window with red glow (overlay adds flicker)
     rect(ctx, 16, 44, 14, 14, win)
     rect(ctx, 16, 44, 14, 4, '#ff7838')
     rect(ctx, 16, 56, 14, 2, '#a82010')
@@ -1304,54 +1296,53 @@
     ])
     rect(ctx, 64, 50, 2, 12, '#7a4d2a')   // hammer handle
     rect(ctx, 62, 48, 6, 4, '#3a3a3a')    // hammer head
-    // Smoke from chimney top-right
-    rect(ctx, 58, 12, 6, 10, '#5a4030')
     return c.c
   }
 
-  // Barn / granero — rojo, con heno
+  // Storehouse / almacén RO — sillería + tejado de tejas + portón + cajas
   function barn() {
     const c = mkc(80, 72)
     const ctx = c.ctx
-    const wall = '#c44030', wallS = dk(wall, 0.25), wallL = lt('#c44030', 0.18)
-    const trim = '#fff5e0'
-    const roof = '#3a2a1a'
-    const stroke = '#1a0a08', hay = '#e8c060'
+    const wall = '#ecdcb4', wallS = dk(wall, 0.12)
+    const stone = '#cdb98e', stoneD = dk(stone, 0.28), beam = '#6f4a27'
+    const roof = '#b8702e'
+    const rp = { roof, roofS: dk(roof, 0.28), roofL: lt(roof, 0.22), roofE: dk(roof, 0.45), ridge: '#fff0cf', stroke: '#2e2114', beam }
+    const stroke = '#2e2114', wood = '#7a4a24', crate = '#b98a4a'
     rect(ctx, 6, 68, 68, 3, 'rgba(40,25,15,0.35)')
-    // Walls
-    rect(ctx, 10, 28, 60, 40, wall)
-    rect(ctx, 10, 64, 60, 4, wallS)
-    rect(ctx, 10, 28, 60, 2, wallL)
-    outline(ctx, 10, 28, 60, 40, stroke)
-    // Trim (white planks)
-    rect(ctx, 10, 28, 60, 2, trim)
-    rect(ctx, 10, 46, 60, 2, trim)
-    // Cross brace (X on the front)
-    rect(ctx, 12, 30, 2, 16, trim)        // diagonal hint
-    rect(ctx, 56, 30, 2, 16, trim)
-    // Roof (gambrel-ish: two slopes)
-    tri(ctx, 40, 4, 36, 28, roof)
-    for (let i = 0; i <= 24; i++) {
-      const w = Math.round(36 * i / 24)
-      px(ctx, 40 - w, 4 + i, stroke); px(ctx, 40 + w, 4 + i, stroke)
-    }
-    // Big sliding doors (closed)
-    rect(ctx, 28, 46, 24, 22, '#7a3020')
-    rect(ctx, 28, 46, 12, 22, dk('#7a3020', 0.15))
-    rect(ctx, 28, 46, 24, 1, lt('#7a3020', 0.20))
-    outline(ctx, 28, 46, 24, 22, stroke)
-    rect(ctx, 39, 46, 2, 22, stroke)        // gap between doors
-    // Hay loft window (top)
-    rect(ctx, 34, 12, 12, 8, hay)
-    rect(ctx, 34, 18, 12, 2, dk(hay, 0.30))
-    outline(ctx, 34, 12, 12, 8, stroke)
-    // Hay bales in front
+    // Walls (sandstone) + timber posts + ashlar courses
+    const bx = 10, by = 30, bw = 60, bh = 36
+    rect(ctx, bx, by, bw, bh, wall)
+    rect(ctx, bx + bw - 3, by, 3, bh, wallS)
+    for (let yy = by + 8; yy < by + bh - 4; yy += 8) rect(ctx, bx + 1, yy, bw - 4, 1, wallS)
+    rect(ctx, bx, by, 2, bh, beam); rect(ctx, bx + bw - 2, by, 2, bh, beam)
+    outline(ctx, bx, by, bw, bh, stroke)
+    // Stone foundation
+    rect(ctx, bx - 1, 63, bw + 2, 4, stone)
+    for (let i = 0; i < bw + 2; i += 7) px(ctx, bx - 1 + i, 63, stoneD)
+    rect(ctx, bx - 1, 67, bw + 2, 1, stroke)
+    // Tiled roof (wide, low — a long storehouse)
+    paintRoofTiled(ctx, rp, { cx: 40, apexY: 6, baseY: 30, halfBase: 38 })
+    // Loft hatch (timber) high on the gable
+    rect(ctx, 34, 14, 12, 8, wood)
+    rect(ctx, 34, 14, 12, 1, lt(wood, 0.20))
+    rect(ctx, 40, 14, 1, 8, dk(wood, 0.25))
+    outline(ctx, 34, 14, 12, 8, stroke)
+    // Big wooden double doors with iron bands
+    rect(ctx, 28, 44, 24, 22, wood)
+    rect(ctx, 28, 44, 12, 22, dk(wood, 0.15))
+    rect(ctx, 28, 44, 24, 1, lt(wood, 0.20))
+    rect(ctx, 28, 49, 24, 1, dk(wood, 0.30))     // iron band
+    rect(ctx, 28, 60, 24, 1, dk(wood, 0.30))
+    outline(ctx, 28, 44, 24, 22, stroke)
+    rect(ctx, 39, 44, 2, 22, stroke)             // gap between doors
+    px(ctx, 37, 55, '#3a2412'); px(ctx, 43, 55, '#3a2412')  // ring handles
+    // Crates stacked outside
     paintBlocks(ctx, [
-      [56, 60, 10, 8, hay],
-      [56, 60, 10, 2, lt(hay, 0.20)],
-      [56, 66, 10, 2, dk(hay, 0.30)],
+      [56, 58, 12, 8, crate], [56, 58, 12, 1, lt(crate, 0.20)], [56, 65, 12, 1, dk(crate, 0.30)],
+      [58, 50, 8, 8, crate], [58, 50, 8, 1, lt(crate, 0.20)], [58, 57, 8, 1, dk(crate, 0.30)],
     ])
-    for (let x = 57; x < 66; x += 2) px(ctx, x, 64, dk(hay, 0.30))
+    outline(ctx, 56, 58, 12, 8, stroke); outline(ctx, 58, 50, 8, 8, stroke)
+    px(ctx, 62, 54, dk(crate, 0.30)); px(ctx, 62, 62, dk(crate, 0.30))  // cross-slat hints
     return c.c
   }
 
