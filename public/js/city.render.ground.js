@@ -11,21 +11,21 @@
 
   // ── Texturas Cainos (suelo) → CanvasPattern desde una celda limpia del atlas.
   // Celdas (sx,sy) AJUSTABLES si el tile sale raro; destino 48px (tile del mundo).
-  const GRASS_CELL = { sx: 32, sy: 40 }, STONE_CELL = { sx: 24, sy: 40 }, CELL = 32, DST = 48
-  let _pat = null
+  const GRASS_CELL = { sx: 32, sy: 40 }, STONE_CELL = { sx: 24, sy: 40 }, WALL_CELL = { sx: 48, sy: 80 }, CELL = 32, DST = 48
+  function _mk(ctx, img, cell) {
+    const c = document.createElement('canvas'); c.width = DST; c.height = DST
+    const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false
+    cx.drawImage(img, cell.sx, cell.sy, CELL, CELL, 0, 0, DST, DST)
+    return ctx.createPattern(c, 'repeat')
+  }
+  let _pg = null, _ps = null, _pw = null   // cache perezosa por patrón (cada uno cuando carga su PNG)
   function cainosPatterns(ctx) {
-    if (_pat) return _pat
-    const A = window.Assets
-    const g = A && A.get('cainos:grass'), s = A && A.get('cainos:stone')
-    if (!g || !s) return null
-    const mk = (img, cell) => {
-      const c = document.createElement('canvas'); c.width = DST; c.height = DST
-      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false
-      cx.drawImage(img, cell.sx, cell.sy, CELL, CELL, 0, 0, DST, DST)
-      return ctx.createPattern(c, 'repeat')
-    }
-    _pat = { grass: mk(g, GRASS_CELL), stone: mk(s, STONE_CELL) }
-    return _pat
+    const A = window.Assets; if (!A) return null
+    if (!_pg) { const g = A.get('cainos:grass'); if (g) _pg = _mk(ctx, g, GRASS_CELL) }
+    if (!_ps) { const s = A.get('cainos:stone'); if (s) _ps = _mk(ctx, s, STONE_CELL) }
+    if (!_pw) { const w = A.get('cainos:wall'); if (w) _pw = _mk(ctx, w, WALL_CELL) }
+    if (!_pg || !_ps) return null
+    return { grass: _pg, stone: _ps, wall: _pw }
   }
 
   // Traza el polígono de la verja (parque). Clip de césped + dibujo de la reja.
@@ -133,9 +133,16 @@
     ctx.strokeStyle = 'rgba(120,90,60,0.35)'; ctx.lineWidth = 3
     ctx.beginPath(); ctx.ellipse(PLAZA.x, PLAZA.y, PLAZA.rx - 4, PLAZA.ry - 4, 0, 0, Math.PI * 2); ctx.stroke()
 
-    // ── 5. Verja (reja de hierro + pilares) ──
-    traceVerja(ctx); ctx.strokeStyle = '#2c2c2c'; ctx.lineWidth = 10; ctx.stroke()
-    ctx.save(); ctx.setLineDash([4, 30]); traceVerja(ctx); ctx.strokeStyle = '#9a9080'; ctx.lineWidth = 22; ctx.stroke(); ctx.restore()
+    // ── 5. Verja: muro de piedra Cainos (o reja procedural de fallback) ──
+    const _vp = cainosPatterns(ctx)
+    if (_vp && _vp.wall) {
+      ctx.lineJoin = 'round'
+      traceVerja(ctx); ctx.strokeStyle = 'rgba(28,22,14,0.55)'; ctx.lineWidth = 36; ctx.stroke()
+      traceVerja(ctx); ctx.strokeStyle = _vp.wall; ctx.lineWidth = 28; ctx.stroke()
+    } else {
+      traceVerja(ctx); ctx.strokeStyle = '#2c2c2c'; ctx.lineWidth = 10; ctx.stroke()
+      ctx.save(); ctx.setLineDash([4, 30]); traceVerja(ctx); ctx.strokeStyle = '#9a9080'; ctx.lineWidth = 22; ctx.stroke(); ctx.restore()
+    }
 
     // ── 6. Warps (remolino azul) en las puertas ──
     if (GATES) {
