@@ -7,7 +7,7 @@
   const { W, H, PLAZA, SPAWN, VERJA, WATER, PASEOS, GATES } = window.CityConfig
 
   const COBBLE = '#d2c6ac', COBBLE_LN = '#ac9e80'
-  const WATER_C = '#3fa3e0', WATER_DK = '#2f86c2'
+  const WATER_C = '#4f93b3', WATER_DK = '#3a7795', SHORE = '#bcb3a2'  // agua apagada + orilla de piedra (cohesión Cainos)
 
   // ── Texturas Cainos (suelo) → CanvasPattern desde una celda limpia del atlas.
   // Celdas (sx,sy) AJUSTABLES si el tile sale raro; destino 48px (tile del mundo).
@@ -168,30 +168,32 @@
   City.drawWater = function (ctx, now, visL, visT, visR, visB) {
     for (const w of WATER) {
       if (w.type === 'rect') {
-        ctx.save()
-        ctx.beginPath()
-        if (ctx.roundRect) ctx.roundRect(w.x, w.y, w.w, w.h, w.r || 0)
-        else ctx.rect(w.x, w.y, w.w, w.h)
-        ctx.fillStyle = WATER_C; ctx.fill()
-        ctx.strokeStyle = WATER_DK; ctx.lineWidth = 8; ctx.stroke()
-        ctx.clip()
-        const drift = (now / 60) % 24
-        ctx.fillStyle = 'rgba(26,74,110,0.20)'
-        for (let y = w.y - drift; y < w.y + w.h; y += 24) ctx.fillRect(w.x, y, w.w, 3)
-        for (let i = 0; i < 40; i++) {
+        // orilla de piedra
+        ctx.fillStyle = SHORE; ctx.beginPath()
+        if (ctx.roundRect) ctx.roundRect(w.x - 10, w.y - 10, w.w + 20, w.h + 20, (w.r || 0) + 10)
+        else ctx.rect(w.x - 10, w.y - 10, w.w + 20, w.h + 20)
+        ctx.fill()
+        // agua (apagada) con bandas de oleaje suaves
+        ctx.save(); ctx.beginPath()
+        if (ctx.roundRect) ctx.roundRect(w.x, w.y, w.w, w.h, w.r || 0); else ctx.rect(w.x, w.y, w.w, w.h)
+        ctx.fillStyle = WATER_C; ctx.fill(); ctx.clip()
+        const drift = (now / 70) % 26
+        ctx.fillStyle = 'rgba(30,70,95,0.18)'
+        for (let y = w.y - drift; y < w.y + w.h; y += 26) ctx.fillRect(w.x, y, w.w, 3)
+        for (let i = 0; i < 36; i++) {
           const sx = w.x + ((i * 137) % w.w), sy = w.y + (((i * 191) + 47) % w.h)
-          const tw = (Math.sin(now / 800 + i * 1.7) + 1) * 0.5
-          ctx.fillStyle = `rgba(220,245,255,${tw * 0.5})`
+          const tw = (Math.sin(now / 900 + i * 1.7) + 1) * 0.5
+          ctx.fillStyle = `rgba(210,235,245,${tw * 0.32})`
           ctx.fillRect(sx | 0, sy | 0, 2, 2)
         }
         ctx.restore()
       } else if (w.type === 'ellipse') {
+        ctx.fillStyle = SHORE; ctx.beginPath(); ctx.ellipse(w.x, w.y, w.rx + 10, w.ry + 10, 0, 0, Math.PI * 2); ctx.fill()
         ctx.fillStyle = WATER_C; ctx.beginPath(); ctx.ellipse(w.x, w.y, w.rx, w.ry, 0, 0, Math.PI * 2); ctx.fill()
-        ctx.strokeStyle = WATER_DK; ctx.lineWidth = 6; ctx.stroke()
       } else if (w.type === 'stroke') {
         ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-        tracePaseo(ctx, w.pts); ctx.strokeStyle = WATER_DK; ctx.lineWidth = w.w; ctx.stroke()
-        tracePaseo(ctx, w.pts); ctx.strokeStyle = WATER_C; ctx.lineWidth = Math.max(2, w.w - 8); ctx.stroke()
+        tracePaseo(ctx, w.pts); ctx.strokeStyle = SHORE; ctx.lineWidth = w.w + 12; ctx.stroke()
+        tracePaseo(ctx, w.pts); ctx.strokeStyle = WATER_C; ctx.lineWidth = Math.max(2, w.w - 4); ctx.stroke()
       }
     }
   }
