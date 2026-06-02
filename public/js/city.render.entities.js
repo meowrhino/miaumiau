@@ -5,37 +5,32 @@
   const City = window.City
   const { W, H, PLAYER_SIZE } = window.CityConfig
 
+  // Fuente de piedra de Cainos (hoja 'props', pila redonda) — corazón del feed.
+  const CAINOS_FOUNTAIN = { sx: 352, sy: 269, sw: 96, sh: 72 }
   City.drawFountain = function (ctx, x, y, now) {
-    // Pixel-art fountain sprite + animated water shimmer/jet/droplets overlays.
-    const sp = City.sprites
     ctx.save()
     ctx.imageSmoothingEnabled = false
-    const fImg = sp && sp.fountain
-    const fw = 144, fh = 112
-    if (fImg) ctx.drawImage(fImg, x - fw/2, y - fh + 36, fw, fh)
-    else {
+    const props = window.Assets && Assets.get('cainos:props')
+    if (props) {
+      const r = CAINOS_FOUNTAIN, scale = 1.5
+      const rw = r.sw * scale, rh = r.sh * scale
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'
+      ctx.beginPath(); ctx.ellipse(x, y + rh * 0.30, rw * 0.42, 12, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.drawImage(props, r.sx, r.sy, r.sw, r.sh, x - rw / 2, y - rh / 2 - 4, rw, rh)
+      // Brillo de agua animado sobre la pila
+      for (let i = 0; i < 5; i++) {
+        const t = ((now / 900) + i * 0.2) % 1
+        const sxx = x + Math.sin(t * Math.PI * 2 + i * 1.3) * 22
+        const syy = y - 6 + Math.cos(t * Math.PI * 2 + i) * 7
+        ctx.fillStyle = `rgba(255,255,255,${0.5 - t * 0.3})`
+        ctx.fillRect(sxx | 0, syy | 0, 2, 2)
+      }
+    } else {
       ctx.fillStyle = '#bdb1a3'
       ctx.beginPath(); ctx.ellipse(x, y + 4, 44, 14, 0, 0, Math.PI * 2); ctx.fill()
-    }
-    // Animated water surface shimmer (white sparkles drifting)
-    for (let i = 0; i < 4; i++) {
-      const t = ((now/900) + i * 0.25) % 1
-      const sxx = x + Math.sin(t * Math.PI * 2 + i * 1.3) * 18
-      const syy = y - 4 + Math.cos(t * Math.PI * 2 + i) * 2
-      ctx.fillStyle = `rgba(255,255,255,${0.5 - t*0.3})`
-      ctx.fillRect(sxx|0, syy|0, 2, 2)
-    }
-    // Jet rising from the top bowl
-    const jet = 8 + (Math.sin(now/180) + 1) * 3
-    ctx.fillStyle = 'rgba(190,225,245,0.85)'
-    ctx.beginPath(); ctx.ellipse(x, y - 50 - jet/2, 3, jet/2, 0, 0, Math.PI * 2); ctx.fill()
-    // Falling droplets from the top bowl
-    for (let i = 0; i < 3; i++) {
-      const t = ((now/600) + i * 0.33) % 1
-      const dy = -42 + t * 38
-      const dx = (i - 1) * 8
-      ctx.fillStyle = `rgba(190,225,245,${0.85 - t*0.3})`
-      ctx.beginPath(); ctx.arc(x + dx, y + dy, 1.6, 0, Math.PI * 2); ctx.fill()
+      const jet = 8 + (Math.sin(now / 180) + 1) * 3
+      ctx.fillStyle = 'rgba(190,225,245,0.85)'
+      ctx.beginPath(); ctx.ellipse(x, y - 50 - jet / 2, 3, jet / 2, 0, 0, Math.PI * 2); ctx.fill()
     }
     ctx.restore()
   }
