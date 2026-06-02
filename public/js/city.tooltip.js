@@ -103,7 +103,7 @@
       if (typeof showToast === 'function') showToast(`saludaste a ${o.username} 💗`, 1500)
       if (window.track) track('city:hello', { to: o.user_id })
       // Broadcast the wave so everyone else in the city sees the heart bubble too
-      if (window.API) API.post('/city/wave', { to_user_id: o.user_id }).catch(() => {})
+      if (typeof API !== 'undefined') API.post('/city/wave', { to_user_id: o.user_id }).catch(() => {})
       City.closeOtherPopover()
     }
     pop.querySelector('.city-popover-close').onclick = () => City.closeOtherPopover()

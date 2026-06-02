@@ -162,7 +162,7 @@
       clearInterval(City.cityChatTimer)
       if (City.unmountChatBar) City.unmountChatBar()
       // Optional: clear presence on leave (best-effort)
-      if (App.user && window.API) API.del('/city/presence').catch(() => {})
+      if (App.user && typeof API !== 'undefined') API.del('/city/presence').catch(() => {})
     },
 
     // ─── Camera + fitCanvas (fitCanvas, detectCameraMode, applyCameraMode,

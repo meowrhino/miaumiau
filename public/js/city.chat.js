@@ -24,7 +24,7 @@
 
   // Poll recent town messages → assign the latest per user to City._says.
   City.fetchCityChat = async function () {
-    if (!window.API) return
+    if (typeof API === 'undefined') return
     try {
       const list = await API.get('/city/chat')
       if (!Array.isArray(list)) return
@@ -51,7 +51,7 @@
   // Say something: show my bubble right away (optimistic) + POST it.
   City.sayInWorld = async function (text) {
     text = (text || '').trim()
-    if (!text || !(window.App && App.user) || !window.API) return
+    if (!text || !(window.App && App.user) || typeof API === 'undefined') return
     if (text.length > 120) text = text.slice(0, 120)
     City._says[App.user.id] = { text, until: performance.now() + SAY_MS }
     City._pushChat((App.user.display_name || App.user.username || 'tú'),

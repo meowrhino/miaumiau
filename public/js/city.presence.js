@@ -77,7 +77,7 @@
 
   // Write presence for a given mode (called by App.go for non-city modes)
   City.writePresenceForMode = async function (mode) {
-    if (!App.user || !window.API) return
+    if (!App.user || typeof API === 'undefined') return
     const coords = City.MASCOT_COORDS[mode]
     if (!coords) return
     try { await API.post('/city/presence', { zone: mode, x: coords.x, y: coords.y }) } catch (_) {}
