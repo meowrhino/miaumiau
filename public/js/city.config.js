@@ -122,6 +122,14 @@
   // 'tile:<name>'. Files under /img/. Missing files → procedural fallback.
   // (M5 del port: aquí entran los PNGs recortados de Elthen, slot a slot.)
   const ASSET_MANIFEST = {
+    // Cainos — Pixel Art Top Down Basic (gratis + comercial). Atlas de tiles;
+    // el render recorta sub-celdas. Crédito en ASSETS_LICENSES.md.
+    'cainos:grass':  '/img/cainos/grass.png',
+    'cainos:stone':  '/img/cainos/stone.png',
+    'cainos:plant':  '/img/cainos/plant.png',
+    'cainos:props':  '/img/cainos/props.png',
+    'cainos:wall':   '/img/cainos/wall.png',
+    'cainos:struct': '/img/cainos/struct.png',
     'building:tweets':  '/img/buildings/tweets-cafe.png',
     'building:posts':   '/img/buildings/posts-board.png',
     'building:stories': '/img/buildings/stories-observatory.png',

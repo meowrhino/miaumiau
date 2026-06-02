@@ -56,3 +56,4 @@ When buying, save the receipt + license note in this file.
 ---
 
 ## (no other third-party assets yet)
+- **Pixel Art Top Down - Basic** by **Cainos** — suelo/props del parque (reskin El Retiro). Gratis + uso comercial. https://cainos.itch.io/pixel-art-top-down-basic

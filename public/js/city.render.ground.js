@@ -9,6 +9,25 @@
   const COBBLE = '#d2c6ac', COBBLE_LN = '#ac9e80'
   const WATER_C = '#3fa3e0', WATER_DK = '#2f86c2'
 
+  // ── Texturas Cainos (suelo) → CanvasPattern desde una celda limpia del atlas.
+  // Celdas (sx,sy) AJUSTABLES si el tile sale raro; destino 48px (tile del mundo).
+  const GRASS_CELL = { sx: 32, sy: 40 }, STONE_CELL = { sx: 24, sy: 40 }, CELL = 32, DST = 48
+  let _pat = null
+  function cainosPatterns(ctx) {
+    if (_pat) return _pat
+    const A = window.Assets
+    const g = A && A.get('cainos:grass'), s = A && A.get('cainos:stone')
+    if (!g || !s) return null
+    const mk = (img, cell) => {
+      const c = document.createElement('canvas'); c.width = DST; c.height = DST
+      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false
+      cx.drawImage(img, cell.sx, cell.sy, CELL, CELL, 0, 0, DST, DST)
+      return ctx.createPattern(c, 'repeat')
+    }
+    _pat = { grass: mk(g, GRASS_CELL), stone: mk(s, STONE_CELL) }
+    return _pat
+  }
+
   // Traza el polígono de la verja (parque). Clip de césped + dibujo de la reja.
   function traceVerja(ctx) {
     ctx.beginPath()
@@ -60,33 +79,34 @@
     ctx.fillStyle = '#3f6b2e'
     ctx.fillRect(visL, visT, visR - visL, visB - visT)
 
-    // ── 1. Césped (clip a la verja) — tonos por tile + briznas/florecillas ──
+    // ── 1+2. Césped + paseos (clip a la verja). Cainos si cargó, si no procedural ──
     ctx.save()
     traceVerja(ctx); ctx.clip()
-    const TILE = 48
-    const TONES = ['#6aa838', '#74b340', '#62a033', '#6fae3c']
-    const gsx = Math.floor(visL / TILE) * TILE - TILE, gex = Math.ceil(visR / TILE) * TILE + TILE
-    const gsy = Math.floor(visT / TILE) * TILE - TILE, gey = Math.ceil(visB / TILE) * TILE + TILE
-    for (let wy = gsy; wy < gey; wy += TILE) {
-      for (let wx = gsx; wx < gex; wx += TILE) {
-        const hsh = (((wx * 73856093) ^ (wy * 19349663)) >>> 0)
-        ctx.fillStyle = TONES[hsh % TONES.length]
-        ctx.fillRect(wx, wy, TILE, TILE)
+    const pat = cainosPatterns(ctx)
+    if (pat) {
+      ctx.fillStyle = pat.grass
+      ctx.fillRect(visL, visT, visR - visL, visB - visT)
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+      for (const p of PASEOS) {
+        tracePaseo(ctx, p); ctx.strokeStyle = 'rgba(40,30,20,0.18)'; ctx.lineWidth = 70; ctx.stroke()
+        tracePaseo(ctx, p); ctx.strokeStyle = pat.stone; ctx.lineWidth = 56; ctx.stroke()
       }
-    }
-    for (let i = 0; i < 1400; i++) {
-      const wx = (i * 137 + i * i * 7) % W
-      const wy = (i * 89 + 31) % H
-      ctx.fillStyle = (i & 1) ? 'rgba(158,206,96,0.55)' : 'rgba(38,86,28,0.5)'
-      ctx.fillRect(wx, wy, 1, 2); ctx.fillRect(wx + 1, wy - 1, 1, 2)
-      if (i % 23 === 0) { ctx.fillStyle = 'rgba(255,238,90,0.7)'; ctx.fillRect(wx, wy - 1, 1, 1) }
-      else if (i % 37 === 0) { ctx.fillStyle = 'rgba(240,240,255,0.75)'; ctx.fillRect(wx, wy - 1, 1, 1) }
-    }
-    // ── 2. Paseos (adoquín serpenteante), dentro del clip de la verja ──
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-    for (const p of PASEOS) {
-      tracePaseo(ctx, p); ctx.strokeStyle = COBBLE_LN; ctx.lineWidth = 64; ctx.stroke()
-      tracePaseo(ctx, p); ctx.strokeStyle = COBBLE; ctx.lineWidth = 54; ctx.stroke()
+    } else {
+      const TILE = 48
+      const TONES = ['#6aa838', '#74b340', '#62a033', '#6fae3c']
+      const gsx = Math.floor(visL / TILE) * TILE - TILE, gex = Math.ceil(visR / TILE) * TILE + TILE
+      const gsy = Math.floor(visT / TILE) * TILE - TILE, gey = Math.ceil(visB / TILE) * TILE + TILE
+      for (let wy = gsy; wy < gey; wy += TILE) {
+        for (let wx = gsx; wx < gex; wx += TILE) {
+          const hsh = (((wx * 73856093) ^ (wy * 19349663)) >>> 0)
+          ctx.fillStyle = TONES[hsh % TONES.length]; ctx.fillRect(wx, wy, TILE, TILE)
+        }
+      }
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+      for (const p of PASEOS) {
+        tracePaseo(ctx, p); ctx.strokeStyle = COBBLE_LN; ctx.lineWidth = 64; ctx.stroke()
+        tracePaseo(ctx, p); ctx.strokeStyle = COBBLE; ctx.lineWidth = 54; ctx.stroke()
+      }
     }
     ctx.restore() // end verja clip
 
@@ -96,12 +116,17 @@
     // ── 4. Explanada del Monumento (adoquín) = PLAZA ──
     ctx.save()
     ctx.beginPath(); ctx.ellipse(PLAZA.x, PLAZA.y, PLAZA.rx, PLAZA.ry, 0, 0, Math.PI * 2); ctx.clip()
-    const CB = 32
-    for (let wy = PLAZA.y - PLAZA.ry - CB; wy < PLAZA.y + PLAZA.ry + CB; wy += CB) {
-      for (let wx = PLAZA.x - PLAZA.rx - CB; wx < PLAZA.x + PLAZA.rx + CB; wx += CB) {
-        const tone = (((wx / CB) | 0) + ((wy / CB) | 0)) & 1
-        ctx.fillStyle = tone ? '#e4d8b4' : '#d0c198'
-        ctx.fillRect(wx, wy, CB, CB)
+    const pat2 = cainosPatterns(ctx)
+    if (pat2) {
+      ctx.fillStyle = pat2.stone
+      ctx.fillRect(PLAZA.x - PLAZA.rx, PLAZA.y - PLAZA.ry, PLAZA.rx * 2, PLAZA.ry * 2)
+    } else {
+      const CB = 32
+      for (let wy = PLAZA.y - PLAZA.ry - CB; wy < PLAZA.y + PLAZA.ry + CB; wy += CB) {
+        for (let wx = PLAZA.x - PLAZA.rx - CB; wx < PLAZA.x + PLAZA.rx + CB; wx += CB) {
+          const tone = (((wx / CB) | 0) + ((wy / CB) | 0)) & 1
+          ctx.fillStyle = tone ? '#e4d8b4' : '#d0c198'; ctx.fillRect(wx, wy, CB, CB)
+        }
       }
     }
     ctx.restore()
