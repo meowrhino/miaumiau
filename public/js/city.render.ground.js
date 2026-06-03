@@ -88,8 +88,9 @@
       ctx.fillRect(visL, visT, visR - visL, visB - visT)
       ctx.lineCap = 'round'; ctx.lineJoin = 'round'
       for (const p of PASEOS) {
-        tracePaseo(ctx, p); ctx.strokeStyle = 'rgba(40,30,20,0.18)'; ctx.lineWidth = 70; ctx.stroke()
-        tracePaseo(ctx, p); ctx.strokeStyle = pat.stone; ctx.lineWidth = 56; ctx.stroke()
+        tracePaseo(ctx, p); ctx.strokeStyle = 'rgba(34,28,20,0.34)'; ctx.lineWidth = 76; ctx.stroke()   // borde/sombra (define el camino)
+        tracePaseo(ctx, p); ctx.strokeStyle = pat.stone; ctx.lineWidth = 58; ctx.stroke()                // piedra Cainos
+        tracePaseo(ctx, p); ctx.strokeStyle = 'rgba(255,250,236,0.10)'; ctx.lineWidth = 36; ctx.stroke() // luz central (volumen)
       }
     } else {
       const TILE = 48
