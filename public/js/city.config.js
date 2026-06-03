@@ -77,21 +77,13 @@
   // Repartidos por el parque para densidad. 'stall' x varios = mercado del feed.
   const DECO_BUILDINGS = [
     // Mercado del feed (junto al Monumento) — puestos = posts
+    // Reskin Cainos: quitado el deco procedural que chocaba (cottages, bakery, barn,
+    // workshop, well, stage). Se mantienen los puestos del feed (leen como mercado)
+    // y el molino de piedra del Observatorio (pega razonablemente).
     { kind: 'stall', seed: 7,  x: 3960, y: 2050, h: 56 },
     { kind: 'stall', seed: 13, x: 4080, y: 2330, h: 56 },
     { kind: 'stall', seed: 21, x: 4380, y: 1950, h: 56 },
-    { kind: 'stage', x: 4430, y: 2360, h: 50 },
-    // Casita del Pescador (profile) — vecindario
-    { kind: 'cottage', seed: 11, x: 2820, y: 760,  h: 90 },
-    { kind: 'cottage', seed: 22, x: 3380, y: 780,  h: 90 },
-    { kind: 'barn',    x: 2700, y: 1020, h: 90 },
-    // La Rosaleda (chat) — pozo
-    { kind: 'well',  x: 1700, y: 3520, h: 60 },
-    // el Parterre (café) — horno/panadería de terraza
-    { kind: 'bakery',  x: 1760, y: 1300, h: 100 },
-    // Observatorio — molino cercano (campo)
     { kind: 'mill',    x: 5350, y: 4180, h: 180 },
-    { kind: 'workshop', x: 4980, y: 3560, h: 100 },
   ]
 
   // ─── Árboles (bosque del Retiro) — scatter determinista con claros ────────
