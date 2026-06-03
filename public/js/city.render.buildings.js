@@ -14,6 +14,9 @@
     { sx: 156, sy: 185, sw: 38, sh: 46 }, { sx: 216, sy: 185, sw: 47, sh: 46 },
     { sx: 282, sy: 185, sw: 39, sh: 46 }, { sx: 346, sy: 185, sw: 40, sh: 46 },
   ]
+  const BENCH = { sx: 225, sy: 36, sw: 62, sh: 26 }, STATUE = { sx: 448, sy: 34, sw: 34, sh: 78 }
+  const THRONE = { sx: 288, sy: 176, sw: 48, sh: 80 }, BARREL = { sx: 160, sy: 158, sw: 32, sh: 38 }
+  const BIGTREE = { sx: 24, sy: 14, sw: 113, sh: 139 }
   City.drawZoneFeature = function (ctx, z, now) {
     const A = window.Assets
     const props = A && A.get('cainos:props'), plant = A && A.get('cainos:plant')
@@ -31,6 +34,14 @@
     } else if (z.id === 'chat') {            // la Rosaleda → setos / arbustos
       draw(plant, BUSH[3], -54, 8, 1.7); draw(plant, BUSH[4], 42, 6, 1.7)
       draw(plant, BUSH[2], -8, 16, 1.9); draw(plant, BUSH[1], 72, 14, 1.5); draw(plant, BUSH[0], -88, 14, 1.5)
+    } else if (z.id === 'stories') {         // el Observatorio → monumento/estatua de piedra
+      draw(props, STATUE, 0, 2, 1.9)
+    } else if (z.id === 'tweets') {          // el Parterre → árbol grande + bancos
+      draw(plant, BIGTREE, -40, 2, 1.15); draw(props, BENCH, 30, 16, 1.4); draw(props, BENCH, -26, 22, 1.2)
+    } else if (z.id === 'bereal') {          // Palacio de Cristal → estructura de piedra (placeholder, asset propio luego)
+      draw(props, THRONE, 0, 2, 1.7)
+    } else if (z.id === 'profile') {         // la Casita → rincón con barriles + banco (placeholder, asset propio luego)
+      draw(props, BENCH, 8, 14, 1.3); draw(props, BARREL, -36, 6, 1.4); draw(props, BARREL, 50, 8, 1.3)
     } else { handled = false }
     ctx.restore()
     return handled

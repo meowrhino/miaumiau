@@ -19,8 +19,8 @@ Atajo usado: textura lisa repetida (CanvasPattern). **Ruta nueva a decidir:**
 ## ⏳ Pendiente
 
 ### Los 6 modos (casitas → "cosas de parque") — modo a modo
-- [ ] 📌 el tablón (posts) → carteles de madera
-- [ ] 🪑 la Rosaleda (chat) → setos + arbustos + flores
+- [x] 📌 el tablón (posts) → carteles de madera ✅ EN VIVO
+- [x] 🪑 la Rosaleda (chat) → setos / arbustos ✅ EN VIVO
 - [ ] 🌙 el Observatorio (stories) → estructura de piedra en alto
 - [ ] ☕ el Parterre (tweets) → árbol grande + bancos
 - [ ] 📷 el Palacio de Cristal (bereal) → ⚠️ Cainos no tiene cristal → estructura distintiva / custom
