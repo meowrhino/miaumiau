@@ -38,8 +38,8 @@
       draw(props, STATUE, 0, 2, 1.9)
     } else if (z.id === 'tweets') {          // el Parterre → árbol grande + bancos
       draw(plant, BIGTREE, -40, 2, 1.15); draw(props, BENCH, 30, 16, 1.4); draw(props, BENCH, -26, 22, 1.2)
-    } else if (z.id === 'bereal') {          // Palacio de Cristal → estructura de piedra (placeholder, asset propio luego)
-      draw(props, THRONE, 0, 2, 1.7)
+    } else if (z.id === 'bereal') {          // Palacio de Cristal → pila de piedra (placeholder, asset propio luego)
+      draw(props, { sx: 352, sy: 269, sw: 96, sh: 72 }, 0, 0, 1.3)
     } else if (z.id === 'profile') {         // la Casita → rincón con barriles + banco (placeholder, asset propio luego)
       draw(props, BENCH, 8, 14, 1.3); draw(props, BARREL, -36, 6, 1.4); draw(props, BARREL, 50, 8, 1.3)
     } else { handled = false }

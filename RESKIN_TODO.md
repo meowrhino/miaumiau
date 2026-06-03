@@ -21,15 +21,17 @@ Atajo usado: textura lisa repetida (CanvasPattern). **Ruta nueva a decidir:**
 ### Los 6 modos (casitas → "cosas de parque") — modo a modo
 - [x] 📌 el tablón (posts) → carteles de madera ✅ EN VIVO
 - [x] 🪑 la Rosaleda (chat) → setos / arbustos ✅ EN VIVO
-- [ ] 🌙 el Observatorio (stories) → estructura de piedra en alto
-- [ ] ☕ el Parterre (tweets) → árbol grande + bancos
-- [ ] 📷 el Palacio de Cristal (bereal) → ⚠️ Cainos no tiene cristal → estructura distintiva / custom
-- [ ] 🏠 la Casita (profile) → ⚠️ Cainos no tiene casa → estructura pequeña / custom
+- [x] 🌙 el Observatorio (stories) → estatua/monumento de piedra ✅ EN VIVO
+- [x] ☕ el Parterre (tweets) → árbol grande + bancos ✅ EN VIVO
+- [~] 📷 el Palacio de Cristal (bereal) → placeholder (pila de piedra) ✅; PENDIENTE asset propio
+- [~] 🏠 la Casita (profile) → placeholder (barriles + banco) ✅; PENDIENTE asset propio
+  (los 6 modos ya NO son casitas — mecanismo drawZoneFeature)
 
-### Deco del feed
-- [ ] Puestos de mercado (ahora procedural a rayas)
-- [ ] Escenario (ahora procedural rojo)
-- [ ] Farolas (ahora procedural — buscar/inventar)
+### ⚠️ Deco procedural que AÚN CANTA (choca con Cainos) — REVISAR JUNTOS
+- [ ] **Cottages residenciales** (casitas tejado azul/teja del fondo) — el estilo viejo, choca fuerte
+- [ ] bakery / barn / mill / workshop / well / stage — procedurales
+- [ ] Puestos de mercado (a rayas) + farolas — procedurales
+→ opción: quitarlos, o cambiarlos por props/estructuras de Cainos, o assets propios
 
 ### Pulido
 - [ ] Bordes de los caminos (transición césped↔piedra, autotile de Cainos)
