@@ -8,7 +8,7 @@
 
   // Reskin Cainos: cada modo como "feature de parque" (props Cainos) en vez de casa.
   // Devuelve true si dibujó el feature (y entonces drawBuilding salta la casita).
-  const CAINOS_PROP = { signpost: { sx: 96, sy: 76, sw: 32, sh: 49 } }
+  const CAINOS_PROP = { signpost: { sx: 96, sy: 160, sw: 32, sh: 42 } }
   City.drawZoneFeature = function (ctx, z, now) {
     const props = window.Assets && Assets.get('cainos:props')
     if (!props) return false
