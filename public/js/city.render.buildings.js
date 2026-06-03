@@ -6,6 +6,29 @@
   if (!window.City || !window.CityConfig) return
   const City = window.City
 
+  // Reskin Cainos: cada modo como "feature de parque" (props Cainos) en vez de casa.
+  // Devuelve true si dibujó el feature (y entonces drawBuilding salta la casita).
+  const CAINOS_PROP = { signpost: { sx: 96, sy: 76, sw: 32, sh: 49 } }
+  City.drawZoneFeature = function (ctx, z, now) {
+    const props = window.Assets && Assets.get('cainos:props')
+    if (!props) return false
+    const cx = z.x + z.w / 2, gy = z.y + z.h - 30
+    function prop (p, dx, dy, scale) {
+      const rw = p.sw * scale, rh = p.sh * scale
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(cx + dx, gy + dy + 2, rw * 0.4, 7, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.drawImage(props, p.sx, p.sy, p.sw, p.sh, cx + dx - rw / 2, gy + dy - rh, rw, rh)
+    }
+    ctx.save(); ctx.imageSmoothingEnabled = false
+    let handled = true
+    if (z.id === 'posts') {            // el tablón → fila de carteles de madera
+      prop(CAINOS_PROP.signpost, -44, -6, 1.5)
+      prop(CAINOS_PROP.signpost, 6, 8, 1.8)
+      prop(CAINOS_PROP.signpost, 52, -2, 1.5)
+    } else { handled = false }
+    ctx.restore()
+    return handled
+  }
+
   City.drawBuilding = function (ctx, z, now) {
     // Top-down pixel-art house sprite + animated overlays (smoke, sign,
     // mascot bob). Sprite is anchored at the doormat (in front of the door).
@@ -22,11 +45,9 @@
     ctx.beginPath(); ctx.ellipse(cx, my + 6, 44, 12, 0, 0, Math.PI * 2); ctx.fill()
     ctx.restore()
 
-    // House sprite, in priority order (RO reskin — the Sprout Lands house_sheet
-    // is no longer used; it read too cozy next to the RO town look):
-    //   1. dedicated PNG asset (building:<zoneId>) — for future hand-made art
-    //   2. procedural RO sprite from sprites.js
-    //   3. colored rect as last resort
+    // Si el modo ya se dibujó como "feature de parque" Cainos, saltamos la casita.
+    const _zoneHandled = City.drawZoneFeature && City.drawZoneFeature(ctx, z, now)
+    if (!_zoneHandled) {
     const useAssetForZone = City.useImageAssets &&
       (!City._assetWhitelist || City._assetWhitelist.has(z.id))
     ctx.imageSmoothingEnabled = false
@@ -61,6 +82,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     ctx.fillText(z.building, sxSign, signTop + 14)
     ctx.restore()
+    } // fin if (!_zoneHandled)
 
     // Doormat aura + progress ring (top-down)
     const distToMat = Math.hypot(City.player.x - cx, City.player.y - my)

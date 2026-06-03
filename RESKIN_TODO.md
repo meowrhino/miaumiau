@@ -11,6 +11,11 @@ Avatares = poporings procedurales (NO se tocan).
 - [x] Fuente del feed (pila de piedra Cainos)
 - [x] Agua del lago + arroyo (adaptada: azul apagado + orilla de piedra — Cainos no trae agua)
 
+## ⚠️ A REHACER — caminos y agua salieron PLANOS (manu: "no se ve suficiente")
+Atajo usado: textura lisa repetida (CanvasPattern). **Ruta nueva a decidir:**
+- (a) colocar tiles de Cainos CON BORDES (autotile: camino con borde de hierba, etc.)
+- (b) o BAKEAR el suelo del parque entero como una imagen compuesta (mejor look; mapa es fijo)
+
 ## ⏳ Pendiente
 
 ### Los 6 modos (casitas → "cosas de parque") — modo a modo
