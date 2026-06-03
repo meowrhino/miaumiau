@@ -8,22 +8,29 @@
 
   // Reskin Cainos: cada modo como "feature de parque" (props Cainos) en vez de casa.
   // Devuelve true si dibujó el feature (y entonces drawBuilding salta la casita).
-  const CAINOS_PROP = { signpost: { sx: 96, sy: 160, sw: 32, sh: 42 } }
+  const SIGN = { sx: 96, sy: 160, sw: 32, sh: 42 }   // cartel de madera (props)
+  const BUSH = [                                      // 6 arbustos (plant)
+    { sx: 38, sy: 185, sw: 22, sh: 46 }, { sx: 98, sy: 185, sw: 27, sh: 46 },
+    { sx: 156, sy: 185, sw: 38, sh: 46 }, { sx: 216, sy: 185, sw: 47, sh: 46 },
+    { sx: 282, sy: 185, sw: 39, sh: 46 }, { sx: 346, sy: 185, sw: 40, sh: 46 },
+  ]
   City.drawZoneFeature = function (ctx, z, now) {
-    const props = window.Assets && Assets.get('cainos:props')
-    if (!props) return false
+    const A = window.Assets
+    const props = A && A.get('cainos:props'), plant = A && A.get('cainos:plant')
+    if (!props || !plant) return false
     const cx = z.x + z.w / 2, gy = z.y + z.h - 30
-    function prop (p, dx, dy, scale) {
+    function draw (img, p, dx, dy, scale) {
       const rw = p.sw * scale, rh = p.sh * scale
-      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(cx + dx, gy + dy + 2, rw * 0.4, 7, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.drawImage(props, p.sx, p.sy, p.sw, p.sh, cx + dx - rw / 2, gy + dy - rh, rw, rh)
+      ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.ellipse(cx + dx, gy + dy + 2, rw * 0.42, 6, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.drawImage(img, p.sx, p.sy, p.sw, p.sh, cx + dx - rw / 2, gy + dy - rh, rw, rh)
     }
     ctx.save(); ctx.imageSmoothingEnabled = false
     let handled = true
-    if (z.id === 'posts') {            // el tablón → fila de carteles de madera
-      prop(CAINOS_PROP.signpost, -44, -6, 1.5)
-      prop(CAINOS_PROP.signpost, 6, 8, 1.8)
-      prop(CAINOS_PROP.signpost, 52, -2, 1.5)
+    if (z.id === 'posts') {                  // el tablón → carteles de madera
+      draw(props, SIGN, -44, -6, 1.5); draw(props, SIGN, 6, 8, 1.8); draw(props, SIGN, 52, -2, 1.5)
+    } else if (z.id === 'chat') {            // la Rosaleda → setos / arbustos
+      draw(plant, BUSH[3], -54, 8, 1.7); draw(plant, BUSH[4], 42, 6, 1.7)
+      draw(plant, BUSH[2], -8, 16, 1.9); draw(plant, BUSH[1], 72, 14, 1.5); draw(plant, BUSH[0], -88, 14, 1.5)
     } else { handled = false }
     ctx.restore()
     return handled
