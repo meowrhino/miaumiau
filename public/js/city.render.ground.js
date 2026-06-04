@@ -46,12 +46,17 @@
     ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y)
   }
 
-  // ── Caminos en REJILLA (autotile) ─────────────────────────────────────────
-  // Rasteriza PATH_SEGMENTS (avenidas rectas H/V) a un set de celdas (cacheado),
-  // y pinta cada celda con el 9-slice de stone.png según sus vecinos → bordes y
-  // esquinas de piedra de verdad. El 9-slice está en las 3×3 celdas (32px) de
-  // arriba-izquierda de stone.png. Ancho de avenida = 3 celdas.
-  const S9 = 32  // tile nativo Cainos
+  // ── Suelo en REJILLA: adoquín texturizado + césped florido ────────────────
+  // Cainos NO usa relleno gris liso: el suelo son BALDOSAS adoquín-sobre-césped
+  // (grass.png cols 0-1 filas 4-7 → piedra con césped en las juntas, varias
+  // variantes para que no se repita) y césped con FLORES/piedrecitas (grass.png
+  // cols 4-7 filas 0-3) sprinkleado. Cada celda elige variante por hash (estable).
+  const TS = 32  // tile nativo Cainos (32px)
+  const COBBLE_SRC = [ [0,128],[32,128],[0,160],[32,160],[0,192],[32,192],[0,224],[32,224] ]
+  const FLOWER_SRC = [ [128,0],[160,0],[192,0],[224,0],[128,32],[160,32],[192,32],[224,32],
+                       [128,64],[160,64],[192,64],[224,64],[128,96],[160,96],[192,96],[224,96] ]
+  function hashCell (c, r, salt) { return (((c * 73856093) ^ (r * 19349663) ^ (salt * 83492791)) >>> 0) }
+  // PATH_SEGMENTS (avenidas rectas H/V) → set de celdas "camino" (cacheado).
   function buildPathCells () {
     if (City._pathCells) return City._pathCells
     const G = PATH_GRID, cells = new Set()
@@ -70,17 +75,11 @@
     City._pathCells = cells
     return cells
   }
-  // src (sx,sy) del 9-slice según qué lados están "abiertos" (vecino sin camino).
-  function nineSlice (oN, oE, oS, oW) {
-    if (oN && oW) return [0, 0];   if (oN && oE) return [64, 0]
-    if (oS && oW) return [0, 64];  if (oS && oE) return [64, 64]
-    if (oN) return [32, 0];        if (oS) return [32, 64]
-    if (oW) return [0, 32];        if (oE) return [64, 32]
-    return [32, 32]                                // centro (relleno)
-  }
+  // Suelo: por cada celda visible, adoquín (si es camino) o, si no, flores de vez
+  // en cuando sobre el césped base. Culling al viewport.
   City.drawPaths = function (ctx, visL, visT, visR, visB) {
-    const A = window.Assets, stone = A && A.get('cainos:stone')
-    if (!stone) return false
+    const A = window.Assets, grass = A && A.get('cainos:grass')
+    if (!grass) return false
     const G = PATH_GRID, cells = buildPathCells()
     const has = (c, r) => cells.has(c + ',' + r)
     const c0 = Math.floor(visL / G) - 1, c1 = Math.ceil(visR / G) + 1
@@ -88,9 +87,13 @@
     ctx.imageSmoothingEnabled = false
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) {
-        if (!has(c, r)) continue
-        const t = nineSlice(!has(c, r - 1), !has(c + 1, r), !has(c, r + 1), !has(c - 1, r))
-        ctx.drawImage(stone, t[0], t[1], S9, S9, c * G, r * G, G, G)
+        if (has(c, r)) {
+          const v = COBBLE_SRC[hashCell(c, r, 4) % COBBLE_SRC.length]
+          ctx.drawImage(grass, v[0], v[1], TS, TS, c * G, r * G, G, G)
+        } else if ((hashCell(c, r, 1) % 100) < 13) {     // sprinkle de césped florido
+          const f = FLOWER_SRC[hashCell(c, r, 2) % FLOWER_SRC.length]
+          ctx.drawImage(grass, f[0], f[1], TS, TS, c * G, r * G, G, G)
+        }
       }
     }
     return true
