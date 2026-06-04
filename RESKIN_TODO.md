@@ -1,44 +1,61 @@
 # Reskin "El Retiro" con Cainos — cola de revisión
 
-Estilo: **Pixel Art Top Down - Basic** (Cainos, gratis+comercial). Mundo = parque.
+Estilo: **Pixel Art Top Down - Basic** (Cainos, gratis+comercial, sin IA). Mundo = parque.
 Avatares = poporings procedurales (NO se tocan).
+Todo el mapa son DATOS en `public/js/city.config.js` → guía en `MAPA.md`.
+Por cada paso: commit + `git push origin main` + `wrangler deploy` (en primer plano).
 
-## ✅ Hecho (en vivo)
-- [x] Césped (textura Cainos)
-- [x] Caminos / paseos (piedra Cainos)
-- [x] Verja (muro de piedra Cainos)
-- [x] Árboles (3 variantes Cainos)
-- [x] Fuente del feed (pila de piedra Cainos)
+---
+
+## 🐞 BUGS a arreglar PRIMERO (los marcó manu, 3 capturas)
+
+1. **Props tapan al personaje (z-order).** En `city.render.buildings.js` → `drawZoneFeature`
+   dibuja árbol/bancos/barriles/estatua anclados en `gy = z.y + z.h - 30`. El jugador es
+   otra entidad, y el feature alto lo tapa. → o y-sort de verdad (walk-behind), o pintar
+   SIEMPRE al jugador encima. (Ver orden de capas en `city.js`.)
+2. **Los "bancos" parecen LÁPIDAS.** `BENCH = {sx:225, sy:36, sw:62, sh:26}` (cainos:props)
+   sale como una losa gris. La coord seguramente está mal → re-inspeccionar `props.png` con
+   el overlay de cuadrícula 32px en el navegador y buscar un banco real, o cambiar el prop.
+   Afecta **el Parterre** y **la Casita**.
+3. **El Parterre / la Casita quedan flojos** = son placeholders. Rehacer con buenos props
+   (o con los assets propios del punto B).
+
+---
+
+## ✅ Hecho (en vivo en miaumiauonline.com)
+- [x] Césped, caminos, verja, árboles, fuente del feed (tiles Cainos)
 - [x] Agua del lago + arroyo (adaptada: azul apagado + orilla de piedra — Cainos no trae agua)
+- [x] Las 6 casitas → "features de parque" (`drawZoneFeature`, un `if` por modo):
+  - [x] 📌 tablón (posts) → carteles de madera
+  - [x] 🪑 Rosaleda (chat) → setos / arbustos
+  - [x] 🌙 Observatorio (stories) → estatua de piedra
+  - [x] ☕ Parterre (tweets) → árbol + bancos  ← revisar (bugs 1,2,3)
+  - [~] 📷 Palacio de Cristal (bereal) → placeholder pila de piedra (falta asset propio)
+  - [~] 🏠 Casita del Pescador (profile) → placeholder barriles+banco (falta asset propio)
+- [x] Deco procedural que chocaba: QUITADO (cottages/bakery/barn/workshop/well/stage)
+- [x] Purga round 1 (drawHouseOverlay, ZONE_ANCHORS, loadSprites slim)
+- [x] `MAPA.md` = guía para editar el mapa fácil
 
-## ⚠️ A REHACER — caminos y agua salieron PLANOS (manu: "no se ve suficiente")
-Atajo usado: textura lisa repetida (CanvasPattern). **Ruta nueva a decidir:**
-- (a) colocar tiles de Cainos CON BORDES (autotile: camino con borde de hierba, etc.)
-- (b) o BAKEAR el suelo del parque entero como una imagen compuesta (mejor look; mapa es fijo)
+---
 
-## ⏳ Pendiente
+## ⏳ Pendiente (después de los bugs)
 
-### Los 6 modos (casitas → "cosas de parque") — modo a modo
-- [x] 📌 el tablón (posts) → carteles de madera ✅ EN VIVO
-- [x] 🪑 la Rosaleda (chat) → setos / arbustos ✅ EN VIVO
-- [x] 🌙 el Observatorio (stories) → estatua/monumento de piedra ✅ EN VIVO
-- [x] ☕ el Parterre (tweets) → árbol grande + bancos ✅ EN VIVO
-- [~] 📷 el Palacio de Cristal (bereal) → placeholder (pila de piedra) ✅; PENDIENTE asset propio
-- [~] 🏠 la Casita (profile) → placeholder (barriles + banco) ✅; PENDIENTE asset propio
-  (los 6 modos ya NO son casitas — mecanismo drawZoneFeature)
+### (B) Assets propios — manu: "los haces tú y lo vemos"
+- [ ] **Palacio de Cristal** (bereal) — construir con piezas Cainos (wall+arcos+tejado de `struct.png`)
+- [ ] **Casita del Pescador** (profile) — ídem, cabañita junto al agua
+- [ ] **Agua / lago** — tile de agua a medida (la actual es un parche de color)
 
-### ⚠️ Deco procedural que AÚN CANTA (choca con Cainos) — REVISAR JUNTOS
-- [ ] **Cottages residenciales** (casitas tejado azul/teja del fondo) — el estilo viejo, choca fuerte
-- [ ] bakery / barn / mill / workshop / well / stage — procedurales
-- [ ] Puestos de mercado (a rayas) + farolas — procedurales
-→ opción: quitarlos, o cambiarlos por props/estructuras de Cainos, o assets propios
+### (C) Caminos "terminados" (autotile) — rebuild grande
+Hoy los caminos son curvas pintadas (se ven de boceto). La ref de manu (**Cainos Scene
+Overview**) usa cobblestone con **bordes reales** + escaleras + muros de piedra.
+- [ ] Caminos en cuadrícula + rule-tile de Cainos (autotile centro/bordes/esquinas)
+- [ ] (alternativa más barata) bakear el suelo entero como una imagen compuesta
 
-### Pulido
-- [ ] Bordes de los caminos (transición césped↔piedra, autotile de Cainos)
-- [ ] Arbustos/setos + flores sueltos por el parque (Cainos los tiene)
-- [ ] Props extra: barriles, bancos, lápidas, estatua
+### (D) Purga round 2 (invisible, no rompe nada)
+- [ ] `sprites.js` (~62KB) tiene generadores procedurales SIN uso (house/cottage/bakery/barn/
+  workshop/well/stage/fountain/bush/bench/fence/trees/grassTile/cobbleTile/dirtPathTile).
+  Solo se usan mill/marketStall/lampPost/cloud. Quitar el resto (verificar con smoke-test).
 
-### Cosas que Cainos NO cubre → inventar / adaptar / custom
-- Agua → ✅ adaptada (procedural reestilizada)
-- Palacio de Cristal, Casita (edificios) → arte a medida a futuro
-- Farolas → buscar prop o inventar
+### Pulido suelto (cuando apetezca)
+- [ ] Arbustos/setos/flores sueltos por el parque (Cainos los tiene)
+- [ ] Props extra bien colocados: barriles, bancos buenos, estatuas
