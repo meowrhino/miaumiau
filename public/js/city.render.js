@@ -45,22 +45,27 @@
     //   wy) draw on top of things higher (lower wy). Sort by wy.
     const entities = []
     const A = window.Assets
-    TREES.forEach((t, i) => entities.push({ kind: 'tree', wx: t.x, wy: t.y, idx: i }))
-    ZONES.forEach(z => {
-      const cx = z.x + z.w/2, gy = z.y + z.h - 30
-      entities.push({ kind: 'zone', wx: cx, wy: gy, ref: z })
-      // Props del modo: cada uno entra al y-sort por su base → walk-behind real
-      // (el personaje pasa por delante/detrás de cada prop según su posición).
-      if (A && City.getZoneProps) {
-        for (const d of City.getZoneProps(z)) {
-          const img = A.get(d.sheet === 'plant' ? 'cainos:plant' : 'cainos:props')
-          if (img) entities.push({ kind: 'prop', wx: cx + d.dx, wy: gy + d.dy, img, p: d.p, scale: d.scale })
+    // Con mapa Tiled activo, los árboles/zonas/deco/fuente vienen del mapa (capa de
+    // objetos), así que NO dibujamos los entes procedurales viejos (solo poporings).
+    const tiledOn = !!(City.tiled && City.tiled.ready)
+    if (!tiledOn) {
+      TREES.forEach((t, i) => entities.push({ kind: 'tree', wx: t.x, wy: t.y, idx: i }))
+      ZONES.forEach(z => {
+        const cx = z.x + z.w/2, gy = z.y + z.h - 30
+        entities.push({ kind: 'zone', wx: cx, wy: gy, ref: z })
+        // Props del modo: cada uno entra al y-sort por su base → walk-behind real
+        // (el personaje pasa por delante/detrás de cada prop según su posición).
+        if (A && City.getZoneProps) {
+          for (const d of City.getZoneProps(z)) {
+            const img = A.get(d.sheet === 'plant' ? 'cainos:plant' : 'cainos:props')
+            if (img) entities.push({ kind: 'prop', wx: cx + d.dx, wy: gy + d.dy, img, p: d.p, scale: d.scale })
+          }
         }
-      }
-    })
-    DECO_BUILDINGS.forEach((d, i) => entities.push({ kind: 'deco', wx: d.x, wy: d.y, ref: d, idx: i }))
-    LAMPS.forEach(l => entities.push({ kind: 'lamp', wx: l.x, wy: l.y }))
-    entities.push({ kind: 'fountain', wx: FOUNTAIN.x, wy: FOUNTAIN.y })
+      })
+      DECO_BUILDINGS.forEach((d, i) => entities.push({ kind: 'deco', wx: d.x, wy: d.y, ref: d, idx: i }))
+      LAMPS.forEach(l => entities.push({ kind: 'lamp', wx: l.x, wy: l.y }))
+      entities.push({ kind: 'fountain', wx: FOUNTAIN.x, wy: FOUNTAIN.y })
+    }
     City.others.forEach(o => entities.push({ kind: 'other', wx: o.x, wy: o.y, ref: o }))
     entities.push({ kind: 'me', wx: City.player.x, wy: City.player.y, ref: City.player })
     entities.sort((a, b) => a.wy - b.wy)
