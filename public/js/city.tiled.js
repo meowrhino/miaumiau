@@ -34,10 +34,13 @@
       // Cargar las imágenes de los tilesets (PNGs de Cainos en /img/cainos/).
       await Promise.all(tilesets.map(t => new Promise(ok => {
         if (!t.image) return ok()
+        // Robusto: da igual cómo guarde Tiled la ruta (relativa para que el editor
+        // local encuentre los PNG); en web siempre cargamos desde /img/cainos/<archivo>.
+        const webSrc = '/img/cainos/' + t.image.split('/').pop()
         const im = new Image()
         im.onload = () => { t.img = im; ok() }
-        im.onerror = () => { console.warn('[tiled] no carga', t.image); ok() }
-        im.src = t.image
+        im.onerror = () => { console.warn('[tiled] no carga', webSrc); ok() }
+        im.src = webSrc
       })))
       City.tiled = {
         w: m.width, h: m.height, tw: m.tilewidth, th: m.tileheight,
