@@ -1,4 +1,8 @@
-// CityConfig — world constants, zone/deco/decoration data.
+// CityConfig — TODOS los datos del MAPA: el mundo, los caminos (PASEOS), el agua
+// (WATER), los 6 modos (ZONES), deco, árboles, farolas... Si quieres MOVER o
+// CAMBIAR algo del parque, se hace AQUÍ (no hace falta tocar el render).
+// 📖 Guía fácil para editarlo: ver  MAPA.md  (en la raíz del repo).
+//
 // Loaded BEFORE city.js so the latter can destructure these locals at the top of its IIFE.
 //
 // ── RESKIN "EL RETIRO" (rama reskin-retiro) ───────────────────────────────────
