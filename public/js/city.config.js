@@ -122,34 +122,6 @@
     'cainos:props':  '/img/cainos/props.png',
     'cainos:wall':   '/img/cainos/wall.png',
     'cainos:struct': '/img/cainos/struct.png',
-    'building:tweets':  '/img/buildings/tweets-cafe.png',
-    'building:posts':   '/img/buildings/posts-board.png',
-    'building:stories': '/img/buildings/stories-observatory.png',
-    'building:chat':    '/img/buildings/chat-bench-house.png',
-    'building:bereal':  '/img/buildings/bereal-polaroid.png',
-    'building:profile': '/img/buildings/profile-home.png',
-    'deco:cottage:1':   '/img/deco/cottage-1.png',
-    'deco:cottage:2':   '/img/deco/cottage-2.png',
-    'deco:cottage:3':   '/img/deco/cottage-3.png',
-    'deco:cottage:4':   '/img/deco/cottage-4.png',
-    'deco:bakery':      '/img/deco/bakery.png',
-    'deco:workshop':    '/img/deco/workshop.png',
-    'deco:barn':        '/img/deco/barn.png',
-    'deco:mill':        '/img/deco/mill.png',
-    'deco:well':        '/img/deco/well.png',
-    'deco:stage':       '/img/deco/stage.png',
-    'deco:stall:1':     '/img/deco/stall-1.png',
-    'deco:stall:2':     '/img/deco/stall-2.png',
-  }
-
-  // Per-zone anchors (ratios 0..1) para humo/bandera/glow sobre cada PNG.
-  const ZONE_ANCHORS = {
-    tweets:  { chimney: [0.69, 0.05], door: [0.50, 0.78], window: [0.30, 0.66] },
-    posts:   { flag:    [0.56, 0.05], door: [0.50, 0.78], window: [0.32, 0.66] },
-    stories: { telescope: [0.50, 0.18], door: [0.50, 0.78], window: [0.30, 0.66] },
-    chat:    { bubble:  [0.62, 0.10], door: [0.50, 0.78], window: [0.30, 0.66] },
-    bereal:  { lens:    [0.50, 0.42], door: [0.50, 0.78] },
-    profile: { heart:   [0.50, 0.78], door: [0.50, 0.78] },
   }
 
   window.CityConfig = {
@@ -157,6 +129,6 @@
     ZONES, PLAZA, FOUNTAIN, SPAWN,
     VERJA, WATER, PASEOS, ESTANQUE, MONUMENT, GATES,
     DECO_BUILDINGS, TREES, LAMPS,
-    ASSET_MANIFEST, ZONE_ANCHORS,
+    ASSET_MANIFEST,
   }
 })()

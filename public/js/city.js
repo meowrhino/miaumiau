@@ -9,7 +9,7 @@
     ZONES, PLAZA, FOUNTAIN, SPAWN,
     VERJA, WATER,
     DECO_BUILDINGS, TREES, LAMPS,
-    ASSET_MANIFEST, ZONE_ANCHORS,
+    ASSET_MANIFEST,
   } = window.CityConfig
 
   // ── Colisión del parque (reskin Retiro) ──────────────────────────────────
@@ -186,46 +186,16 @@
         Assets.load(ASSET_MANIFEST).then(() => { City._assetsReady = true })
       }
       if (typeof MiauSprites === 'undefined') return
-      const ownerHex = (App.user && typeof colorHex === 'function') ? colorHex(App.user.color) : '#FFB800'
-      const houses = {}
-      ZONES.forEach(z => {
-        houses[z.id] = MiauSprites.house(z.id, z.roof, z.id === 'profile' ? ownerHex : null)
-      })
-      // Tree variants per position
-      const trees = TREES.map((_, i) => {
-        const seed = i * 31 + 7
-        const v = i % 4
-        if (v === 0) return MiauSprites.treeLush(seed)
-        if (v === 1) return MiauSprites.treeAutumn(seed)
-        if (v === 2) return MiauSprites.treePine(seed)
-        return MiauSprites.treeLush(seed + 13)
-      })
-      // Deco buildings — pre-render each one. Cottages get a seeded roof color so
-      // they don't all match.
-      const deco = DECO_BUILDINGS.map(d => {
-        if (d.kind === 'cottage')  return MiauSprites.cottage(d.seed, null)
-        if (d.kind === 'bakery')   return MiauSprites.bakery()
-        if (d.kind === 'workshop') return MiauSprites.workshop()
-        if (d.kind === 'barn')     return MiauSprites.barn()
-        if (d.kind === 'mill')     return MiauSprites.mill()
-        if (d.kind === 'well')     return MiauSprites.well()
-        if (d.kind === 'stage')    return MiauSprites.stage()
-        if (d.kind === 'stall')    return MiauSprites.marketStall(d.seed || 1)
-        return null
-      })
+      // Reskin Cainos: solo se genera lo que aún se usa — deco suelto (puestos del
+      // feed + molino), farola y nubes. Casas/árboles/fuente/suelo los pinta Cainos.
+      const deco = DECO_BUILDINGS.map(d =>
+        d.kind === 'mill'  ? MiauSprites.mill()
+        : d.kind === 'stall' ? MiauSprites.marketStall(d.seed || 1)
+        : null
+      )
       City.sprites = {
-        house: houses,
-        trees,
         deco,
-        bushes: [MiauSprites.bush(11), MiauSprites.bush(22), MiauSprites.bush(33), MiauSprites.bush(44)],
-        flowers: [MiauSprites.flowerPatch(55), MiauSprites.flowerPatch(66), MiauSprites.flowerPatch(77)],
-        fountain: MiauSprites.fountain(),
         lamp: MiauSprites.lampPost(),
-        bench: MiauSprites.bench(),
-        fence: MiauSprites.fence(),
-        grass: MiauSprites.grassTile(123),
-        cobble: MiauSprites.cobbleTile(),
-        dirt: MiauSprites.dirtPathTile(),
         clouds: [MiauSprites.cloud(11), MiauSprites.cloud(22), MiauSprites.cloud(33)],
       }
     },
