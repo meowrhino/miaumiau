@@ -3,22 +3,10 @@
 // /bereal, /profile resolve to { mode: 'city', sheet: <id> } so direct navigation
 // (refresh, share, deep link) lands on the map with the right sheet open.
 ;(function () {
-  const SHEET_ZONES = ['tweets', 'posts', 'stories', 'chat', 'bereal', 'profile']
-  const STANDALONE  = ['city', 'admin']
-
+  // Limpieza (OLD/): los modos sociales están archivados. Lo único vivo es el
+  // parque + el chat en vivo, así que toda ruta resuelve al parque ('city').
   // path → { mode, params }
   function parse(path) {
-    if (!path || path === '/') return { mode: 'city', params: {} }
-    const parts = path.replace(/^\/|\/$/g, '').split('/')
-    const head = parts[0]
-    if (SHEET_ZONES.includes(head)) {
-      const params = { sheet: head }
-      // /chat/:username → open conversation with that user once the sheet is mounted
-      if (head === 'chat' && parts[1]) params.chatWith = parts[1]
-      return { mode: 'city', params }
-    }
-    if (STANDALONE.includes(head)) return { mode: head, params: {} }
-    if (['u', 'p', 't'].includes(head)) return { mode: 'public', params: { kind: head, ref: parts[1] } }
     return { mode: 'city', params: {} }
   }
 

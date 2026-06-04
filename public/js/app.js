@@ -25,8 +25,9 @@ const App = {
     if (window.Pet)   Pet.mount()
     if (window.Routes) Routes.init()
 
-    // Public page (/u/:username, /p/:id, /t/:id) — render read-only, no login required
-    if (window.__PUBLIC_CONTEXT__) {
+    // Public page (/u/:username, /p/:id, /t/:id) — archivado en OLD/. Si el server
+    // marca __PUBLIC_CONTEXT__ pero ya no existe la sección, se ignora (no peta).
+    if (window.__PUBLIC_CONTEXT__ && document.getElementById('mode-public') && App.enter_public) {
       document.querySelectorAll('.mode').forEach(s => s.hidden = true)
       document.getElementById('mode-public').hidden = false
       const banner = document.getElementById('modeBanner'); if (banner) banner.hidden = true

@@ -27,7 +27,7 @@
 </head>
 <body>
 
-  <!-- WORLD: fullscreen habitat per section (parallax + ambient + day/night tint) -->
+  <!-- WORLD: fondo ambiente a pantalla completa (gradiente CSS detrás del parque/auth) -->
   <div id="world" aria-hidden="true">
     <div id="worldSky"></div>
     <div id="worldFar"></div>
@@ -36,21 +36,6 @@
     <div id="worldAmbient"></div>
     <div id="worldTint"></div>
   </div>
-
-  <!-- Unread badge (floating, no header) -->
-  <button id="headerUnread" class="unread-badge" hidden onclick="App.go('chat')">0</button>
-
-  <!-- Mode Banner: per-section habitat (gradient + mascota + particles) -->
-  <header id="modeBanner" class="mode-banner" hidden>
-    <div class="banner-particles" id="bannerParticles"></div>
-    <div class="banner-content">
-      <div class="banner-text">
-        <h1 id="bannerTitle" class="banner-title"></h1>
-        <p id="bannerSubtitle" class="banner-subtitle"></p>
-      </div>
-      <div id="bannerMascot" class="banner-mascot"></div>
-    </div>
-  </header>
 
   <!-- Registration (shown if no user) -->
   <section id="registration" class="mode" hidden>
@@ -114,168 +99,7 @@
     </div>
   </div>
 
-  <!-- Mode: Stories -->
-  <section id="mode-stories" class="mode" hidden>
-    <div id="storyBubbles" class="story-bubbles"></div>
-    <button class="fab" onclick="App.openStoryEditor()">+</button>
-  </section>
-
-  <!-- Mode: Posts -->
-  <section id="mode-posts" class="mode" hidden>
-    <div id="postFeed" class="feed"></div>
-    <button id="postsMore" class="btn load-more" hidden onclick="App.loadPosts(++App.postsPage)">cargar m&aacute;s</button>
-    <button class="fab" onclick="App.openPostComposer()">+</button>
-  </section>
-
-  <!-- Mode: Tweets -->
-  <section id="mode-tweets" class="mode" hidden>
-    <div class="feed">
-      <div id="tweetComposer" class="tweet-composer">
-        <img id="composerAvatar" class="avatar" src="">
-        <div class="tweet-composer-body">
-          <textarea id="tweetInput" placeholder="que pasa miau?" maxlength="1000" rows="1"
-                    oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-          <div class="composer-bar">
-            <span id="tweetCount" class="char-count">0/1000</span>
-            <button class="btn primary small" onclick="App.createTweet()">miau</button>
-          </div>
-        </div>
-      </div>
-      <div id="tweetTimeline"></div>
-      <button id="tweetsMore" class="btn load-more" hidden onclick="App.loadTweets(++App.tweetsPage)">m&aacute;s</button>
-    </div>
-  </section>
-
-  <!-- Mode: BeReal -->
-  <section id="mode-bereal" class="mode" hidden>
-    <div class="feed bereal-feed">
-      <div id="berealGrid" class="bereal-grid"></div>
-      <button class="fab" onclick="App.openBerealCapture()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-      </button>
-    </div>
-  </section>
-
-  <!-- BeReal Capture Modal -->
-  <div id="berealModal" class="modal" hidden>
-    <div class="modal-content bereal-capture">
-      <h2>tu miau real de hoy</h2>
-      <p class="muted" style="margin-bottom:14px">que estas haciendo ahora mismo?</p>
-      <label class="drop-zone" for="berealFile" id="berealDropZone">
-        <span class="drop-zone-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="3.5"/><path d="M21 7h-3.2L16 5H8L6.2 7H3v12h18z"/></svg>
-        </span>
-        <span class="drop-zone-text">haz una foto</span>
-        <span class="drop-zone-hint" id="berealDropHint">o sube una desde el rollo</span>
-      </label>
-      <input id="berealFile" type="file" accept="image/*" capture="environment" hidden>
-      <img id="berealPreview" class="bereal-preview" hidden>
-      <input id="berealCaption" type="text" placeholder="algo breve..." maxlength="200">
-      <div class="modal-actions">
-        <button class="btn" onclick="$('#berealModal').hidden=true">cancelar</button>
-        <button class="btn primary" onclick="App.submitBereal()">publicar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Mode: Chat -->
-  <section id="mode-chat" class="mode" hidden>
-    <div class="chat-search">
-      <input id="chatSearch" type="text" placeholder="buscar gatos para chatear..." autocomplete="off"
-             oninput="App.searchChatUsers(this.value)">
-      <div id="chatSearchResults"></div>
-    </div>
-    <div id="chatConversations" class="feed"></div>
-    <div id="chatThread" class="chat-thread" hidden>
-      <div id="chatHeader" class="chat-header">
-        <button class="btn small" onclick="App.closeChat()">&larr;</button>
-        <span id="chatWith"></span>
-      </div>
-      <div id="chatMessages" class="chat-messages"></div>
-      <div class="composer">
-        <input id="chatInput" type="text" placeholder="escribe..." maxlength="2000"
-               onkeydown="if(event.key==='Enter')App.sendMessage()">
-        <button class="btn primary small chat-send" onclick="App.sendMessage()" aria-label="enviar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Mode: Profile (5th tab) -->
-  <section id="mode-profile" class="mode" hidden>
-    <div class="profile-page">
-      <div class="profile-avatar-area">
-        <div id="profileAvatar" class="profile-avatar-big"></div>
-        <button class="btn small" onclick="CatEditor.open()">editar mi gato</button>
-        <button class="btn small" onclick="App.rerollProfileAvatar()">aleatorio</button>
-      </div>
-
-      <div class="profile-section">
-        <h2>amigos</h2>
-        <div class="friends-search">
-          <input id="friendSearch" type="text" placeholder="buscar gatos..." autocomplete="off"
-                 oninput="App.searchUsers(this.value)">
-          <div id="friendSearchResults" class="friends-results"></div>
-        </div>
-        <div id="friendPending" class="friends-pending"></div>
-        <div id="friendList" class="friends-list"></div>
-      </div>
-
-      <div class="profile-section">
-        <h2>tu gato</h2>
-        <p class="profile-label">color</p>
-        <div id="profileColorGrid" class="color-grid"></div>
-      </div>
-
-      <div class="profile-section">
-        <h2>perfil</h2>
-        <p class="profile-label">nombre</p>
-        <p id="profileName" class="profile-value"></p>
-        <p class="profile-label">bio</p>
-        <textarea id="profileBio" maxlength="200" rows="2" placeholder="algo sobre ti..."></textarea>
-        <button class="btn primary" onclick="App.saveProfile()">guardar</button>
-      </div>
-
-      <div class="profile-section">
-        <h2>tu clave secreta</h2>
-        <p class="muted" style="font-size:0.75rem;margin-bottom:6px">es tu contrasena. ponle algo que te mole y que recuerdes</p>
-        <div class="profile-key">
-          <code id="profileKey"></code>
-          <button class="btn small" onclick="App.copyKey()">copiar</button>
-        </div>
-        <div class="profile-key-edit">
-          <input id="profileNewKey" type="text" placeholder="nueva clave (min 4 chars, se creativo)" maxlength="32" autocomplete="off">
-          <button class="btn small" onclick="App.changeKey()">cambiar</button>
-        </div>
-      </div>
-
-      <div class="profile-section">
-        <h2>tema</h2>
-        <div class="profile-theme-row">
-          <button class="btn" onclick="App.setTheme('light')" id="btnLight">claro</button>
-          <button class="btn" onclick="App.setTheme('dark')" id="btnDark">oscuro</button>
-        </div>
-      </div>
-
-      <div class="profile-section">
-        <button class="btn danger" onclick="App.deleteAccount()">eliminar cuenta</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Mode: Admin (owner-only stats dashboard at /admin) -->
-  <section id="mode-admin" class="mode" hidden>
-    <div class="admin-page">
-      <h1 class="admin-title">stats</h1>
-      <p class="admin-sub">solo Manu ve esto</p>
-      <div id="adminContent" class="admin-content">
-        <div class="loading">cargando stats</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Mode: City (the town map — Phase 1 single-player) -->
+  <!-- Mode: City (el parque — único "modo" vivo ahora mismo) -->
   <section id="mode-city" class="mode" hidden>
     <div class="city-wrap">
       <canvas id="cityCanvas" class="city-canvas"></canvas>
@@ -283,8 +107,8 @@
     </div>
   </section>
 
-  <!-- Zone Sheet (Phase 4): bottom-sheet that hosts a section while you stay in /city.
-       The corresponding .mode element is moved into #zoneSheetContent on open and back to body on close. -->
+  <!-- Zone Sheet: panel inferior. Se mantiene pero se auto-neutraliza (los modos
+       que alojaba están en OLD/; openSheet hace return si no encuentra su sección). -->
   <div id="zoneSheet" class="zone-sheet" hidden>
     <div class="zone-sheet-backdrop" onclick="City.closeSheet()"></div>
     <div class="zone-sheet-panel">
@@ -302,129 +126,6 @@
     </div>
   </div>
 
-  <!-- Mode: Public (read-only profile/post/tweet for /u/:username, /p/:id, /t/:id) -->
-  <section id="mode-public" class="mode" hidden>
-    <div class="public-page">
-      <div id="publicContent"></div>
-      <div class="public-cta">
-        <a href="/" class="btn primary">entrar a miaumiau</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Reply Modal -->
-  <div id="replyModal" class="modal" hidden>
-    <div class="modal-content card">
-      <div id="replyThread"></div>
-      <textarea id="replyInput" placeholder="responder..." maxlength="1000" rows="2"></textarea>
-      <div class="modal-actions">
-        <button class="btn" onclick="App.closeReply()">cerrar</button>
-        <button class="btn primary" onclick="App.submitReply()">responder</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Post Composer Modal -->
-  <div id="postModal" class="modal" hidden>
-    <div class="modal-content card">
-      <h2>nueva publicaci&oacute;n</h2>
-      <label class="drop-zone" for="postFile" id="postDropZone">
-        <span class="drop-zone-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L8 19"/></svg>
-        </span>
-        <span class="drop-zone-text">elige una foto</span>
-        <span class="drop-zone-hint" id="postDropHint">o arr&aacute;strala aqu&iacute;</span>
-      </label>
-      <input id="postFile" type="file" accept="image/*" hidden>
-      <img id="postPreview" class="post-preview" hidden>
-      <span id="postSize" class="muted"></span>
-      <textarea id="postCaption" placeholder="escribe algo..." maxlength="500" rows="3"></textarea>
-      <div class="modal-actions">
-        <button class="btn" onclick="App.closePostComposer()">cerrar</button>
-        <button class="btn primary" onclick="App.submitPost()">publicar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Story Viewer -->
-  <div id="storyViewer" class="story-viewer" hidden>
-    <div id="storyProgress" class="story-progress"></div>
-    <img id="storyImage" class="story-image">
-    <div id="storyLayers" class="story-layers"></div>
-    <div class="story-nav">
-      <div class="story-nav-left" onclick="App.storyPrev()"></div>
-      <div class="story-nav-right" onclick="App.storyNext()"></div>
-    </div>
-    <button class="story-close" onclick="App.closeStoryViewer()">&times;</button>
-    <div class="story-actions">
-      <button id="storyLikeBtn" class="story-like" onclick="App.toggleStoryLike()" aria-label="me gusta">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-        <span id="storyLikeCount" class="story-like-count">0</span>
-      </button>
-    </div>
-    <div id="storyComments" class="story-comments"></div>
-    <form id="storyCommentForm" class="story-comment-form" onsubmit="event.preventDefault(); App.sendStoryComment()">
-      <input id="storyCommentInput" type="text" maxlength="200" placeholder="responder..." autocomplete="off">
-      <button type="submit" class="story-comment-send" aria-label="enviar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-      </button>
-    </form>
-  </div>
-
-  <!-- Story Editor Modal -->
-  <div id="storyEditor" class="story-editor" hidden>
-    <div class="story-editor-toolbar">
-      <button class="btn small active" data-tool="draw" onclick="StoryEditor.setTool('draw')">dibujar</button>
-      <button class="btn small" data-tool="text" onclick="StoryEditor.setTool('text')">texto</button>
-      <button class="btn small" data-tool="link" onclick="StoryEditor.setTool('link')">link</button>
-      <input id="storyDrawColor" type="color" value="#ffffff" onchange="StoryEditor.drawColor=this.value">
-      <select id="storyDrawSize" onchange="StoryEditor.drawSize=+this.value">
-        <option value="2">fino</option>
-        <option value="4" selected>normal</option>
-        <option value="8">grueso</option>
-        <option value="16">mega</option>
-      </select>
-      <button class="btn small" onclick="StoryEditor.toggleEraser()">borrador</button>
-    </div>
-    <div id="storyEditorCanvas" class="story-editor-canvas">
-      <img id="storyEditorBg">
-      <canvas id="storyEditorDraw"></canvas>
-      <div id="storyEditorOverlays"></div>
-    </div>
-    <div class="story-editor-actions">
-      <input id="storyFile" type="file" accept="image/*" onchange="StoryEditor.loadImage(this.files[0])">
-      <button class="btn" onclick="StoryEditor.close()">cancelar</button>
-      <button class="btn primary" onclick="StoryEditor.publish()">publicar</button>
-    </div>
-  </div>
-
-  <!-- Cat Editor Modal -->
-  <div id="catEditorModal" class="modal" hidden>
-    <div class="modal-content cat-editor">
-      <h2>editar tu gato</h2>
-      <div class="cat-editor-preview">
-        <div id="catEditorAvatar" class="profile-avatar-big"></div>
-      </div>
-      <div id="catEditorTraits" class="cat-editor-traits"></div>
-      <div class="modal-actions">
-        <button class="btn" onclick="CatEditor.close()">cancelar</button>
-        <button class="btn primary" onclick="CatEditor.save()">guardar gato</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Events Modal (calendar from /data/events.json — sesión 9) -->
-  <div id="eventsModal" class="events-modal" hidden>
-    <div class="events-canvas">
-      <button class="events-close" onclick="Events.closeModal()" aria-label="cerrar">×</button>
-      <h2 class="events-title">eventos del pueblo</h2>
-      <p class="events-sub">próximos 30 días</p>
-      <div id="eventsList" class="events-list"></div>
-    </div>
-  </div>
-
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
@@ -437,6 +138,7 @@
   </div>
 
   <!-- ─── PET MENU (radial — opens on pet click) ─── -->
+  <!-- Recortado: ahora solo hay parque + chat en vivo. Resto de acciones en OLD/. -->
   <div id="petMenu" class="pet-menu" hidden>
     <div class="pet-menu-canvas">
       <button class="pet-menu-close" onclick="Menu.close()" aria-label="cerrar">×</button>
@@ -449,32 +151,12 @@
         </div>
       </div>
 
-      <!-- The 6 places of the village live in the city map (the city IS the menu).
-           This radial only carries actions that wouldn't otherwise fit in the map:
-           editing your cat, browsing events, admin stats, and signing out. -->
       <div class="pet-menu-section">
         <h3 class="pet-menu-section-title">acciones</h3>
         <div class="pet-menu-actions">
           <button class="pet-menu-action" data-action="back-to-city">
             <span class="pet-menu-action-icon">🗺️</span>
             <span class="pet-menu-action-name">volver al pueblo</span>
-          </button>
-          <button class="pet-menu-action" data-action="cat-editor">
-            <span class="pet-menu-action-icon">✨</span>
-            <span class="pet-menu-action-name">editar miau</span>
-          </button>
-          <button class="pet-menu-action" data-action="events">
-            <span class="pet-menu-action-icon">📅</span>
-            <span class="pet-menu-action-name">eventos</span>
-          </button>
-          <button class="pet-menu-action" data-route="/profile">
-            <span class="pet-menu-action-icon">🏠</span>
-            <span class="pet-menu-action-name">tu casa</span>
-            <span id="petMenuUnread" class="pet-menu-badge" hidden>0</span>
-          </button>
-          <button class="pet-menu-action" data-route="/admin" id="petMenuAdmin" hidden>
-            <span class="pet-menu-action-icon">📊</span>
-            <span class="pet-menu-action-name">stats</span>
           </button>
           <button class="pet-menu-action" data-action="logout">
             <span class="pet-menu-action-icon">🌙</span>
@@ -483,25 +165,22 @@
         </div>
       </div>
 
-      <!-- Asset attribution (Sprout Lands by Cup Nooble — Basic license) -->
+      <!-- Asset attribution (Cainos · Pixel Art Top Down Basic) -->
       <p class="pet-menu-credits">
-        art by <a href="https://cupnooble.itch.io/sprout-lands-asset-pack" target="_blank" rel="noopener">Cup Nooble · Sprout Lands</a>
+        art by <a href="https://cainos.itch.io/pixel-art-top-down-basic" target="_blank" rel="noopener">Cainos · Pixel Art Top Down</a>
       </p>
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Scripts (recortado: solo auth + parque + chat en vivo; el resto en OLD/) -->
   <script src="/js/colors.js"></script>
   <script src="/js/poporing.js"></script>
   <script src="/js/themes.js"></script>
   <script src="/js/toast.js"></script>
-  <script src="/js/media.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/track.js"></script>
-  <script src="/js/world.js"></script>
   <script src="/js/menu.js"></script>
   <script src="/js/pet.js"></script>
-  <script src="/js/events.js"></script>
   <script src="/js/routes.js"></script>
   <script src="/js/sprites.js"></script>
   <script src="/js/assets.js"></script>
@@ -518,15 +197,5 @@
   <script src="/js/city.tooltip.js"></script>
   <script src="/js/city.chat.js"></script>
   <script src="/js/app.js"></script>
-  <script src="/js/mode.tweets.js"></script>
-  <script src="/js/mode.posts.js"></script>
-  <script src="/js/mode.stories.js"></script>
-  <script src="/js/mode.chat.js"></script>
-  <script src="/js/mode.bereal.js"></script>
-  <script src="/js/cat-editor.js"></script>
-  <script src="/js/mode.profile.js"></script>
-  <script src="/js/mode.public.js"></script>
-  <script src="/js/mode.admin.js"></script>
-  <script src="/js/story-editor.js"></script>
 </body>
 </html>
