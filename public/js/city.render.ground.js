@@ -4,9 +4,8 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { W, H, PLAZA, SPAWN, VERJA, WATER, PASEOS, GATES } = window.CityConfig
+  const { W, H, PLAZA, SPAWN, VERJA, WATER, PATH_GRID, PATH_SEGMENTS, GATES } = window.CityConfig
 
-  const COBBLE = '#d2c6ac', COBBLE_LN = '#ac9e80'
   const WATER_C = '#4f93b3', WATER_DK = '#3a7795', SHORE = '#bcb3a2'  // agua apagada + orilla de piedra (cohesión Cainos)
 
   // ── Texturas Cainos (suelo) → CanvasPattern desde una celda limpia del atlas.
@@ -45,6 +44,56 @@
       ctx.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i + 1].x) / 2, (pts[i].y + pts[i + 1].y) / 2)
     }
     ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y)
+  }
+
+  // ── Caminos en REJILLA (autotile) ─────────────────────────────────────────
+  // Rasteriza PATH_SEGMENTS (avenidas rectas H/V) a un set de celdas (cacheado),
+  // y pinta cada celda con el 9-slice de stone.png según sus vecinos → bordes y
+  // esquinas de piedra de verdad. El 9-slice está en las 3×3 celdas (32px) de
+  // arriba-izquierda de stone.png. Ancho de avenida = 3 celdas.
+  const S9 = 32  // tile nativo Cainos
+  function buildPathCells () {
+    if (City._pathCells) return City._pathCells
+    const G = PATH_GRID, cells = new Set()
+    const add = (c, r) => cells.add(c + ',' + r)
+    for (const s of (PATH_SEGMENTS || [])) {
+      if (s.y0 === s.y1) {                         // horizontal → 3 filas centradas en y
+        const yc = Math.round((s.y0 - G / 2) / G)
+        const ca = Math.floor(Math.min(s.x0, s.x1) / G), cb = Math.floor(Math.max(s.x0, s.x1) / G)
+        for (let c = ca; c <= cb; c++) for (let r = yc - 1; r <= yc + 1; r++) add(c, r)
+      } else {                                     // vertical → 3 columnas centradas en x
+        const xc = Math.round((s.x0 - G / 2) / G)
+        const ra = Math.floor(Math.min(s.y0, s.y1) / G), rb = Math.floor(Math.max(s.y0, s.y1) / G)
+        for (let r = ra; r <= rb; r++) for (let c = xc - 1; c <= xc + 1; c++) add(c, r)
+      }
+    }
+    City._pathCells = cells
+    return cells
+  }
+  // src (sx,sy) del 9-slice según qué lados están "abiertos" (vecino sin camino).
+  function nineSlice (oN, oE, oS, oW) {
+    if (oN && oW) return [0, 0];   if (oN && oE) return [64, 0]
+    if (oS && oW) return [0, 64];  if (oS && oE) return [64, 64]
+    if (oN) return [32, 0];        if (oS) return [32, 64]
+    if (oW) return [0, 32];        if (oE) return [64, 32]
+    return [32, 32]                                // centro (relleno)
+  }
+  City.drawPaths = function (ctx, visL, visT, visR, visB) {
+    const A = window.Assets, stone = A && A.get('cainos:stone')
+    if (!stone) return false
+    const G = PATH_GRID, cells = buildPathCells()
+    const has = (c, r) => cells.has(c + ',' + r)
+    const c0 = Math.floor(visL / G) - 1, c1 = Math.ceil(visR / G) + 1
+    const r0 = Math.floor(visT / G) - 1, r1 = Math.ceil(visB / G) + 1
+    ctx.imageSmoothingEnabled = false
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        if (!has(c, r)) continue
+        const t = nineSlice(!has(c, r - 1), !has(c + 1, r), !has(c, r + 1), !has(c - 1, r))
+        ctx.drawImage(stone, t[0], t[1], S9, S9, c * G, r * G, G, G)
+      }
+    }
+    return true
   }
 
   // Spawn portal — runa pulsante donde aparecen los recién llegados (Puerta de Alcalá).
@@ -86,12 +135,7 @@
     if (pat) {
       ctx.fillStyle = pat.grass
       ctx.fillRect(visL, visT, visR - visL, visB - visT)
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-      for (const p of PASEOS) {
-        tracePaseo(ctx, p); ctx.strokeStyle = 'rgba(34,28,20,0.34)'; ctx.lineWidth = 76; ctx.stroke()   // borde/sombra (define el camino)
-        tracePaseo(ctx, p); ctx.strokeStyle = pat.stone; ctx.lineWidth = 58; ctx.stroke()                // piedra Cainos
-        tracePaseo(ctx, p); ctx.strokeStyle = 'rgba(255,250,236,0.10)'; ctx.lineWidth = 36; ctx.stroke() // luz central (volumen)
-      }
+      City.drawPaths(ctx, visL, visT, visR, visB)   // caminos = autotile en rejilla
     } else {
       const TILE = 48
       const TONES = ['#6aa838', '#74b340', '#62a033', '#6fae3c']
@@ -103,11 +147,7 @@
           ctx.fillStyle = TONES[hsh % TONES.length]; ctx.fillRect(wx, wy, TILE, TILE)
         }
       }
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-      for (const p of PASEOS) {
-        tracePaseo(ctx, p); ctx.strokeStyle = COBBLE_LN; ctx.lineWidth = 64; ctx.stroke()
-        tracePaseo(ctx, p); ctx.strokeStyle = COBBLE; ctx.lineWidth = 54; ctx.stroke()
-      }
+      City.drawPaths(ctx, visL, visT, visR, visB)   // caminos = autotile en rejilla
     }
     ctx.restore() // end verja clip
 

@@ -53,6 +53,32 @@
     [{ x: 4850, y: 3450 }, { x: 5300, y: 3750 }, { x: 5600, y: 3950 }],
   ]
 
+  // ─── Caminos en REJILLA (autotile Cainos) — ESTO es lo que se pinta ────────
+  // Avenidas alineadas a la cuadrícula (rectos H/V + giros de 90°). Cada segmento
+  // es RECTO: comparte y (horizontal) o x (vertical). Se autotilean con stone.png
+  // (9-slice → bordes y esquinas de piedra de verdad). Ancho fijo = 3 celdas.
+  // ⚠️ Los PASEOS curvos de arriba quedan como datos LEGACY (ya NO se dibujan).
+  // 📖 Para mover/añadir avenidas: ver MAPA.md (es solo cambiar números aquí).
+  const PATH_GRID = 48
+  const PATH_SEGMENTS = [
+    // Anillo alrededor del Estanque (el "paseo del estanque"); plaza en el lado este
+    { x0: 1500, y0: 1450, x1: 4430, y1: 1450 },  // arriba
+    { x0: 4430, y0: 1450, x1: 4430, y1: 2850 },  // este (pasa por la plaza)
+    { x0: 1500, y0: 2850, x1: 4430, y1: 2850 },  // abajo
+    { x0: 1500, y0: 1450, x1: 1500, y1: 2850 },  // oeste
+    // Ramales rectos a las zonas y las puertas
+    { x0: 760,  y0: 1450, x1: 1500, y1: 1450 },  // → Puerta de Alcalá (oeste)
+    { x0: 1120, y0: 1320, x1: 1120, y1: 1450 },  // baja al spawn
+    { x0: 3100, y0: 1450, x1: 3100, y1: 840  },  // → Casita del Pescador (norte)
+    { x0: 4430, y0: 1450, x1: 5700, y1: 1450 },  // → Puerta de Hernani (este)
+    { x0: 1500, y0: 2850, x1: 1500, y1: 3470 },  // → la Rosaleda (suroeste)
+    { x0: 3100, y0: 2850, x1: 3100, y1: 4560 },  // → Cuesta de Moyano / Pta España (sur)
+    { x0: 3100, y0: 4360, x1: 3300, y1: 4360 },  // jog hasta posts
+    { x0: 4430, y0: 2850, x1: 4430, y1: 3380 },  // baja desde la plaza
+    { x0: 4430, y0: 3380, x1: 5650, y1: 3380 },  // → Palacio de Cristal (este)
+    { x0: 5650, y0: 3380, x1: 5650, y1: 3960 },  // → el Observatorio (sur)
+  ]
+
   // Estanque grande + Monumento = corazón social ("el feed"). MONUMENT = columnata.
   const ESTANQUE = WATER[0]
   const MONUMENT = { x: 4250, y: 2150 }
@@ -131,7 +157,7 @@
   window.CityConfig = {
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
-    VERJA, WATER, PASEOS, ESTANQUE, MONUMENT, GATES,
+    VERJA, WATER, PASEOS, PATH_GRID, PATH_SEGMENTS, ESTANQUE, MONUMENT, GATES,
     DECO_BUILDINGS, TREES, LAMPS,
     ASSET_MANIFEST,
   }
