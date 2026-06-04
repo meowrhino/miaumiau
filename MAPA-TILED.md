@@ -26,11 +26,21 @@ De abajo a arriba (se pintan en ese orden):
 | Capa | Tipo | Qué es | Con qué se pinta |
 |---|---|---|---|
 | **suelo** | tiles | césped + flores (todo el fondo) | tileset **grass** |
-| **caminos** | tiles | adoquín (avenidas + plaza) | tileset **grass** (las baldosas) o **stone** |
-| **muros** | tiles | borde/muros de piedra | tileset **wall** |
-| **props** | objetos | árboles, bancos, estatua, fuente, escaleras, arcos… | colecciones **plants / struct / deco** |
+| **caminos** | tiles | adoquín (avenidas) + plaza de piedra | **grass** (baldosas) / **stone** |
+| **terraza** | tiles | plataformas elevadas (mirador) | **stone** (9-slice) |
+| **muros** | tiles | muros/paredes de piedra (las haces tú) | tileset **wall** |
+| **props** | objetos | árboles, bancos, estatua, fuente… (tuyos) | colecciones **plants / struct / deco** |
+| **estructuras** | objetos | escaleras, arcos, pilares, monumentos | colecciones **struct / deco** |
+| **agua** | tiles | estanque/arroyo (créala tú) | tileset **water** |
+| **colision** *(oculta)* | tiles | dónde NO se puede andar | cualquier tile (no se ve) |
 
 Haz clic en una capa para seleccionarla **antes** de pintar/colocar en ella.
+
+> 🚧 **Navegabilidad (colisión):** en el juego, **NO se anda** por las celdas que tengan
+> tile en las capas **`muros`**, **`agua`** o **`colision`**. Así tus muros son sólidos.
+> Para una **terraza navegable** (subir por escaleras): pinta la plataforma en `terraza`,
+> pon su **borde** en la capa `colision` (bloquea) dejando un **hueco** donde va la escalera,
+> y coloca la escalera (objeto de `struct`) en ese hueco. ¡Subes por la escalera, no atraviesas!
 
 ## 3. Los tilesets (panel **Conjunto de Patrones**, abajo-derecha)
 
