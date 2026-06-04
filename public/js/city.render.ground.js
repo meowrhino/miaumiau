@@ -127,6 +127,15 @@
     visL = visL ?? 0; visT = visT ?? 0; visR = visR ?? W; visB = visB ?? H
     ctx.imageSmoothingEnabled = false
 
+    // ── Mapa TILED (flag ?map=tiled): si hay un mapa cargado, lo pintamos en vez
+    //    del suelo procedural. El resto (procedural) queda intacto como fallback. ──
+    if (City.tiled && City.tiled.ready && City.drawTiledMap) {
+      ctx.fillStyle = '#3f6b2e'; ctx.fillRect(visL, visT, visR - visL, visB - visT)
+      City.drawTiledMap(ctx, visL, visT, visR, visB)
+      if (City.drawSpawnPortal) City.drawSpawnPortal(ctx, now)
+      return
+    }
+
     // ── 0. "fuera del parque" (más allá de la verja): verde oscuro apagado ──
     ctx.fillStyle = '#3f6b2e'
     ctx.fillRect(visL, visT, visR - visL, visB - visT)
