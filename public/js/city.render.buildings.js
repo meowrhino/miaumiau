@@ -1,67 +1,74 @@
 // City — building renderers (reskin Cainos):
-//   · drawZoneFeature — cada modo = "feature de parque" (props/plant de Cainos)
-//   · drawBuilding    — sombra + feature + mascota + nameplate (ya NO hay casita)
+//   · getZoneProps    — props/plant de cada modo, como lista para el y-sort
+//   · drawProp        — pinta UN prop con base en (x,y) world (lo llama el y-sort)
+//   · drawBuilding    — marcador del modo: sombra + aura + mascota + nameplate
 //   · drawDecoBuilding— deco suelto (puestos del feed + molino)
 // Loads after city.js.
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
 
-  // Reskin Cainos: cada modo como "feature de parque" (props Cainos) en vez de casa.
-  // Devuelve true si dibujó el feature (y entonces drawBuilding salta la casita).
-  const SIGN = { sx: 96, sy: 160, sw: 32, sh: 42 }   // cartel de madera (props)
-  const BUSH = [                                      // 6 arbustos (plant)
+  // Reskin Cainos: cada modo = "feature de parque" hecho de props/plant del atlas.
+  // getZoneProps devuelve la LISTA de props del modo y el render (city.render.js) mete
+  // cada uno UNO A UNO en el y-sort de entidades por su base → walk-behind real: el
+  // personaje pasa por delante/detrás de cada prop según dónde esté, en vez de que toda
+  // la zona (árbol, estatua…) salte de golpe delante. Cada prop:
+  //   { sheet:'props'|'plant', p:{sx,sy,sw,sh}, dx, dy, scale }  (dx/dy vs centro-base de la zona)
+  const SIGN    = { sx: 96,  sy: 160, sw: 32,  sh: 42 }   // cartel de madera (props)
+  const BENCH   = { sx: 292, sy: 19,  sw: 56,  sh: 41 }   // banco real (antes agarraba la lápida de al lado)
+  const STATUE  = { sx: 445, sy: 21,  sw: 37,  sh: 72 }   // monumento/estatua (props)
+  const BARREL  = { sx: 162, sy: 153, sw: 28,  sh: 36 }   // barril (props)
+  const PILA    = { sx: 353, sy: 269, sw: 94,  sh: 72 }   // pila/altar redondo (placeholder bereal)
+  const BIGTREE = { sx: 24,  sy: 14,  sw: 113, sh: 139 }  // árbol grande (plant)
+  const BUSH = [                                           // arbustos (plant)
     { sx: 38, sy: 185, sw: 22, sh: 46 }, { sx: 98, sy: 185, sw: 27, sh: 46 },
     { sx: 156, sy: 185, sw: 38, sh: 46 }, { sx: 216, sy: 185, sw: 47, sh: 46 },
     { sx: 282, sy: 185, sw: 39, sh: 46 }, { sx: 346, sy: 185, sw: 40, sh: 46 },
   ]
-  const BENCH = { sx: 225, sy: 36, sw: 62, sh: 26 }, STATUE = { sx: 448, sy: 34, sw: 34, sh: 78 }
-  const THRONE = { sx: 288, sy: 176, sw: 48, sh: 80 }, BARREL = { sx: 160, sy: 158, sw: 32, sh: 38 }
-  const BIGTREE = { sx: 24, sy: 14, sw: 113, sh: 139 }
-  City.drawZoneFeature = function (ctx, z, now) {
-    const A = window.Assets
-    const props = A && A.get('cainos:props'), plant = A && A.get('cainos:plant')
-    if (!props || !plant) return false
-    const cx = z.x + z.w / 2, gy = z.y + z.h - 30
-    function draw (img, p, dx, dy, scale) {
-      const rw = p.sw * scale, rh = p.sh * scale
-      ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.ellipse(cx + dx, gy + dy + 2, rw * 0.42, 6, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.drawImage(img, p.sx, p.sy, p.sw, p.sh, cx + dx - rw / 2, gy + dy - rh, rw, rh)
-    }
-    ctx.save(); ctx.imageSmoothingEnabled = false
-    let handled = true
+  City.getZoneProps = function (z) {
+    const out = []
+    const P = (p, dx, dy, scale) => out.push({ sheet: 'props', p, dx, dy, scale })
+    const L = (p, dx, dy, scale) => out.push({ sheet: 'plant', p, dx, dy, scale })
     if (z.id === 'posts') {                  // el tablón → carteles de madera
-      draw(props, SIGN, -44, -6, 1.5); draw(props, SIGN, 6, 8, 1.8); draw(props, SIGN, 52, -2, 1.5)
+      P(SIGN, -44, -6, 1.5); P(SIGN, 6, 8, 1.8); P(SIGN, 52, -2, 1.5)
     } else if (z.id === 'chat') {            // la Rosaleda → setos / arbustos
-      draw(plant, BUSH[3], -54, 8, 1.7); draw(plant, BUSH[4], 42, 6, 1.7)
-      draw(plant, BUSH[2], -8, 16, 1.9); draw(plant, BUSH[1], 72, 14, 1.5); draw(plant, BUSH[0], -88, 14, 1.5)
+      L(BUSH[3], -54, 8, 1.7); L(BUSH[4], 42, 6, 1.7)
+      L(BUSH[2], -8, 16, 1.9); L(BUSH[1], 72, 14, 1.5); L(BUSH[0], -88, 14, 1.5)
     } else if (z.id === 'stories') {         // el Observatorio → monumento/estatua de piedra
-      draw(props, STATUE, 0, 2, 1.9)
+      P(STATUE, 0, 2, 1.9)
     } else if (z.id === 'tweets') {          // el Parterre → árbol grande + bancos
-      draw(plant, BIGTREE, -40, 2, 1.15); draw(props, BENCH, 30, 16, 1.4); draw(props, BENCH, -26, 22, 1.2)
+      L(BIGTREE, -40, 2, 1.15); P(BENCH, 30, 16, 1.35); P(BENCH, -26, 22, 1.15)
     } else if (z.id === 'bereal') {          // Palacio de Cristal → pila de piedra (placeholder, asset propio luego)
-      draw(props, { sx: 352, sy: 269, sw: 96, sh: 72 }, 0, 0, 1.3)
+      P(PILA, 0, 0, 1.3)
     } else if (z.id === 'profile') {         // la Casita → rincón con barriles + banco (placeholder, asset propio luego)
-      draw(props, BENCH, 8, 14, 1.3); draw(props, BARREL, -36, 6, 1.4); draw(props, BARREL, 50, 8, 1.3)
-    } else { handled = false }
+      P(BENCH, 8, 14, 1.25); P(BARREL, -36, 6, 1.4); P(BARREL, 50, 8, 1.3)
+    }
+    return out
+  }
+  // Dibuja UN prop con base-centro en (bx, by) world coords (lo invoca el y-sort).
+  City.drawProp = function (ctx, bx, by, img, p, scale) {
+    if (!img) return
+    const rw = p.sw * scale, rh = p.sh * scale
+    ctx.save(); ctx.imageSmoothingEnabled = false
+    ctx.fillStyle = 'rgba(0,0,0,0.16)'
+    ctx.beginPath(); ctx.ellipse(bx, by + 2, rw * 0.42, 6, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.drawImage(img, p.sx, p.sy, p.sw, p.sh, bx - rw / 2, by - rh, rw, rh)
     ctx.restore()
-    return handled
   }
 
   City.drawBuilding = function (ctx, z, now) {
-    // Cada modo se dibuja como "feature de parque" (drawZoneFeature) + mascota +
-    // nameplate. Ya NO hay casita procedural (reskin Cainos).
+    // El "edificio" del modo es solo su marcador interactivo: sombra + aura del felpudo
+    // + mascota + nameplate. Los props del parque (árbol, bancos, estatua…) los pinta el
+    // y-sort como entidades sueltas (getZoneProps / drawProp) para que hagan walk-behind
+    // con el personaje. Ya NO hay casita procedural (reskin Cainos).
     const cx = z.x + z.w / 2
     const my = z.y + z.h - 30                    // felpudo / posición de la mascota
 
-    // Sombra suave bajo el feature
+    // Sombra suave bajo la mascota
     ctx.save()
     ctx.fillStyle = 'rgba(0,0,0,0.22)'
     ctx.beginPath(); ctx.ellipse(cx, my + 6, 44, 12, 0, 0, Math.PI * 2); ctx.fill()
     ctx.restore()
-
-    // Feature de parque (props/plant de Cainos) del modo
-    if (City.drawZoneFeature) City.drawZoneFeature(ctx, z, now)
 
     // Doormat aura + progress ring (top-down)
     const distToMat = Math.hypot(City.player.x - cx, City.player.y - my)

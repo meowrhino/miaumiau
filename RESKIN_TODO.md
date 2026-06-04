@@ -7,18 +7,20 @@ Por cada paso: commit + `git push origin main` + `wrangler deploy` (en primer pl
 
 ---
 
-## 🐞 BUGS a arreglar PRIMERO (los marcó manu, 3 capturas)
+## 🐞 BUGS marcados por manu (3 capturas)
 
-1. **Props tapan al personaje (z-order).** En `city.render.buildings.js` → `drawZoneFeature`
-   dibuja árbol/bancos/barriles/estatua anclados en `gy = z.y + z.h - 30`. El jugador es
-   otra entidad, y el feature alto lo tapa. → o y-sort de verdad (walk-behind), o pintar
-   SIEMPRE al jugador encima. (Ver orden de capas en `city.js`.)
-2. **Los "bancos" parecen LÁPIDAS.** `BENCH = {sx:225, sy:36, sw:62, sh:26}` (cainos:props)
-   sale como una losa gris. La coord seguramente está mal → re-inspeccionar `props.png` con
-   el overlay de cuadrícula 32px en el navegador y buscar un banco real, o cambiar el prop.
-   Afecta **el Parterre** y **la Casita**.
-3. **El Parterre / la Casita quedan flojos** = son placeholders. Rehacer con buenos props
-   (o con los assets propios del punto B).
+1. [x] **Props tapaban al personaje (z-order)** — ARREGLADO. Cada prop de zona (árbol,
+   banco, estatua, barril…) entra ahora individualmente al y-sort por su base →
+   **walk-behind real**: `getZoneProps` + `drawProp` en `city.render.buildings.js`,
+   expandidos como entidades `'prop'` en el sort de `city.render.js`. (Antes toda la zona
+   se pintaba en un único punto y el feature alto saltaba delante del jugador.)
+2. [x] **El "banco" parecía una LÁPIDA** — ARREGLADO. `BENCH` apuntaba a `{225,36}` = la
+   lápida gris del atlas. Movido al banco real `{292,19,56,41}` (verificado con análisis
+   de cajas por alpha). Estatua → `{445,21,37,72}` y barril → `{162,153,28,36}` también a
+   sus cajas exactas. Afecta **el Parterre** y **la Casita**.
+3. [~] **Parterre / Casita flojos** — con el banco bueno + z-order ya respiran; lo que
+   queda de verdad (Palacio de Cristal, Casita del Pescador, agua) es la tarea (B) de
+   assets propios → más abajo.
 
 ---
 
@@ -29,7 +31,7 @@ Por cada paso: commit + `git push origin main` + `wrangler deploy` (en primer pl
   - [x] 📌 tablón (posts) → carteles de madera
   - [x] 🪑 Rosaleda (chat) → setos / arbustos
   - [x] 🌙 Observatorio (stories) → estatua de piedra
-  - [x] ☕ Parterre (tweets) → árbol + bancos  ← revisar (bugs 1,2,3)
+  - [x] ☕ Parterre (tweets) → árbol + bancos (banco real + walk-behind, bugs 1,2 ✓)
   - [~] 📷 Palacio de Cristal (bereal) → placeholder pila de piedra (falta asset propio)
   - [~] 🏠 Casita del Pescador (profile) → placeholder barriles+banco (falta asset propio)
 - [x] Deco procedural que chocaba: QUITADO (cottages/bakery/barn/workshop/well/stage)
