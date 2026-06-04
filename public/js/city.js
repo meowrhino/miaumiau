@@ -45,8 +45,10 @@
     }
     return false
   }
-  // Walkable ground: inside the park fence, not in water.
+  // Walkable ground: inside the park fence, not in water. Con mapa Tiled activo,
+  // la colisión viene del mapa (muros/agua/colisión bloquean) → navegable.
   function pointInLand(x, y) {
+    if (City.tiled && City.tiled.ready && City.tiledBlocked) return !City.tiledBlocked(x, y)
     return pointInPolygon(x, y, VERJA) && !pointInWater(x, y)
   }
   // Coarse region id (kept for API parity; the park is one landmass now).

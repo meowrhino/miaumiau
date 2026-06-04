@@ -113,6 +113,22 @@
     return true
   }
 
+  // Colisión desde el mapa: bloquea sobre muros / agua / colisión, y fuera del mapa.
+  // Así las paredes (que dibuja manu en la capa 'muros'), el agua y el borde del
+  // mirador (capa 'colision') son SÓLIDOS → el parque se vuelve navegable.
+  const BLOCK_LAYERS = new Set(['muros', 'agua', 'colision'])
+  City.tiledBlocked = function (wx, wy) {
+    const T = City.tiled
+    if (!T || !T.ready) return false
+    const c = Math.floor(wx / RENDER), r = Math.floor(wy / RENDER)
+    if (c < 0 || r < 0 || c >= T.w || r >= T.h) return true
+    const i = r * T.w + c
+    for (const layer of T.layers) {
+      if (layer.type === 'tilelayer' && BLOCK_LAYERS.has(layer.name) && layer.data[i]) return true
+    }
+    return false
+  }
+
   if (/[?&]map=tiled/.test(location.search)) {
     City.loadTiledMap('/data/park.tmj')
   }
