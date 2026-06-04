@@ -38,9 +38,11 @@ Haz clic en una capa para seleccionarla **antes** de pintar/colocar en ella.
 
 > 🚧 **Navegabilidad (colisión):** en el juego, **NO se anda** por las celdas que tengan
 > tile en las capas **`muros`**, **`agua`** o **`colision`**. Así tus muros son sólidos.
-> Para una **terraza navegable** (subir por escaleras): pinta la plataforma en `terraza`,
-> pon su **borde** en la capa `colision` (bloquea) dejando un **hueco** donde va la escalera,
-> y coloca la escalera (objeto de `struct`) en ese hueco. ¡Subes por la escalera, no atraviesas!
+>
+> 🪜 **Las escaleras abren paso solas:** si colocas una **escalera** (objeto de la colección
+> `struct`) **encima de un muro**, ahí se puede pasar automáticamente. O sea: amuralla la
+> terraza y pon la escalera sobre el muro donde quieras la entrada → ¡ya es transitable,
+> sin borrar nada! (También puedes dejar un hueco a mano en `muros`/`colision` si prefieres.)
 
 ## 3. Los tilesets (panel **Conjunto de Patrones**, abajo-derecha)
 
