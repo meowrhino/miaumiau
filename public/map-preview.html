@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>preview mapa · miaumiau</title>
+<style>
+  html,body{margin:0;height:100%;background:#2a2622;overflow:hidden;font:13px system-ui,sans-serif;color:#eee}
+  #c{display:block;width:100vw;height:100vh;image-rendering:pixelated;cursor:grab}
+  #c:active{cursor:grabbing}
+  #hud{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.55);padding:8px 12px;border-radius:8px;line-height:1.6}
+  #hud b{color:#ffd98a}
+  #err{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#5a2c2c;padding:16px 22px;border-radius:10px;max-width:70%;display:none}
+  kbd{background:#444;border-radius:4px;padding:1px 5px;font-family:monospace}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <b>preview del mapa de Tiled</b> · arrastra para mover · rueda para zoom · <kbd>G</kbd> rejilla · <kbd>R</kbd> recargar<br>
+  <span id="info">cargando /data/park.tmj…</span>
+</div>
+<div id="err"></div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const info=document.getElementById('info'),errEl=document.getElementById('err');
+function fit(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);}
+fit();addEventListener('resize',()=>{fit();draw()});
+const RENDER=48;
+let map=null, cam={x:0,y:0,zoom:0.5}, showGrid=false;
+function webUrl(p){return '/img/cainos/'+p.replace(/^.*\/img\/cainos\//,'')}
+function loadImg(src){return new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=src})}
+async function load(){
+  try{
+    const m=await (await fetch('/data/park.tmj?t='+Date.now())).json();
+    for(const t of m.tilesets){
+      if(t.image){t._img=await loadImg(webUrl(t.image));t._kind='grid';}
+      else if(t.tiles){t._kind='coll';t._tiles={};await Promise.all(t.tiles.map(async tl=>{t._tiles[tl.id]={img:await loadImg(webUrl(tl.image)),w:tl.imagewidth,h:tl.imageheight}}))}
+    }
+    map=m; cam.x=m.width*RENDER/2; cam.y=m.height*RENDER/2;
+    info.textContent=`${m.width}×${m.height} tiles · ${m.tilesets.length} tilesets · ${m.layers.length} capas`;
+    draw();
+  }catch(e){errEl.style.display='block';errEl.textContent='No pude cargar /data/park.tmj — sírvelo con un servidor local (no file://). Ej: cd public && python3 -m http.server 8080  → abre localhost:8080/map-preview.html · '+e}
+}
+function tsFor(g){let b=null;for(const t of map.tilesets)if(t.firstgid<=g&&(!b||t.firstgid>b.firstgid))b=t;return b}
+function draw(){
+  if(!map)return;
+  const W=innerWidth,H=innerHeight,z=cam.zoom;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#3f6b2e';ctx.fillRect(0,0,W,H);
+  ctx.save();ctx.translate(W/2,H/2);ctx.scale(z,z);ctx.translate(-cam.x,-cam.y);
+  ctx.imageSmoothingEnabled=false;
+  for(const L of map.layers){
+    if(L.visible===false)continue;
+    if(L.type==='tilelayer'){
+      for(let r=0;r<map.height;r++)for(let c=0;c<map.width;c++){
+        const g=L.data[r*map.width+c];if(!g)continue;
+        const t=tsFor(g);if(!t||t._kind!=='grid'||!t._img)continue;
+        const lo=g-t.firstgid,sx=(lo%t.columns)*t.tilewidth,sy=((lo/t.columns)|0)*t.tileheight;
+        ctx.drawImage(t._img,sx,sy,t.tilewidth,t.tileheight,c*RENDER,r*RENDER,RENDER,RENDER);
+      }
+    } else if(L.type==='objectgroup'){
+      const objs=(L.objects||[]).filter(o=>o.gid).slice().sort((a,b)=>a.y-b.y);
+      for(const o of objs){const t=tsFor(o.gid);if(!t||t._kind!=='coll')continue;
+        const tl=t._tiles[o.gid-t.firstgid];if(!tl||!tl.img)continue;
+        const S=RENDER/map.tilewidth,w=(o.width||tl.w)*S,h=(o.height||tl.h)*S;
+        ctx.drawImage(tl.img,o.x*S,o.y*S-h,w,h);}
+    }
+  }
+  if(showGrid){ctx.strokeStyle='rgba(255,0,0,.25)';ctx.lineWidth=1/z;
+    for(let c=0;c<=map.width;c++){ctx.beginPath();ctx.moveTo(c*RENDER,0);ctx.lineTo(c*RENDER,map.height*RENDER);ctx.stroke();}
+    for(let r=0;r<=map.height;r++){ctx.beginPath();ctx.moveTo(0,r*RENDER);ctx.lineTo(map.width*RENDER,r*RENDER);ctx.stroke();}}
+  ctx.restore();
+}
+let drag=null;
+cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(!drag)return;cam.x-=(e.clientX-drag.x)/cam.zoom;cam.y-=(e.clientY-drag.y)/cam.zoom;drag={x:e.clientX,y:e.clientY};draw()});
+cv.addEventListener('pointerup',()=>drag=null);
+cv.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY<0?1.1:0.9;cam.zoom=Math.max(0.1,Math.min(3,cam.zoom*f));draw()},{passive:false});
+addEventListener('keydown',e=>{if(e.key==='g'||e.key==='G'){showGrid=!showGrid;draw()}if(e.key==='r'||e.key==='R')load()});
+load();
+</script></body></html>
