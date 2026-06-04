@@ -57,7 +57,27 @@
         scale: RENDER / m.tilewidth, layers: m.layers || [], tilesets, ready: true,
       }
       City.tiledWorld = { W: m.width * RENDER, H: m.height * RENDER }
-      console.log('[tiled] mapa cargado:', m.width + 'x' + m.height, '·', tilesets.length, 'tilesets ·', (m.layers || []).length, 'capas')
+      // Escaleras (colección 'struct', ids 8-11) abren HUECO transitable bajo su huella:
+      // pones una escalera sobre un muro → ahí se puede pasar → terrazas navegables sin
+      // borrar muro a mano. Precalculado al cargar (rápido en la colisión).
+      const stairTs = tilesets.find(t => t.name === 'struct')
+      const holes = new Set()
+      if (stairTs) {
+        const stairGids = new Set([8, 9, 10, 11].map(i => stairTs.firstgid + i))
+        const S = RENDER / m.tilewidth
+        for (const layer of (m.layers || [])) {
+          if (layer.type !== 'objectgroup') continue
+          for (const o of (layer.objects || [])) {
+            if (!o.gid || !stairGids.has(o.gid)) continue
+            const left = o.x * S, bottom = o.y * S, top = (o.y - o.height) * S, right = (o.x + o.width) * S
+            for (let r = Math.floor(top / RENDER); r <= Math.floor(bottom / RENDER); r++)
+              for (let c = Math.floor(left / RENDER); c <= Math.floor(right / RENDER); c++)
+                holes.add(c + ',' + r)
+          }
+        }
+      }
+      City._stairHoles = holes
+      console.log('[tiled] mapa cargado:', m.width + 'x' + m.height, '·', tilesets.length, 'tilesets ·', (m.layers || []).length, 'capas ·', holes.size, 'celdas-escalera')
       return true
     } catch (e) {
       console.warn('[tiled] no se pudo cargar el mapa:', e)
@@ -122,6 +142,7 @@
     if (!T || !T.ready) return false
     const c = Math.floor(wx / RENDER), r = Math.floor(wy / RENDER)
     if (c < 0 || r < 0 || c >= T.w || r >= T.h) return true
+    if (City._stairHoles && City._stairHoles.has(c + ',' + r)) return false   // las escaleras abren paso
     const i = r * T.w + c
     for (const layer of T.layers) {
       if (layer.type === 'tilelayer' && BLOCK_LAYERS.has(layer.name) && layer.data[i]) return true
