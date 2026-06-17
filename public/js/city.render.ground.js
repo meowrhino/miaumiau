@@ -242,11 +242,34 @@
         ctx.restore()
       } else if (w.type === 'ellipse') {
         ctx.fillStyle = SHORE; ctx.beginPath(); ctx.ellipse(w.x, w.y, w.rx + 10, w.ry + 10, 0, 0, Math.PI * 2); ctx.fill()
-        ctx.fillStyle = WATER_C; ctx.beginPath(); ctx.ellipse(w.x, w.y, w.rx, w.ry, 0, 0, Math.PI * 2); ctx.fill()
+        ctx.save()
+        ctx.beginPath(); ctx.ellipse(w.x, w.y, w.rx, w.ry, 0, 0, Math.PI * 2)
+        ctx.fillStyle = WATER_C; ctx.fill(); ctx.clip()
+        const drift = (now / 70) % 22
+        ctx.fillStyle = 'rgba(30,70,95,0.16)'
+        for (let y = w.y - w.ry - drift; y < w.y + w.ry; y += 22) ctx.fillRect(w.x - w.rx, y, w.rx * 2, 3)
+        for (let i = 0; i < 16; i++) {
+          const sx = w.x - w.rx + ((i * 137) % (w.rx * 2))
+          const sy = w.y - w.ry + (((i * 191) + 31) % (w.ry * 2))
+          const tw = (Math.sin(now / 900 + i * 1.7) + 1) * 0.5
+          ctx.fillStyle = `rgba(210,235,245,${tw * 0.30})`
+          ctx.fillRect(sx | 0, sy | 0, 2, 2)
+        }
+        ctx.restore()
       } else if (w.type === 'stroke') {
         ctx.lineCap = 'round'; ctx.lineJoin = 'round'
         tracePaseo(ctx, w.pts); ctx.strokeStyle = SHORE; ctx.lineWidth = w.w + 12; ctx.stroke()
         tracePaseo(ctx, w.pts); ctx.strokeStyle = WATER_C; ctx.lineWidth = Math.max(2, w.w - 4); ctx.stroke()
+        // reflejo central que late + destellos a lo largo del cauce
+        const sh = (Math.sin(now / 700) + 1) * 0.5
+        tracePaseo(ctx, w.pts); ctx.strokeStyle = `rgba(210,235,245,${0.10 + sh * 0.12})`
+        ctx.lineWidth = Math.max(1, (w.w - 4) * 0.4); ctx.stroke()
+        for (let i = 0; i < w.pts.length; i++) {
+          const p = w.pts[i]
+          const tw = (Math.sin(now / 850 + i * 2.1) + 1) * 0.5
+          ctx.fillStyle = `rgba(225,242,250,${tw * 0.4})`
+          ctx.fillRect((p.x + Math.sin(now / 600 + i) * 4) | 0, p.y | 0, 2, 2)
+        }
       }
     }
   }

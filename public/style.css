@@ -537,6 +537,70 @@ small, .muted { color: var(--text-secondary); }
 }
 .city-canvas:active { cursor: grabbing; }
 
+/* ─── Capa atmosférica sobre el parque (dirección de arte) ───
+   Viñeta (foco/diorama) + grano filmico + gradación cálida arriba / fresca abajo.
+   No captura clics. Quita el look "plano" sin tocar el render del canvas. */
+#cityAtmos {
+  position: absolute; inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  /* gradación de color: sol cálido arriba → sombra fresca abajo */
+  background:
+    linear-gradient(180deg,
+      rgba(255, 234, 196, 0.34) 0%,
+      rgba(255, 248, 232, 0.04) 34%,
+      rgba(60, 80, 120, 0.05) 78%,
+      rgba(36, 44, 78, 0.16) 100%);
+  mix-blend-mode: soft-light;
+  isolation: auto;
+}
+/* grano fino (SVG fractalNoise, tile pequeño) */
+#cityAtmos::before {
+  content: ""; position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+}
+/* viñeta: oscurece esquinas, enfoca el centro (sensación de mundo pequeño) */
+#cityAtmos::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(120% 90% at 50% 42%,
+      rgba(0,0,0,0) 52%,
+      rgba(28, 20, 12, 0.10) 78%,
+      rgba(20, 14, 8, 0.30) 100%);
+  mix-blend-mode: normal;
+}
+@media (prefers-reduced-motion: reduce) {
+  #cityAtmos::before { opacity: 0.04; }
+}
+
+/* ─── Muro de fotos del barrio (se abre desde el tablón) ─── */
+.photo-wall { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; }
+.photo-wall .pw-backdrop { position: absolute; inset: 0; background: rgba(28, 20, 12, 0.5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.photo-wall .pw-panel {
+  position: relative; z-index: 1;
+  width: min(680px, 92vw); max-height: 82vh; overflow: auto;
+  background: var(--surface, #fffaf0);
+  border: 1px solid var(--border-strong, rgba(42,31,21,0.16));
+  border-radius: var(--radius-lg, 24px);
+  box-shadow: var(--shadow-float, 0 22px 48px -12px rgba(96,65,32,0.3));
+  padding: 18px 18px 14px;
+}
+.photo-wall .pw-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.photo-wall .pw-title { font-family: var(--font-display, serif); font-weight: 800; font-size: 19px; color: var(--text, #2a1f15); }
+.photo-wall .pw-count { font-size: 12px; color: var(--text-secondary, #8a7558); }
+.photo-wall .pw-close { margin-left: auto; width: 32px; height: 32px; border: none; border-radius: 50%; background: var(--accent-soft, rgba(42,31,21,0.06)); font-size: 20px; line-height: 1; cursor: pointer; color: var(--text, #2a1f15); }
+.photo-wall .pw-close:hover { background: var(--border, rgba(42,31,21,0.12)); }
+.photo-wall .pw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
+.photo-wall .pw-card { display: flex; flex-direction: column; gap: 6px; background: #fff; padding: 8px 8px 10px; border-radius: 6px; box-shadow: 0 3px 10px rgba(96,65,32,0.14); transform: rotate(var(--tilt, 0deg)); }
+.photo-wall .pw-card:nth-child(3n) { --tilt: 1.4deg; }
+.photo-wall .pw-card:nth-child(3n+1) { --tilt: -1.6deg; }
+.photo-wall .pw-img { aspect-ratio: 1 / 1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.photo-wall .pw-card figcaption { font-size: 11px; color: var(--text-secondary, #8a7558); text-align: center; }
+.photo-wall .pw-empty { grid-column: 1 / -1; text-align: center; color: var(--text-secondary, #8a7558); padding: 28px 10px; font-size: 14px; }
+.photo-wall .pw-note { margin-top: 14px; text-align: center; font-family: var(--font-hand, cursive); font-size: 15px; color: var(--text-secondary, #8a7558); }
+
 /* Floating "centrar" button — restores default camera (zoom=1, follow mode). */
 .city-recenter-btn {
   position: absolute;

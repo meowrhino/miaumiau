@@ -280,6 +280,9 @@
       ctx.fillStyle = '#3a2a14'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
       ctx.fillText(text, bx + pad, by + bh / 2 + 1)
     }
+    // Banner del recado activo (arriba-derecha) + estantería de recuerdos
+    if (City.drawQuestBanner) City.drawQuestBanner(ctx, VW, VH)
+    if (City.drawKeepsakeShelf) City.drawKeepsakeShelf(ctx, VW, VH)
     // Ventana de chat RO (abajo-izquierda)
     City.drawChatLog(ctx, 14, VH - 14)
     ctx.restore()

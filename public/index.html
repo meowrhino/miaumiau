@@ -103,6 +103,9 @@
   <section id="mode-city" class="mode" hidden>
     <div class="city-wrap">
       <canvas id="cityCanvas" class="city-canvas"></canvas>
+      <!-- Capa atmosférica: viñeta + grano + gradación cálida (encima del canvas,
+           no captura clics). Da foco/diorama y quita el look "plano". -->
+      <div id="cityAtmos" aria-hidden="true"></div>
       <button id="cityRecenterBtn" class="city-recenter-btn" type="button" title="centrar la vista" aria-label="centrar la vista">📍</button>
     </div>
   </section>
@@ -194,6 +197,7 @@
   <script src="/js/city.render.buildings.js"></script>
   <script src="/js/city.render.entities.js"></script>
   <script src="/js/city.render.js"></script>
+  <script src="/js/city.npcs.js"></script>
   <script src="/js/city.presence.js"></script>
   <script src="/js/city.tooltip.js"></script>
   <script src="/js/city.chat.js"></script>

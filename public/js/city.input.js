@@ -152,6 +152,8 @@
 
   City.onEsc = function (e) {
     if (e.key !== 'Escape') return
+    const pw = document.getElementById('photoWall')
+    if (pw && !pw.hidden) { City.closePhotoWall(); return }
     if (City.activeOtherId) { City.closeOtherPopover(); return }
     City.closeSheet()
   }
@@ -187,6 +189,9 @@
     const { x, y } = City.canvasCoords(e)
     const o = City.findOtherAt(x, y)
     const z = !o ? City.findZoneMascotAt(x, y) : null
+    const npc = (!o && !z && City.findNpcAt) ? City.findNpcAt(x, y) : null
+    const obj = (!o && !z && !npc) &&
+      ((City.findBuzonAt && City.findBuzonAt(x, y)) || (City.findTablonAt && City.findTablonAt(x, y)))
     const newId = o ? o.user_id : null
     if (newId !== City.hoveredOtherId) {
       City.hoveredOtherId = newId
@@ -195,7 +200,7 @@
     } else if (o) {
       City.moveOtherTooltip(e.clientX, e.clientY)
     }
-    City.canvas.style.cursor = (o || z) ? 'pointer' : 'grab'
+    City.canvas.style.cursor = (o || z || npc || obj) ? 'pointer' : 'grab'
   }
 
   City.onLeave = function () {
@@ -209,7 +214,7 @@
   City.isInputBlocked = function () {
     const ae = document.activeElement
     if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return true
-    const open = document.querySelector('.modal:not([hidden]), .zone-sheet:not([hidden]), .story-viewer:not([hidden]), .story-editor:not([hidden]), .events-modal:not([hidden]), .pet-menu:not([hidden]), #zoneSheet:not([hidden])')
+    const open = document.querySelector('.modal:not([hidden]), .zone-sheet:not([hidden]), .story-viewer:not([hidden]), .story-editor:not([hidden]), .events-modal:not([hidden]), .pet-menu:not([hidden]), #zoneSheet:not([hidden]), .photo-wall:not([hidden])')
     return !!open
   }
 
@@ -235,6 +240,18 @@
     // input). Don't let stray clicks send the player walking under the modal.
     if (City.isInputBlocked()) return
     const { x, y } = City.canvasCoords(e)
+    // 0. Vecino (NPC) → conversar / dar o entregar recado
+    if (City.findNpcAt) {
+      const npc = City.findNpcAt(x, y)
+      if (npc) { City.talkToNpc(npc); return }
+    }
+    // 0b. Buzón de un vecino → entregar foto
+    if (City.findBuzonAt) {
+      const owner = City.findBuzonAt(x, y)
+      if (owner) { City.deliverToBuzon(owner); return }
+    }
+    // 0c. Tablón del barrio → abrir el muro de fotos
+    if (City.findTablonAt && City.findTablonAt(x, y)) { City.openPhotoWall(); return }
     // 1. Other player → open interaction popover (sesión 8)
     const other = City.findOtherAt(x, y)
     if (other) {

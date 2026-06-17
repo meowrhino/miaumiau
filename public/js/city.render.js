@@ -66,6 +66,12 @@
       LAMPS.forEach(l => entities.push({ kind: 'lamp', wx: l.x, wy: l.y }))
       entities.push({ kind: 'fountain', wx: FOUNTAIN.x, wy: FOUNTAIN.y })
     }
+    // Vecinos (NPCs) + sus buzones + el tablón del barrio: en ambos modos.
+    if (City.npcs) City.npcs.forEach(n => {
+      entities.push({ kind: 'npc', wx: n.x, wy: n.y, ref: n })
+      if (n.buzon) entities.push({ kind: 'buzon', wx: n.buzon.x, wy: n.buzon.y, ref: n })
+    })
+    if (City.tablon) entities.push({ kind: 'tablon', wx: City.tablon.x, wy: City.tablon.y })
     City.others.forEach(o => entities.push({ kind: 'other', wx: o.x, wy: o.y, ref: o }))
     entities.push({ kind: 'me', wx: City.player.x, wy: City.player.y, ref: City.player })
     entities.sort((a, b) => a.wy - b.wy)
@@ -76,6 +82,9 @@
       else if (e.kind === 'deco')     City.drawDecoBuilding(ctx, e.ref, City.sprites && City.sprites.deco[e.idx], now)
       else if (e.kind === 'lamp')     City.drawLamp(ctx, e.wx, e.wy, now)
       else if (e.kind === 'fountain') City.drawFountain(ctx, e.wx, e.wy, now)
+      else if (e.kind === 'npc')      City.drawNpc(ctx, e.ref, now)
+      else if (e.kind === 'buzon')    City.drawBuzon(ctx, e.ref, now)
+      else if (e.kind === 'tablon')   City.drawTablon(ctx, e.wx, e.wy, now)
       else if (e.kind === 'other')    City.drawOther(ctx, e.ref, now)
       else if (e.kind === 'me')       City.drawPlayer(ctx, e.ref, now)
     }

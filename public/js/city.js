@@ -123,6 +123,8 @@
       City.loadMascots()
       // Pixel-art world sprites (houses, trees, fountain, lamp, ground tiles)
       City.loadSprites()
+      // Vecinos del barrio (NPCs que pasean) — el parque vivo aunque no haya nadie.
+      if (City.initNpcs) City.initNpcs()
       City.render(0)
       City.bind()
       City.last = performance.now()
@@ -285,6 +287,8 @@
       p.x = Math.max(40, Math.min(W - 40, p.x))
       p.y = Math.max(40, Math.min(H - 40, p.y))
       City.checkZone()
+      // Vecinos (NPCs): paseo ambiental
+      if (City.updateNpcs) City.updateNpcs(dt, now)
       // Throttled presence write while moving
       if (p.walking) City.writePresence(false)
 

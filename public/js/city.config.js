@@ -140,6 +140,39 @@
     { x: 1700, y: 1470 }, { x: 1600, y: 3550 }, { x: 2750, y: 4100 }, { x: 4780, y: 3250 },
   ]
 
+  // ─── Vecinos (NPCs que pasean por el barrio) ──────────────────────────────
+  // El alma del sitio: aunque no haya nadie conectado, el parque está VIVO. Cada
+  // vecino tiene su casa (home), un radio de paseo (roam) y frases ambientales.
+  // Pasean lento, se paran, sueltan una frase de vez en cuando. 📖 Para añadir o
+  // mover vecinos: edita aquí (igual que LAMPS/TREES). `color` = nombre de COLORS;
+  // `seed` cambia su carita. Futuro: `quest` para misiones de recados al vecino.
+  const NPCS = [
+    { name: 'Rosa',   color: 'RosyBrown',   seed: 412, home: { x: 1620, y: 1560 }, roam: 240, near: 'el Parterre',
+      gift: { emoji: '🌷', name: 'un tulipán' },
+      lines: ['buenas!', '¿qué tal el día?', 'qué solecito hace hoy', 'riego las flores y vuelvo'] },
+    { name: 'Tomás',  color: 'SaddleBrown', seed: 77,  home: { x: 4300, y: 2360 }, roam: 260, near: 'el Monumento',
+      gift: { emoji: '☕', name: 'un café' },
+      lines: ['hombre, cuánto tiempo', '¿bajamos al estanque?', 'me he dejado las llaves…', 'invito a un café'] },
+    { name: 'Lola',   color: 'PaleVioletRed', seed: 935, home: { x: 1560, y: 3420 }, roam: 230, near: 'la Rosaleda',
+      gift: { emoji: '🌹', name: 'una rosa' },
+      lines: ['huele a rosas, ¿eh?', 'siéntate un rato', '¿has visto a mi gato?', 'qué gusto de tarde'] },
+    { name: 'Paco',   color: 'Olive',       seed: 248, home: { x: 3260, y: 4280 }, roam: 220, near: 'Cuesta de Moyano',
+      gift: { emoji: '🔖', name: 'un marcapáginas' },
+      lines: ['¿un libro de viejo?', 'aquí, dando una vuelta', 'me han traído carta hoy', 'ay, mis rodillas'] },
+    { name: 'Marisa', color: 'CadetBlue',   seed: 561, home: { x: 3160, y: 960 },  roam: 210, near: 'la Casita del Pescador',
+      gift: { emoji: '🐚', name: 'una concha' },
+      lines: ['¿pican los peces?', 'desde aquí se ve todo', 'tranquilo esto, ¿verdad?', 'me sé un atajo'] },
+    { name: 'Quique', color: 'DarkCyan',    seed: 1330, home: { x: 4760, y: 3300 }, roam: 230, near: 'el Palacio de Cristal',
+      gift: { emoji: '📷', name: 'una polaroid' },
+      lines: ['mira qué cristales', 'te hago una foto', '¿posas un segundo?', 'qué luz más bonita'] },
+  ]
+
+  // ─── Tablón del barrio (muro de fotos) ───────────────────────────────────
+  // Junto al estanque/Monumento (el corazón social = "el feed"). Las fotos que
+  // entregas en los buzones de los vecinos se cuelgan aquí. Clicar abre el muro.
+  // 👉 Esta es la COSTURA donde enchufarán las fotos cuadradas reales más adelante.
+  const TABLON = { x: 4430, y: 2370, label: 'Tablón del barrio' }
+
   // Image asset manifest. Keys: 'building:<zoneId>', 'deco:<kind>:<variant>',
   // 'tile:<name>'. Files under /img/. Missing files → procedural fallback.
   // (M5 del port: aquí entran los PNGs recortados de Elthen, slot a slot.)
@@ -158,7 +191,7 @@
     W, H, PLAYER_SPEED, PLAYER_SIZE,
     ZONES, PLAZA, FOUNTAIN, SPAWN,
     VERJA, WATER, PASEOS, PATH_GRID, PATH_SEGMENTS, ESTANQUE, MONUMENT, GATES,
-    DECO_BUILDINGS, TREES, LAMPS,
+    DECO_BUILDINGS, TREES, LAMPS, NPCS, TABLON,
     ASSET_MANIFEST,
   }
 })()
