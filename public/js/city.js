@@ -70,7 +70,6 @@
     otherSprites: {},    // user_id → Image
     pollTimer: 0,
     wavesTimer: 0,
-    cityChatTimer: 0,
     _wavesSeen: new Set(),
     lastPresenceWrite: 0,
     lastPresenceState: null,
@@ -140,11 +139,9 @@
       City.wavesTimer = setInterval(() => City.fetchWaves(), 3500)
       City.fetchWaves()
 
-      // City chat: mount the input bar + poll proximity bubbles (sesión 13)
+      // City chat en vivo: barra de input + WebSocket a la sala de la zona actual
       if (City.mountChatBar) City.mountChatBar()
-      clearInterval(City.cityChatTimer)
-      City.cityChatTimer = setInterval(() => { if (City.fetchCityChat) City.fetchCityChat() }, 3000)
-      if (City.fetchCityChat) City.fetchCityChat()
+      if (City.connectChat) City.connectChat()
     },
 
     onResize() {
@@ -162,7 +159,7 @@
       window.removeEventListener('resize', City.onResize)
       clearInterval(City.pollTimer)
       clearInterval(City.wavesTimer)
-      clearInterval(City.cityChatTimer)
+      if (City.disconnectChat) City.disconnectChat()
       if (City.unmountChatBar) City.unmountChatBar()
       // Optional: clear presence on leave (best-effort)
       if (App.user && typeof API !== 'undefined') API.del('/city/presence').catch(() => {})

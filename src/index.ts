@@ -1,13 +1,17 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import type { Env } from './middleware'
+import type { Env, User } from './middleware'
 import {
   auth, rateLimit, validateText, tripcode, esc,
-  hashPassword, verifyPassword, issueToken,
+  hashPassword, verifyPassword, issueToken, verifyToken, parseAuth,
   validateAccountName, validateDisplayName, validatePassword,
 } from './middleware'
 import * as db from './db'
-import { generateCatSvg, COLOR_NAMES } from './poporing'
+import { generateCatSvg, colorHex, COLOR_NAMES } from './poporing'
+import { ConversationDO } from './conversation'
+
+// El DO debe re-exportarse desde el entrypoint del Worker.
+export { ConversationDO }
 
 const app = new Hono<{ Bindings: Env }>()
 app.use('*', cors())
@@ -406,6 +410,50 @@ app.get('/api/city/waves', async (c) => {
   // Public — anyone in the city sees the heart bubbles
   const rows = await db.waveListRecent(c.env.DB, 8)
   return json(rows.results)
+})
+
+// ─── City chat EN VIVO (motor rumrum): WebSocket → ConversationDO ───
+// Una sala por zona del mapa (sala = zona actual, o 'plaza'). El navegador no
+// puede mandar headers en un WebSocket, así que la credencial viaja en el
+// query: ?token=<bearer v2> o ?miau=<username#secret legacy>. El Worker valida
+// aquí y reenvía al DO con `name`/`color` YA verificados (el DO se fía del
+// query porque solo se llega a él a través de esta ruta).
+
+app.get('/ws', async (c) => {
+  if (c.req.header('Upgrade') !== 'websocket') return err('se esperaba un websocket', 426)
+  const url = new URL(c.req.url)
+
+  let user: User | null = null
+  const token = url.searchParams.get('token')
+  const legacy = url.searchParams.get('miau')
+  if (token) {
+    const decoded = await verifyToken(c.env.AUTH_SECRET, token)
+    if (decoded) {
+      user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?')
+        .bind(decoded.userId).first<User>()
+    }
+  } else if (legacy) {
+    const parsed = parseAuth(legacy)
+    if (parsed) {
+      const u = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?')
+        .bind(parsed.username).first<User>()
+      if (u && u.tripcode && (await tripcode(parsed.secret)) === u.tripcode) user = u
+    }
+  }
+  if (!user) return err('No autorizado', 401)
+
+  const roomParam = url.searchParams.get('room') ?? 'plaza'
+  const room = ZONE_VALID.has(roomParam) ? roomParam : 'plaza'
+
+  const fwd = new URL(c.req.url)
+  fwd.searchParams.delete('token')
+  fwd.searchParams.delete('miau')
+  fwd.searchParams.set('room', room)
+  fwd.searchParams.set('name', user.display_name ?? user.username ?? 'gato#' + user.id)
+  fwd.searchParams.set('color', colorHex(user.color))
+
+  const id = c.env.CITY_CHAT.idFromName(room)
+  return c.env.CITY_CHAT.get(id).fetch(new Request(fwd.toString(), c.req.raw))
 })
 
 // ─── City chat: ephemeral proximity bubbles over avatars (sesión 13) ───

@@ -19,3 +19,12 @@ database_id = "d7373829-9b9d-430c-b318-f6d67a9a472e"
 [[r2_buckets]]
 binding = "STORAGE"
 bucket_name = "miaumiau-media"
+
+# Chat en vivo (motor rumrum): un Durable Object por sala (= zona del mapa).
+[[durable_objects.bindings]]
+name = "CITY_CHAT"
+class_name = "ConversationDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ConversationDO"]
