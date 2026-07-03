@@ -99,3 +99,21 @@ Por pulir (fácil en Tiled, o dímelo):
 - **Farolas**: el pack no trae farola → pendiente.
 - **Niveles/terrazas**: con la capa `muros` + escaleras de `struct` se pueden hacer
   zonas elevadas; lo montamos cuando quieras.
+
+---
+
+## Re-composición 2026-07 (fase B) — qué cambió
+
+- **Capa nueva `agua`** (tile layer, bloquea por nombre): el Estanque Grande al
+  NE, con orilla autotile del `water.png` nuevo (128×128: fila 0 = los 4 tiles
+  de siempre; filas 1-3 = bordes, esquinas exteriores e interiores).
+- **Tilesets nuevos:** `extra` (setos, bloquean en construido_muros) y
+  `extra_obj` (farola, 6 estandartes de zona, pérgola, caseta de mercado,
+  árboles de otoño, rosales) en `public/img/extra/`.
+- **Tus capas NO se tocaron:** `props` (tus 150 objetos con sus escaleras),
+  `muros`, `terraza` y `colision` van tal cual estaban. Lo regenerado:
+  suelo, caminos, agua, construido_*, y la capa `estructuras` (era generada).
+- **Herramientas en `tools/`** (antes vivían en /tmp y se perdían):
+  `render_map.py` (mapa → PNG sin navegador), `gen_assets.py` +
+  `gen_assets_b.py` (assets derivados/a mano), `gen_park2.py` (la
+  composición; editable y re-ejecutable — respeta siempre tus capas).
