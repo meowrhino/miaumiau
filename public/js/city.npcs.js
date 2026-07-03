@@ -163,23 +163,26 @@
     return { continued: false, gift, chain }
   }
 
-  // Mensajería tras una entrega (say del vecino + toasts), común a mano y buzón.
+  // Aviso de recado: línea dorada en la ventana de chat (estilo RO); si la
+  // ventana no está montada, City.notifyInChat cae solo al toast.
+  function notify (msg, ms) {
+    if (City.notifyInChat) City.notifyInChat(msg)
+    else if (typeof showToast === 'function') showToast(msg, ms || 3000)
+  }
+
+  // Mensajería tras una entrega (say del vecino + avisos), común a mano y buzón.
   function announceDelivery (recipientNpc, r, now, prefixToast) {
     if (r.continued) {
       const q = City.quest
       const what = q.kind === 'photo' ? 'una foto' : 'esto'
       recipientNpc.say = { text: `¡gracias! oye, ¿y ${what} a ${q.to}?`, until: now + 3800 }
-      if (typeof showToast === 'function') {
-        if (prefixToast) showToast(prefixToast, 1800)
-        showToast(`sigue la cadena 🔗 ${q.item.emoji} → ${q.to} (${q.toRef.near})`, 3200)
-      }
+      if (prefixToast) notify(prefixToast, 1800)
+      notify(`sigue la cadena 🔗 ${q.item.emoji} → ${q.to} (${q.toRef.near})`, 3200)
     } else {
       recipientNpc.say = { text: `¡gracias! toma, ${r.gift.emoji} de recuerdo`, until: now + 3600 }
-      if (typeof showToast === 'function') {
-        if (prefixToast) showToast(prefixToast, 1800)
-        showToast(`${recipientNpc.name} te da ${r.gift.emoji} ${r.gift.name} · ${City.keepsakes.length} recuerdos`, 2800)
-        if (r.chain >= 3) setTimeout(() => showToast(`¡cadena de barrio de ${r.chain} paradas! 🎉`, 2600), 800)
-      }
+      if (prefixToast) notify(prefixToast, 1800)
+      notify(`${recipientNpc.name} te da ${r.gift.emoji} ${r.gift.name} · ${City.keepsakes.length} recuerdos`, 2800)
+      if (r.chain >= 3) setTimeout(() => notify(`¡cadena de barrio de ${r.chain} paradas! 🎉`, 2600), 800)
     }
   }
 
@@ -210,10 +213,10 @@
     City.quest = { giver: npc.name, to: r.to.name, toRef: r.to, item: r.item, kind: r.kind, chain: 1 }
     if (r.kind === 'photo') {
       npc.say = { text: `¿le llevas una foto a ${r.to.name}?`, until: now + 3600 }
-      if (typeof showToast === 'function') showToast(`📷 foto para ${r.to.name} → su buzón (${r.to.near})`, 3400)
+      notify(`📷 foto para ${r.to.name} → su buzón (${r.to.near})`, 3400)
     } else {
       npc.say = { text: `¿me llevas esto a ${r.to.name}?`, until: now + 3600 }
-      if (typeof showToast === 'function') showToast(`${r.item.emoji} lleva ${r.item.name} a ${r.to.name} (${r.to.near})`, 3400)
+      notify(`${r.item.emoji} lleva ${r.item.name} a ${r.to.name} (${r.to.near})`, 3400)
     }
     if (window.track) track('city:recado-start', { from: npc.name, to: r.to.name, kind: r.kind })
   }
@@ -229,10 +232,10 @@
       return
     }
     if (q && q.kind === 'photo') {
-      if (typeof showToast === 'function') showToast(`ese no es el buzón de ${q.to}`, 1800)
+      notify(`ese no es el buzón de ${q.to}`, 1800)
       return
     }
-    if (typeof showToast === 'function') showToast(`el buzón de ${owner.name}`, 1400)
+    notify(`el buzón de ${owner.name}`, 1400)
   }
 
   // Hit-testing de buzones y del tablón (coords de mundo).

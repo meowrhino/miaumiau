@@ -112,7 +112,8 @@
     }
 
     // Añade una línea al historial DOM (+ sonido/badge si toca).
-    // line: { name, color, text, ts, system, mine }
+    // line: { name, color, text, ts, system, mine, quest }
+    // quest = aviso de recado/misión: dorado, solo texto, sin sonido (estilo RO).
     inst.appendLine = function (line) {
       inst.log.push(line)
       if (inst.log.length > 200) inst.log.shift()
@@ -120,12 +121,12 @@
       const el = inst.logEl
       const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24
       const row = document.createElement('div')
-      row.className = 'roc-line' + (line.system ? ' roc-sys' : '')
+      row.className = 'roc-line' + (line.system ? ' roc-sys' : '') + (line.quest ? ' roc-quest' : '')
       const time = document.createElement('span')
       time.className = 'roc-time'
       time.textContent = hhmm(line.ts)
       row.appendChild(time)
-      if (line.system) {
+      if (line.system || line.quest) {
         const txt = document.createElement('span')
         txt.className = 'roc-txt'
         txt.textContent = line.text
@@ -143,8 +144,8 @@
       el.appendChild(row)
       while (el.childElementCount > 200) el.removeChild(el.firstChild)
       if (nearBottom) el.scrollTop = el.scrollHeight
-      // Aviso solo para mensajes de OTRA persona (no propios, no sistema).
-      if (!line.mine && !line.system) {
+      // Aviso solo para mensajes de OTRA persona (no propios, no sistema/misión).
+      if (!line.mine && !line.system && !line.quest) {
         blip()
         if (inst.minimized && inst.badgeEl) {
           inst.unread++
@@ -434,10 +435,18 @@
       ts: opts.ts || Date.now(),
       system: !!opts.system,
       mine: !!opts.mine,
+      quest: !!opts.quest,
     }
     City._chatLog.push(line)
     if (City._chatLog.length > 200) City._chatLog.shift()
     if (roomWin) roomWin.appendLine(line)
+  }
+
+  // Aviso de recado/misión: línea dorada DENTRO de la ventana de chat (estilo
+  // RO). Si la ventana no está montada (fuera de la city), cae al toast.
+  City.notifyInChat = function (text) {
+    if (roomWin) City._pushChat('📜', '#8a6d1e', text, { quest: true })
+    else if (typeof showToast === 'function') showToast(text, 3000)
   }
 
   // Mete un mensaje del DO en el log de sala (+ burbuja si en vivo y de otro).
@@ -782,6 +791,7 @@
       'background:rgba(255,247,224,.35);overscroll-behavior:contain;}',
       '.roc-line{margin:0 0 2px;word-break:break-word;}',
       '.roc-sys{color:#7a6a52;font-style:italic;}',
+      '.roc-quest{color:#8a6d1e;font-weight:700;}',   // avisos de recado (dorado RO)
       '.roc-time{color:#9a8a68;font-size:10px;margin-right:5px;}',
       '.roc-name{font-weight:700;}',
       '.roc-txt{color:#2c2036;}',
