@@ -68,6 +68,7 @@
       </div>
       <div class="city-popover-actions">
         <button class="city-popover-btn" data-act="profile">ver perfil</button>
+        <button class="city-popover-btn" data-act="whisper">susurrar 🤫</button>
         <button class="city-popover-btn" data-act="chat">miau privado</button>
         <button class="city-popover-btn" data-act="hello">decir hola 💗</button>
       </div>
@@ -81,6 +82,11 @@
       City.closeOtherPopover()
       const slug = (o.username || '').toLowerCase().replace(/[^a-z0-9_-]/g, '')
       window.location.assign('/u/' + slug)
+    }
+    pop.querySelector('[data-act="whisper"]').onclick = () => {
+      City.closeOtherPopover()
+      // Abre una ventana de susurro 1:1 en cascada, conectada a `dm:...`.
+      if (City.openWhisper) City.openWhisper({ user_id: o.user_id, username: o.username, color: o.color })
     }
     pop.querySelector('[data-act="chat"]').onclick = () => {
       City.closeOtherPopover()

@@ -142,6 +142,8 @@
       // City chat en vivo: ventana DOM estilo RO + WebSocket a la sala de la zona
       if (City.mountChatWindow) City.mountChatWindow()
       if (City.connectChat) City.connectChat()
+      // Susurros 1:1: vigilante de no-leídos (badge 💌) + polling.
+      if (City.startDmWatch) City.startDmWatch()
     },
 
     onResize() {
@@ -161,6 +163,7 @@
       clearInterval(City.wavesTimer)
       if (City.disconnectChat) City.disconnectChat()
       if (City.unmountChatWindow) City.unmountChatWindow()
+      if (City.stopDmWatch) City.stopDmWatch()
       // Optional: clear presence on leave (best-effort)
       if (App.user && typeof API !== 'undefined') API.del('/city/presence').catch(() => {})
     },
