@@ -150,7 +150,9 @@
     return false
   }
 
-  if (/[?&]map=tiled/.test(location.search)) {
+  // El parque Tiled es el mapa POR DEFECTO desde la re-composición (fase B).
+  // Escape: ?map=classic vuelve al parque procedural viejo de city.config.js.
+  if (!/[?&]map=classic/.test(location.search)) {
     City.loadTiledMap('/data/park.tmj')
   }
 })()
