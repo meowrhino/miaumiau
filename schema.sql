@@ -183,3 +183,17 @@ CREATE TABLE IF NOT EXISTS admin_events (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_admin_events_date ON admin_events(date);
+
+-- Bandeja de susurros 1:1 (DMs de la ciudad). El chat en sí vive en el
+-- ConversationDO (sala `dm:<idMenor>~<idMayor>`); esta tabla solo lleva la
+-- "bandeja": qué parejas hablaron y cuándo (para no-leídos y la lista).
+-- user_a < user_b siempre (par ordenado), así hay una sola fila por pareja.
+CREATE TABLE IF NOT EXISTS dms (
+    user_a    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_b    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    last_ts   TEXT NOT NULL DEFAULT (datetime('now')),
+    last_from INTEGER NOT NULL,
+    PRIMARY KEY (user_a, user_b)
+);
+CREATE INDEX IF NOT EXISTS idx_dms_a ON dms(user_a, last_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_dms_b ON dms(user_b, last_ts DESC);

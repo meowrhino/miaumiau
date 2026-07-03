@@ -364,6 +364,20 @@ app.post('/api/posts/:id/comments', async (c) => {
 
 const ZONE_VALID = new Set(['tweets','posts','stories','chat','bereal','profile','plaza','city'])
 
+// Parsea `dm:<idMenor>~<idMayor>` → { a, b } con a<b (ids numéricos). Devuelve
+// null si el formato no cuadra o los ids no son válidos.
+function parseDmRoom(room: string): { a: number; b: number } | null {
+  const m = /^dm:(\d+)~(\d+)$/.exec(room)
+  if (!m) return null
+  const a = Number(m[1]), b = Number(m[2])
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0 || a >= b) return null
+  return { a, b }
+}
+// Ordena dos ids en el par (menor, mayor) que usa la tabla `dms` y la sala.
+function dmPair(x: number, y: number): { a: number; b: number } {
+  return x < y ? { a: x, b: y } : { a: y, b: x }
+}
+
 app.post('/api/city/presence', async (c) => {
   const user = await requireAuth(c)
   if (!user) return err('No autorizado', 401)
@@ -443,7 +457,17 @@ app.get('/ws', async (c) => {
   if (!user) return err('No autorizado', 401)
 
   const roomParam = url.searchParams.get('room') ?? 'plaza'
-  const room = ZONE_VALID.has(roomParam) ? roomParam : 'plaza'
+  let room: string
+  if (roomParam.startsWith('dm:')) {
+    // Sala de susurro 1:1: `dm:<idMenor>~<idMayor>`. Exigimos que el usuario
+    // autenticado sea uno de los dos (si no → 403). No aplicamos ZONE_VALID.
+    const pair = parseDmRoom(roomParam)
+    if (!pair) return err('sala inválida', 400)
+    if (user.id !== pair.a && user.id !== pair.b) return err('No autorizado', 403)
+    room = roomParam
+  } else {
+    room = ZONE_VALID.has(roomParam) ? roomParam : 'plaza'
+  }
 
   const fwd = new URL(c.req.url)
   fwd.searchParams.delete('token')
@@ -454,6 +478,49 @@ app.get('/ws', async (c) => {
 
   const id = c.env.CITY_CHAT.idFromName(room)
   return c.env.CITY_CHAT.get(id).fetch(new Request(fwd.toString(), c.req.raw))
+})
+
+// ─── Susurros 1:1: bandeja de DMs (el chat vive en el ConversationDO) ───
+// La sala DM (`dm:<a>~<b>`) la sirve /ws; estos endpoints solo llevan la
+// "bandeja" en D1: qué parejas hablaron y cuándo, para pintar no-leídos.
+
+// El cliente lo llama al ENVIAR un susurro: marca actividad en la pareja.
+app.post('/api/dm/touch', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+  if (rateLimit(ip + ':dmtouch', 40)) return err('Demasiadas peticiones', 429)
+  const body = await c.req.json<{ other_id?: number }>()
+  const otherId = Number(body.other_id)
+  if (!Number.isFinite(otherId) || otherId <= 0 || otherId === user.id) return err('destinatario inválido', 400)
+  const other = await db.userGetById(c.env.DB, otherId)
+  if (!other) return err('Usuario no encontrado', 404)
+  const { a, b } = dmPair(user.id, otherId)
+  await c.env.DB.prepare(
+    `INSERT INTO dms (user_a, user_b, last_ts, last_from) VALUES (?, ?, datetime('now'), ?)
+     ON CONFLICT(user_a, user_b) DO UPDATE SET last_ts = datetime('now'), last_from = excluded.last_from`
+  ).bind(a, b, user.id).run()
+  return json({ ok: true })
+})
+
+// Lista de susurros del usuario, con datos del otro para pintar la bandeja.
+app.get('/api/dm', async (c) => {
+  const user = await requireAuth(c)
+  if (!user) return err('No autorizado', 401)
+  const rows = await c.env.DB.prepare(`
+    SELECT
+      u.id AS id,
+      COALESCE(u.display_name, u.username) AS username,
+      u.color AS color,
+      u.avatar_seed AS avatar_seed,
+      d.last_ts AS last_ts,
+      d.last_from AS last_from
+    FROM dms d
+    JOIN users u ON u.id = CASE WHEN d.user_a = ? THEN d.user_b ELSE d.user_a END
+    WHERE d.user_a = ? OR d.user_b = ?
+    ORDER BY d.last_ts DESC
+  `).bind(user.id, user.id, user.id).all()
+  return json(rows.results)
 })
 
 // ─── City chat: ephemeral proximity bubbles over avatars (sesión 13) ───
