@@ -139,8 +139,8 @@
       City.wavesTimer = setInterval(() => City.fetchWaves(), 3500)
       City.fetchWaves()
 
-      // City chat en vivo: barra de input + WebSocket a la sala de la zona actual
-      if (City.mountChatBar) City.mountChatBar()
+      // City chat en vivo: ventana DOM estilo RO + WebSocket a la sala de la zona
+      if (City.mountChatWindow) City.mountChatWindow()
       if (City.connectChat) City.connectChat()
     },
 
@@ -160,7 +160,7 @@
       clearInterval(City.pollTimer)
       clearInterval(City.wavesTimer)
       if (City.disconnectChat) City.disconnectChat()
-      if (City.unmountChatBar) City.unmountChatBar()
+      if (City.unmountChatWindow) City.unmountChatWindow()
       // Optional: clear presence on leave (best-effort)
       if (App.user && typeof API !== 'undefined') API.del('/city/presence').catch(() => {})
     },

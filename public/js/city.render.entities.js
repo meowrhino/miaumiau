@@ -227,7 +227,9 @@
     ctx.beginPath(); ctx.roundRect(x + 2, y + 2, w - 4, h - 4, Math.max(1, r - 2)); ctx.stroke()
   }
 
-  // Ventana de chat estilo RO (abajo-izquierda). Espacio de PANTALLA.
+  // (MUERTA) Antes pintaba el log del chat en canvas. Ahora el chat es una
+  // ventana DOM estilo RO (City.mountChatWindow en city.chat.js). Se deja por si
+  // algún día se quiere un fallback en canvas; drawHud ya no la llama.
   City.drawChatLog = function (ctx, x, bottomY) {
     const log = City._chatLog
     if (!log || !log.length) return
@@ -283,8 +285,8 @@
     // Banner del recado activo (arriba-derecha) + estantería de recuerdos
     if (City.drawQuestBanner) City.drawQuestBanner(ctx, VW, VH)
     if (City.drawKeepsakeShelf) City.drawKeepsakeShelf(ctx, VW, VH)
-    // Ventana de chat RO (abajo-izquierda)
-    City.drawChatLog(ctx, 14, VH - 14)
+    // El chat ya NO se pinta en canvas: ahora es una VENTANA DOM estilo RO
+    // (City.mountChatWindow en city.chat.js). Ver City.drawChatLog abajo (muerta).
     ctx.restore()
   }
 })()
