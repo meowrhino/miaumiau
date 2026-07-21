@@ -14,7 +14,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "miaumiau-db"
-database_id = "d7373829-9b9d-430c-b318-f6d67a9a472e"
+database_id = "4f1f8395-767d-4582-b77c-2fed449d1859"
 
 [[r2_buckets]]
 binding = "STORAGE"
