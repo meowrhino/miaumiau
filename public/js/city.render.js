@@ -41,6 +41,16 @@
     // ── 1. iso ground (rhombic tiles + plaza + paths + bushes/flowers) ──
     City.drawGround(ctx, now, visL, visT, visR, visB)
 
+    // ── 1b. anillos de click-to-walk (feedback estilo Ragnarok) ──
+    if (City.clickFx && City.clickFx.length) {
+      for (const c of City.clickFx) {
+        const r = 5 + c.t * 18
+        ctx.strokeStyle = `rgba(255,255,255,${(0.75 * (1 - c.t)).toFixed(2)})`
+        ctx.lineWidth = 2
+        ctx.beginPath(); ctx.ellipse(c.x, c.y, r, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke()
+      }
+    }
+
     // ── 2-7. depth-sorted entities. Top-down: things lower on screen (higher
     //   wy) draw on top of things higher (lower wy). Sort by wy.
     const entities = []

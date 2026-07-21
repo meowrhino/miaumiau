@@ -1,5 +1,5 @@
-// City — Phase 1: solo player. Canvas with 6 zones. WASD/click-to-walk.
-// Zone detection emits enter:zone events. No networking yet.
+// City — canvas del parque. WASD/click-to-walk, detección de zonas, presencia
+// multijugador (polling + interpolación en updateOthers) y chat WS por zona.
 //
 // World constants and zone/deco/decoration data live in city.config.js as
 // `window.CityConfig`. We destructure them locally here.
@@ -73,6 +73,7 @@
     _wavesSeen: new Set(),
     lastPresenceWrite: 0,
     lastPresenceState: null,
+    clickFx: [],         // anillos de click-to-walk estilo RO [{x,y,t}]
     // Image-asset feature flag. Set _assetWhitelist=null when all PNGs are in.
     useImageAssets: true,
     _assetWhitelist: null,  // Set<zoneId|decoKind> | null (null = use for everything)
@@ -133,7 +134,7 @@
       // Presence: write own + poll others + waves broadcast
       City.writePresence(true)
       clearInterval(City.pollTimer)
-      City.pollTimer = setInterval(() => City.fetchOthers(), 5000)
+      City.pollTimer = setInterval(() => City.fetchOthers(), 3000)
       City.fetchOthers()
       clearInterval(City.wavesTimer)
       City.wavesTimer = setInterval(() => City.fetchWaves(), 3500)
@@ -274,10 +275,12 @@
           City.targetQueue = null
         }
         p.walking = true
+        p.walkT = (p.walkT || 0) + dt * 11   // fase del salto poporing (Midgard)
         if (vx < -0.1) p.dir = 1
         else if (vx > 0.1) p.dir = 0
       } else {
         p.walking = false
+        p.walkT = 0
         // Reached current target. If there are queued waypoints, advance.
         if (!City.target && City.targetQueue && City.targetQueue.length) {
           City.target = City.targetQueue.shift()
@@ -289,6 +292,13 @@
       City.checkZone()
       // Vecinos (NPCs): paseo ambiental
       if (City.updateNpcs) City.updateNpcs(dt, now)
+      // Otros jugadores: caminan hacia su última posición conocida (interpolación)
+      if (City.updateOthers) City.updateOthers(dt)
+      // Anillos de click (feedback estilo RO)
+      for (let i = City.clickFx.length - 1; i >= 0; i--) {
+        City.clickFx[i].t += dt * 2.4
+        if (City.clickFx[i].t > 1) City.clickFx.splice(i, 1)
+      }
       // Throttled presence write while moving
       if (p.walking) City.writePresence(false)
 
@@ -335,6 +345,7 @@
     if (!pointInLand(x, y)) { City.target = null; City.targetQueue = null; return }
     City.target = { x, y }
     City.targetQueue = null
+    City.clickFx.push({ x, y, t: 0 })
   }
   // Expose collision predicates for debugging / future pathfinding work.
   City._pointInLand = pointInLand

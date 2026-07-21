@@ -401,8 +401,11 @@ app.post('/api/city/presence', async (c) => {
   if (rateLimit(ip + ':presence', 60)) return err('Demasiadas peticiones', 429)
   const body = await c.req.json<{ zone?: string | null; x?: number; y?: number }>()
   const zone = body.zone && ZONE_VALID.has(body.zone) ? body.zone : null
-  const x = Math.max(0, Math.min(1280, Number(body.x) || 640))
-  const y = Math.max(0, Math.min(720, Number(body.y) || 374))
+  // Límites = tamaño del mundo en city.config.js (W=6400, H=4800). El clamp
+  // viejo (1280×720) era de antes de agrandar el parque y aplastaba la
+  // presencia de casi todo el mapa contra la esquina.
+  const x = Math.max(0, Math.min(6400, Number(body.x) || 1120))
+  const y = Math.max(0, Math.min(4800, Number(body.y) || 1320))
   await db.presenceUpsert(c.env.DB, user.id, zone, x, y)
   return json({ ok: true })
 })

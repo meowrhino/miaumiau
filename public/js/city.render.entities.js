@@ -3,7 +3,7 @@
 ;(function () {
   if (!window.City || !window.CityConfig) return
   const City = window.City
-  const { W, H, PLAYER_SIZE } = window.CityConfig
+  const { W, H, PLAYER_SIZE, VERJA, WATER, ZONES } = window.CityConfig
 
   // Fuente de piedra de Cainos (hoja 'props', pila redonda) — corazón del feed.
   const CAINOS_FOUNTAIN = { sx: 352, sy: 269, sw: 96, sh: 72 }
@@ -97,11 +97,18 @@
 
   City.drawOther = function (ctx, o, now) {
     const sprite = City.otherSprites[o.user_id]
-    const bob = Math.sin(now/600 + o.user_id) * 2
+    // Al caminar, salto de poporing (hop + squash & stretch, del motor Midgard);
+    // quieto, respiración suave como antes.
+    const walking = !!o._walking
+    const wt = o._walkT || 0
+    const hop = walking ? Math.abs(Math.sin(wt)) * 6 : 0
+    const squash = walking ? 1 + Math.sin(wt * 2) * 0.06 : 1
+    const bob = walking ? -hop : Math.sin(now/600 + o.user_id) * 2
     const ox = o.x, oy = o.y
     ctx.save()
     ctx.fillStyle = 'rgba(0,0,0,0.25)'
-    ctx.beginPath(); ctx.ellipse(ox, oy + PLAYER_SIZE/2 - 6, 14, 4, 0, 0, Math.PI * 2); ctx.fill()
+    const shScale = 1 - hop * 0.03   // la sombra encoge al saltar
+    ctx.beginPath(); ctx.ellipse(ox, oy + PLAYER_SIZE/2 - 6, 14 * shScale, 4 * shScale, 0, 0, Math.PI * 2); ctx.fill()
     ctx.restore()
     // Hover halo
     if (City.hoveredOtherId === o.user_id) {
@@ -116,7 +123,12 @@
       ctx.save()
       ctx.imageSmoothingEnabled = false
       ctx.globalAlpha = 0.96
-      ctx.drawImage(sprite, ox - PLAYER_SIZE/2 + 4, oy - PLAYER_SIZE/2 + bob + 4, PLAYER_SIZE - 8, PLAYER_SIZE - 8)
+      const s = PLAYER_SIZE - 8
+      const w = s * squash, h = s / squash   // volumen conservado
+      const baseY = oy + PLAYER_SIZE/2 - 4   // los pies quedan clavados al suelo
+      ctx.translate(ox, baseY + bob)
+      if (o._dir === 1) ctx.scale(-1, 1)
+      ctx.drawImage(sprite, -w/2, -h, w, h)
       ctx.restore()
     } else {
       ctx.fillStyle = colorHex ? colorHex(o.color) : '#888'
@@ -152,21 +164,24 @@
   }
 
   City.drawPlayer = function (ctx, p, now) {
-    const bobP = p.walking ? Math.sin(now/100) * 2 : Math.sin(now/600) * 1
+    // Salto de poporing al caminar (hop + squash del motor Midgard).
+    const wt = p.walkT || 0
+    const hop = p.walking ? Math.abs(Math.sin(wt)) * 6 : 0
+    const squash = p.walking ? 1 + Math.sin(wt * 2) * 0.06 : 1
+    const bobP = p.walking ? -hop : Math.sin(now/600) * 1
     ctx.save()
     ctx.fillStyle = 'rgba(0,0,0,0.30)'
-    ctx.beginPath(); ctx.ellipse(p.x, p.y + PLAYER_SIZE/2 - 4, 18, 5, 0, 0, Math.PI * 2); ctx.fill()
+    const shScale = 1 - hop * 0.03
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + PLAYER_SIZE/2 - 4, 18 * shScale, 5 * shScale, 0, 0, Math.PI * 2); ctx.fill()
     ctx.restore()
     if (p.sprite) {
       ctx.save()
       ctx.imageSmoothingEnabled = false
-      if (p.dir === 1) {
-        ctx.translate(p.x + PLAYER_SIZE/2, 0)
-        ctx.scale(-1, 1)
-        ctx.drawImage(p.sprite, 0, p.y - PLAYER_SIZE/2 + bobP, PLAYER_SIZE, PLAYER_SIZE)
-      } else {
-        ctx.drawImage(p.sprite, p.x - PLAYER_SIZE/2, p.y - PLAYER_SIZE/2 + bobP, PLAYER_SIZE, PLAYER_SIZE)
-      }
+      const w = PLAYER_SIZE * squash, h = PLAYER_SIZE / squash
+      const baseY = p.y + PLAYER_SIZE/2
+      ctx.translate(p.x, baseY + bobP)
+      if (p.dir === 1) ctx.scale(-1, 1)
+      ctx.drawImage(p.sprite, -w/2, -h, w, h)
       ctx.restore()
     } else {
       ctx.fillStyle = '#FFB800'
@@ -256,6 +271,66 @@
     ctx.restore()
   }
 
+  // Minimapa estilo RO: verja + agua + zonas + puntos (otros de su color, yo
+  // en blanco) + rectángulo del viewport. Todo escalado desde coords de mundo.
+  const MINI_W = 128
+  City.drawMinimap = function (ctx, bx, by, now) {
+    const s = MINI_W / W
+    const mh = Math.round(H * s)
+    ctx.save()
+    // marco pergamino
+    City.drawPanel(ctx, bx, by, MINI_W + 8, mh + 8, 6)
+    const mx = bx + 4, my = by + 4
+    ctx.beginPath(); ctx.rect(mx, my, MINI_W, mh); ctx.clip()
+    // hierba base + interior de la verja
+    ctx.fillStyle = '#4c7c40'
+    ctx.fillRect(mx, my, MINI_W, mh)
+    if (VERJA && VERJA.length) {
+      ctx.fillStyle = '#63a052'
+      ctx.beginPath()
+      VERJA.forEach((p, i) => i ? ctx.lineTo(mx + p.x * s, my + p.y * s) : ctx.moveTo(mx + p.x * s, my + p.y * s))
+      ctx.closePath(); ctx.fill()
+    }
+    // agua
+    if (WATER) {
+      ctx.fillStyle = '#4a83b5'
+      for (const w of WATER) {
+        if (w.type === 'rect') ctx.fillRect(mx + w.x * s, my + w.y * s, w.w * s, w.h * s)
+        else if (w.type === 'ellipse') {
+          ctx.beginPath(); ctx.ellipse(mx + w.x * s, my + w.y * s, w.rx * s, w.ry * s, 0, 0, Math.PI * 2); ctx.fill()
+        } else if (w.type === 'stroke' && w.pts) {
+          ctx.strokeStyle = '#4a83b5'; ctx.lineWidth = Math.max(1, w.w * s); ctx.lineCap = 'round'
+          ctx.beginPath()
+          w.pts.forEach((p, i) => i ? ctx.lineTo(mx + p.x * s, my + p.y * s) : ctx.moveTo(mx + p.x * s, my + p.y * s))
+          ctx.stroke()
+        }
+      }
+    }
+    // zonas (casitas/habitats): cuadraditos dorados suaves
+    if (ZONES) {
+      ctx.fillStyle = 'rgba(255,220,120,0.4)'
+      for (const z of ZONES) ctx.fillRect(mx + z.x * s, my + z.y * s, Math.max(2, z.w * s), Math.max(2, z.h * s))
+    }
+    // viewport de la cámara
+    const v = City._view
+    if (v && v.scale) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1
+      ctx.strokeRect(mx + (-v.ox / v.scale) * s, my + (-v.oy / v.scale) * s, (v.vw / v.scale) * s, (v.vh / v.scale) * s)
+    }
+    // otros: punto de su color (parpadea suave para que se vean vivos)
+    for (const o of City.others) {
+      ctx.fillStyle = (typeof colorHex === 'function' && colorHex(o.color)) || '#ffd24a'
+      ctx.fillRect(mx + o.x * s - 1.5, my + o.y * s - 1.5, 3, 3)
+    }
+    // yo: blanco con halo
+    const p = City.player
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'
+    ctx.beginPath(); ctx.arc(mx + p.x * s, my + p.y * s, 4 + Math.sin(now / 300) * 1, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(mx + p.x * s - 2, my + p.y * s - 2, 4, 4)
+    ctx.restore()
+  }
+
   City.drawHud = function (ctx, now) {
     // El HUD se dibuja en ESPACIO DE PANTALLA (CSS px). Con la cámara-follow ya
     // no vale dibujar en coords de mundo: reseteamos la matriz a (dpr,0,0,dpr).
@@ -282,6 +357,9 @@
       ctx.fillStyle = '#3a2a14'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
       ctx.fillText(text, bx + pad, by + bh / 2 + 1)
     }
+    // Minimapa (trasplante Midgard): parque en miniatura + puntos de la gente.
+    // Solo en pantallas anchas; en móvil el espacio es oro.
+    if (VW >= 640) City.drawMinimap(ctx, 14, total >= 2 ? 50 : 14, now)
     // Banner del recado activo (arriba-derecha) + estantería de recuerdos
     if (City.drawQuestBanner) City.drawQuestBanner(ctx, VW, VH)
     if (City.drawKeepsakeShelf) City.drawKeepsakeShelf(ctx, VW, VH)
